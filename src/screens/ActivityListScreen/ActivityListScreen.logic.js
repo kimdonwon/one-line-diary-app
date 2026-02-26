@@ -7,7 +7,7 @@ import { useYearSpecificActivities, useDiariesForYear } from '../../hooks/useDia
  * ⚙️ 해당 연도의 특정 활동과 연계된 일기 목록을 필터링하고 가져오는 비즈니스 로직 훅입니다.
  */
 export function useActivityListLogic(route, navigation) {
-    const { year, activityKey } = route.params;
+    const { year, month, activityKey } = route.params;
     const act = getActivityByKey(activityKey);
 
     /**
@@ -33,14 +33,18 @@ export function useActivityListLogic(route, navigation) {
 
     /**
      * 📊 해당 연도의 기록들 중에서 특정 활동 코드가 매칭되는 날짜의 일기만 필터링합니다.
-     * 퍼포먼스 최적화를 위해 Set 객체 캐싱과 useMemo를 동원합니다.
+     * month 파라미터가 있을 경우 해당 월만 필터링합니다.
      */
     const filteredDiaries = useMemo(() => {
         const activityDates = new Set(activities.map(a => a.date));
-        const matched = diaries.filter(d => activityDates.has(d.date));
+        let matched = diaries.filter(d => activityDates.has(d.date));
+        if (month) {
+            const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+            matched = matched.filter(d => d.date.startsWith(monthPrefix));
+        }
         // 최근 날짜가 상단에 배치되도록 내림차순 정렬
         return matched.sort((a, b) => b.date.localeCompare(a.date));
-    }, [activities, diaries]);
+    }, [activities, diaries, year, month]);
 
     /**
      * 뒤로가기 액션
@@ -58,6 +62,7 @@ export function useActivityListLogic(route, navigation) {
 
     return {
         year,
+        month,
         act,
         loading,
         filteredDiaries,

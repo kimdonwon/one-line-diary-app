@@ -1,10 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { COLORS, FONTS } from '../../constants/theme';
+import { COLORS, FONTS, SPACING, RADIUS } from '../../constants/theme';
 
-/**
- * 🎨 설정 화면의 스타일 시트 모듈입니다.
- * 앱 전체 설정에 필요한 UI 요소들의 크기와 색상을 정의합니다.
- */
 export const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -12,17 +8,58 @@ export const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
+        padding: SPACING.lg,
     },
-    title: {
+    sectionHeader: {
         ...FONTS.subtitle,
-        marginTop: 20,
-        marginBottom: 8,
+        fontSize: 16,
+        color: COLORS.textSecondary,
+        marginBottom: SPACING.sm,
+        marginLeft: 4,
     },
-    subtitle: {
+    settingCard: {
+        padding: 0,
+        overflow: 'hidden',
+        marginBottom: 30,
+    },
+    settingItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: SPACING.lg,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    settingLabel: {
+        ...FONTS.subtitle,
+        fontSize: 18,
+        color: COLORS.text,
+    },
+    settingDesc: {
         ...FONTS.body,
+        fontSize: 13,
+        color: COLORS.textSecondary,
+        marginTop: 2,
+    },
+    actionButton: {
+        padding: SPACING.md,
+        alignItems: 'center',
+        backgroundColor: COLORS.card,
+    },
+    actionButtonText: {
+        ...FONTS.body,
+        fontSize: 15,
+        color: COLORS.happy,
+        fontWeight: '700',
+    },
+    footer: {
+        alignItems: 'center',
+        marginTop: 'auto',
+        paddingBottom: 40,
+    },
+    versionText: {
+        ...FONTS.caption,
+        marginTop: 10,
         color: COLORS.textSecondary,
     }
 });

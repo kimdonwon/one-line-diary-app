@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, FlatList, StatusBar } from 'react-native';
 
-import { DiaryListItem, BackButton } from '../../components';
+import { DiaryListItem } from '../../components';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { getMoodByKey } from '../../constants/mood';
 
@@ -16,6 +16,7 @@ export function MoodListScreenView({ route, navigation }) {
     // 로직 전담 훅 호출
     const {
         year,
+        month,
         mood,
         loading,
         filteredDiaries,
@@ -39,13 +40,11 @@ export function MoodListScreenView({ route, navigation }) {
             <StatusBar barStyle="dark-content" />
 
             <View style={styles.header}>
-                <BackButton onPress={handleGoBack} />
-
                 <View style={styles.headerTitleContainer}>
                     <View style={styles.headerIconWrapper}>
                         <MoodCharacter character={mood.character} size={28} />
                     </View>
-                    <Text style={styles.headerTitle}>{year}년의 {mood.label}</Text>
+                    <Text style={styles.headerTitle}>{year}년{month ? ` ${month}월` : ''}의 {mood.label}</Text>
                 </View>
 
                 <View style={styles.spacer} />

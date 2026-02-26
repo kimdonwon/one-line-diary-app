@@ -4,7 +4,7 @@ let db = null;
 let dbReady = false;
 
 export async function initDB() {
-    db = SQLite.openDatabaseSync('diary.db');
+    db = await SQLite.openDatabaseAsync('diary.db');
 
     await db.execAsync(
         `CREATE TABLE IF NOT EXISTS diary (
@@ -34,7 +34,38 @@ export async function initDB() {
     // 기존 diary 테이블 마이그레이션 (다꾸 스티커 데이터용)
     try { await db.execAsync(`ALTER TABLE diary ADD COLUMN stickers TEXT DEFAULT '[]'`); } catch (e) { }
 
+    await db.execAsync(
+        `CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )`
+    );
+
+    // 기본 설정값 초기화 (비밀번호 잠금 비활성)
+    try {
+        await db.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['isLockEnabled', 'false']);
+        await db.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['password', '']);
+    } catch (e) { }
+
     dbReady = true;
+}
+
+export async function saveSetting(key, value) {
+    return enqueueDBTask(async () => {
+        const d = ensureDB();
+        await d.runAsync(
+            'INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)',
+            [key, String(value)]
+        );
+    });
+}
+
+export async function getSetting(key) {
+    return enqueueDBTask(async () => {
+        const d = ensureDB();
+        const result = await d.getFirstAsync('SELECT value FROM app_settings WHERE key = ?', [key]);
+        return result ? result.value : null;
+    });
 }
 
 function ensureDB() {

@@ -94,6 +94,14 @@ export function useMainLogic(navigation) {
         navigation.navigate('Write', { date: diary.date });
     };
 
+    const onMoodPress = (moodKey) => {
+        navigation.navigate('MoodList', { year, month, moodKey });
+    };
+
+    const onActivityPress = (activityKey) => {
+        navigation.navigate('ActivityList', { year, month, activityKey });
+    };
+
     // 요약 데이터 가공 (Formatting Data)
     const maxCount = stats.reduce((max, s) => Math.max(max, s.count), 0);
     const topMood = stats.length > 0
@@ -118,6 +126,6 @@ export function useMainLogic(navigation) {
         isToday,
 
         // Handlers
-        goToPrevMonth, goToNextMonth, onDayPress, onSummaryPress, onTodayWrite, onDiaryPress
+        goToPrevMonth, goToNextMonth, onDayPress, onSummaryPress, onTodayWrite, onDiaryPress, onMoodPress, onActivityPress
     };
 }

@@ -26,7 +26,7 @@ export function MainScreenView({ navigation }) {
         diaries, activityStats, diaryMap,
         firstDay, daysInMonth, topMoodData, allMoodStats, maxCount,
         isToday,
-        goToPrevMonth, goToNextMonth, onDayPress, onDiaryPress
+        goToPrevMonth, goToNextMonth, onDayPress, onDiaryPress, onMoodPress, onActivityPress
     } = useMainLogic(navigation);
 
     const weeklyMood = useGlobalWeeklyMood();
@@ -130,13 +130,18 @@ export function MainScreenView({ navigation }) {
                                     <Text style={styles.sectionTitle}>{month}월 기분</Text>
                                 </View>
                                 {allMoodStats.map((mood) => (
-                                    <MoodBar
+                                    <TouchableOpacity
                                         key={mood.key}
-                                        mood={mood}
-                                        count={mood.count}
-                                        maxCount={maxCount}
-                                        color={mood.color}
-                                    />
+                                        onPress={() => onMoodPress(mood.key)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <MoodBar
+                                            mood={mood}
+                                            count={mood.count}
+                                            maxCount={maxCount}
+                                            color={mood.color}
+                                        />
+                                    </TouchableOpacity>
                                 ))}
 
                                 {topMoodData && (
@@ -150,31 +155,22 @@ export function MainScreenView({ navigation }) {
                                 )}
                             </Card>
 
-                            <Card style={styles.chartCard}>
-                                <View style={styles.sectionRow}>
-                                    <Text style={styles.sectionTitle}>✎ 일기 목록</Text>
-                                </View>
-                                {diaries.map((diary) => (
-                                    <DiaryListItem
-                                        key={diary.id}
-                                        diary={diary}
-                                        mood={getMoodByKey(diary.mood)}
-                                        onPress={() => onDiaryPress(diary)}
-                                    />
-                                ))}
-                            </Card>
-
                             {activityStats.length > 0 && (
                                 <Card style={styles.chartCard}>
                                     <View style={styles.sectionRow}>
-                                        <Text style={styles.sectionTitle}>🏃 {month}월 활동</Text>
+                                        <Text style={styles.sectionTitle}>{month}월 활동</Text>
                                     </View>
                                     {activityStats.map((stat) => {
                                         const act = getActivityByKey(stat.activity);
                                         const maxActCount = activityStats[0].count;
                                         const ratio = stat.count / maxActCount;
                                         return (
-                                            <View key={stat.activity} style={styles.actBarRow}>
+                                            <TouchableOpacity
+                                                key={stat.activity}
+                                                style={styles.actBarRow}
+                                                onPress={() => onActivityPress(stat.activity)}
+                                                activeOpacity={0.7}
+                                            >
                                                 <View style={styles.actBarIcon}>
                                                     <ActivityIcon type={act.key} size={20} />
                                                 </View>
@@ -189,11 +185,27 @@ export function MainScreenView({ navigation }) {
                                                     ]} />
                                                 </View>
                                                 <Text style={styles.actBarCount}>{stat.count}</Text>
-                                            </View>
+                                            </TouchableOpacity>
                                         );
                                     })}
                                 </Card>
                             )}
+
+                            <Card style={styles.chartCard}>
+                                <View style={styles.sectionRow}>
+                                    <Text style={styles.sectionTitle}>일기 목록</Text>
+                                </View>
+                                {diaries.map((diary) => (
+                                    <DiaryListItem
+                                        key={diary.id}
+                                        diary={diary}
+                                        mood={getMoodByKey(diary.mood)}
+                                        onPress={() => onDiaryPress(diary)}
+                                    />
+                                ))}
+                            </Card>
+
+
                         </>
                     ) : (
                         <Card style={styles.emptyCard}>

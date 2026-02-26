@@ -15,6 +15,7 @@ export function ActivityListScreenView({ route, navigation }) {
     // 뷰(UI 로직)와 비즈니스/통신 로직을 철저히 분리(Decoupling)했습니다.
     const {
         year,
+        month,
         act,
         loading,
         filteredDiaries,
@@ -40,21 +41,12 @@ export function ActivityListScreenView({ route, navigation }) {
             <StatusBar barStyle="dark-content" />
 
             <View style={styles.header}>
-                {/* 상단 뒤로가기 버튼 */}
-                <TouchableOpacity
-                    style={styles.backCircle}
-                    onPress={handleGoBack}
-                    activeOpacity={0.7}
-                >
-                    <Text style={styles.backIcon}>‹</Text>
-                </TouchableOpacity>
-
                 {/* 화면 제목 중앙 정렬 래퍼 */}
                 <View style={styles.headerTitleContainer}>
                     <View style={styles.headerIconWrapper}>
                         <ActivityIcon type={act.key} size={24} />
                     </View>
-                    <Text style={styles.headerTitle}>{year}년의 {act.label} 기록</Text>
+                    <Text style={styles.headerTitle}>{year}년{month ? ` ${month}월` : ''}의 {act.label} 기록</Text>
                 </View>
 
                 {/* 우측 공백 스페이서 (타이틀을 정중앙에 고정하기 위한 목적) */}

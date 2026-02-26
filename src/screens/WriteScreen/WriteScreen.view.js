@@ -11,6 +11,12 @@ import { TEXT_STICKERS, GRAPHIC_STICKERS } from '../../constants/stickers';
 import { ActivityIcon } from '../../constants/ActivityIcons';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { DraggableSticker } from '../../components/DraggableSticker';
+import {
+    HomeTabIcon,
+    StatsTabIcon,
+    SearchIcon,
+    SettingsTabIcon
+} from '../../constants/icons';
 
 import { useWriteLogic } from './WriteScreen.logic';
 import { styles } from './WriteScreen.styles';
@@ -70,24 +76,7 @@ export function WriteScreenView({ route, navigation }) {
         <View style={styles.container}>
             <StatusBar style="dark" />
 
-            <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backCircle}
-                    onPress={() => navigation.goBack()}
-                    activeOpacity={0.7}
-                >
-                    <Text style={styles.backIcon}>‹</Text>
-                </TouchableOpacity>
-                <View style={styles.headerCenter}>
-                    <Text style={styles.headerDate}>{formattedDate}</Text>
-                    {activeMood && (
-                        <Text style={[styles.headerMoodLabel, { color: activeMood.color }]}>
-                            {activeMood.label}
-                        </Text>
-                    )}
-                </View>
-                <View style={styles.headerSpacer} />
-            </View>
+
 
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
@@ -286,16 +275,54 @@ export function WriteScreenView({ route, navigation }) {
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            <TouchableOpacity
-                style={[
-                    styles.saveCircle,
-                    { backgroundColor: activeMood ? activeMood.color : COLORS.soso },
-                ]}
-                onPress={handleSave}
-                activeOpacity={0.7}
-            >
-                <CheckIcon size={28} color="#FFFFFF" />
-            </TouchableOpacity>
+            {/* 하단 플로팅 탭바 (홈 화면의 하단 탭바와 똑같은 생김새 유지) */}
+            <View style={styles.floatingTabBar}>
+                <TouchableOpacity
+                    style={styles.fakeTabButton}
+                    onPress={() => { navigation.goBack(); navigation.navigate('HomeTab'); }}
+                    activeOpacity={0.7}
+                >
+                    <HomeTabIcon size={24} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.fakeTabButton}
+                    onPress={() => { navigation.goBack(); navigation.navigate('StatsTab'); }}
+                    activeOpacity={0.7}
+                >
+                    <StatsTabIcon size={24} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.saveCircle,
+                        {
+                            backgroundColor: activeMood ? activeMood.color : COLORS.soso,
+                            shadowColor: activeMood ? activeMood.color : COLORS.soso,
+                        },
+                    ]}
+                    onPress={handleSave}
+                    activeOpacity={0.7}
+                >
+                    <CheckIcon size={26} color="#FFFFFF" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.fakeTabButton}
+                    onPress={() => { navigation.goBack(); navigation.navigate('SearchTab'); }}
+                    activeOpacity={0.7}
+                >
+                    <SearchIcon size={24} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.fakeTabButton}
+                    onPress={() => { navigation.goBack(); navigation.navigate('SettingsTab'); }}
+                    activeOpacity={0.7}
+                >
+                    <SettingsTabIcon size={24} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+            </View>
 
             <SoftAlertModal
                 isVisible={isStickerLimitModalVisible}

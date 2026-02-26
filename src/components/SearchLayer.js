@@ -6,25 +6,23 @@ import {
   Text,
   StyleSheet,
 } from "react-native";
-import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW } from '../constants/theme';
+import { COLORS, FONTS, SPACING, RADIUS } from '../constants/theme';
 import { SearchIcon, CloseIcon } from "../constants/icons";
-import { BackButton } from "./index";
 
 export function SearchBar({ value, onChangeText, onClear, onCancel }) {
   return (
     <View style={styles.searchBarContainer}>
-      <BackButton onPress={onCancel} style={{ marginRight: SPACING.sm }} />
-      <View style={[styles.inputWrapper, SOFT_SHADOW.card]}>
+      <View style={styles.inputWrapper}>
         <View style={styles.searchIconWrap}>
-          <SearchIcon size={18} color={COLORS.textSecondary} />
+          <SearchIcon size={20} color="#FF7474" />
         </View>
         <TextInput
           style={styles.input}
-          placeholder="..."
-          placeholderTextColor="#A0968F"
+          placeholder=" "
+          placeholderTextColor="#CB9D6C"
           value={value}
           onChangeText={onChangeText}
-          autoFocus
+          autoFocus={false}
         />
         {value.length > 0 && (
           <TouchableOpacity
@@ -46,22 +44,20 @@ const styles = StyleSheet.create({
   searchBarContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.md,
-    backgroundColor: COLORS.background,
   },
   inputWrapper: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    paddingLeft: SPACING.sm,
-    paddingRight: SPACING.xs,
-    height: 50,
+    borderRadius: 30,
+    paddingLeft: SPACING.lg,
+    paddingRight: SPACING.sm,
+    height: 56,
   },
   searchIconWrap: {
-    paddingHorizontal: SPACING.sm,
+    paddingRight: SPACING.sm,
   },
   input: {
     flex: 1,
@@ -72,13 +68,13 @@ const styles = StyleSheet.create({
   },
   clearBtn: {
     padding: SPACING.xs,
-    marginRight: SPACING.xs,
+    marginLeft: SPACING.xs,
   },
   clearIconCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#D1C6C0",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#FF7474", // 포인트 플랫 컬러
     alignItems: "center",
     justifyContent: "center",
   },

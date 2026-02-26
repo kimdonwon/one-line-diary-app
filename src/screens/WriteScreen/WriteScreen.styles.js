@@ -26,7 +26,7 @@ export const styles = StyleSheet.create({
     headerSpacer: { width: 36 },
 
     scrollView: { flex: 1 },
-    scrollContent: { padding: SPACING.md, paddingBottom: 100 },
+    scrollContent: { padding: SPACING.md, paddingTop: Math.max(SPACING.md + 40, 60), paddingBottom: 100 },
 
     sectionTitle: { ...FONTS.subtitle, fontSize: 20, marginBottom: SPACING.md, textAlign: 'center' },
 
@@ -151,21 +151,44 @@ export const styles = StyleSheet.create({
         borderBottomColor: COLORS.border,
         paddingVertical: 4,
     },
-    bottomSpacer: { height: 80 },
+    bottomSpacer: { height: 130 },
 
-    // 저장 플로팅
-    saveCircle: {
+    // 저장 플로팅 바 (App.js 탭바 디자인 완벽 호환)
+    floatingTabBar: {
         position: 'absolute',
-        bottom: 32,
-        right: 24,
+        bottom: 24,
+        left: 20,
+        right: 20,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 35,
+        height: 70,
+        elevation: 8,
+        shadowColor: '#C9A8B2',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        paddingHorizontal: 10,
+    },
+    fakeTabButton: {
+        padding: 10,
+        width: 50,
+        alignItems: 'center',
+    },
+    saveCircle: {
         width: 62,
         height: 62,
         borderRadius: 31,
         alignItems: 'center',
         justifyContent: 'center',
-        ...SOFT_SHADOW.button,
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
+        marginTop: -24, // 둥둥 떠오른 느낌
+        borderWidth: 4,
+        borderColor: '#FFFFFF',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
         elevation: 6,
     },
 });

@@ -7,7 +7,7 @@ import { useDiariesForYear } from '../../hooks/useDiary';
  * ⚙️ 연도 및 기분 바탕으로 일기 데이터를 로딩하고 필터링하는 로직 훅입니다.
  */
 export function useMoodListLogic(route, navigation) {
-    const { year, moodKey } = route.params;
+    const { year, month, moodKey } = route.params;
     const mood = getMoodByKey(moodKey);
 
     /**
@@ -31,13 +31,16 @@ export function useMoodListLogic(route, navigation) {
 
     /**
      * 📊 일기 목록 중 해당 기분 코드(moodKey)와 일치하는 것들만 필터링합니다.
-     * 결과는 최신순(내림차순)으로 정렬됩니다. 연산 비용 절감을 위해 useMemo로 캐싱합니다.
+     * month 파라미터가 있을 경우 해당 월만 필터링합니다.
      */
     const filteredDiaries = useMemo(() => {
-        return diaries
-            .filter(d => d.mood === moodKey)
-            .sort((a, b) => b.date.localeCompare(a.date));
-    }, [diaries, moodKey]);
+        let result = diaries.filter(d => d.mood === moodKey);
+        if (month) {
+            const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+            result = result.filter(d => d.date.startsWith(monthPrefix));
+        }
+        return result.sort((a, b) => b.date.localeCompare(a.date));
+    }, [diaries, moodKey, year, month]);
 
     /**
      * 뒤로 가기 네비게이션 액션
@@ -56,6 +59,7 @@ export function useMoodListLogic(route, navigation) {
 
     return {
         year,
+        month,
         mood,
         loading,
         filteredDiaries,

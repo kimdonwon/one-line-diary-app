@@ -43,6 +43,7 @@ export function useSummaryLogic(route, navigation, scrollRef) {
         ? stats.reduce((top, s) => (s.count > top.count ? s : top), stats[0])
         : null;
     const topMoodData = topMood ? getMoodByKey(topMood.mood) : null;
+    const topMoodCount = topMood ? topMood.count : 0;
 
     const allMoodStats = MOOD_LIST.map((mood) => {
         const stat = stats.find((s) => s.mood === mood.key);
@@ -115,6 +116,7 @@ export function useSummaryLogic(route, navigation, scrollRef) {
         totalEntries,
         maxCount,
         topMoodData,
+        topMoodCount,
         allMoodStats,
         monthlyEntryCounts,
         maxMonthlyCount,

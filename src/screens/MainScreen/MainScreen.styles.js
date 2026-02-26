@@ -82,7 +82,7 @@ export const styles = StyleSheet.create({
     sectionTitle: {
         ...FONTS.subtitle, fontSize: 18,
     },
-    chartCard: { marginBottom: SPACING.sm },
+    chartCard: { marginBottom: SPACING.lg },
     topMoodBanner: {
         padding: SPACING.md, borderRadius: RADIUS.md, alignItems: 'center', marginTop: SPACING.sm,
     },
@@ -106,5 +106,5 @@ export const styles = StyleSheet.create({
     actBarFill: { height: '100%', borderRadius: RADIUS.full },
     actBarCount: { width: 24, textAlign: 'right', fontSize: 14, fontWeight: '700', color: COLORS.text },
 
-    bottomSpacer: { height: 80 }
+    bottomSpacer: { height: 130 }
 });

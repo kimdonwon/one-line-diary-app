@@ -14,7 +14,7 @@ import { styles, chartConstants } from './SummaryScreen.styles';
 export function SummaryScreenView({ route, navigation }) {
     const scrollRef = useRef(null);
     const {
-        year, pageIndex, totalEntries, maxCount, topMoodData, allMoodStats,
+        year, pageIndex, totalEntries, maxCount, topMoodData, topMoodCount, allMoodStats,
         monthlyEntryCounts, maxMonthlyCount, monthlyTopMoods,
         moodLineData, maxLineValue, activityStats, maxActivityCount,
         maxActivityLineValue, activityLineData,
@@ -85,18 +85,21 @@ export function SummaryScreenView({ route, navigation }) {
             <StatusBar style="dark" />
 
             <View style={styles.header}>
-                <TouchableOpacity style={styles.backCircle} onPress={handleGoBack}>
-                    <Text style={styles.backIcon}>‹</Text>
-                </TouchableOpacity>
                 <Text style={styles.headerTitle}>{year}년 기록</Text>
                 <View style={styles.headerSpacer} />
             </View>
 
             <View style={styles.pageIndicator}>
-                <TouchableOpacity style={[styles.pageTab, pageIndex === 0 && styles.pageTabActive]} onPress={() => handleTabPress(0)}>
+                <TouchableOpacity
+                    style={[styles.pageTab, pageIndex === 0 && [styles.pageTabActive, { backgroundColor: topMoodData ? topMoodData.color : '#FF7474' }]]}
+                    onPress={() => handleTabPress(0)}
+                >
                     <Text style={[styles.pageTabText, pageIndex === 0 && styles.pageTabTextActive]}>기분</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.pageTab, pageIndex === 1 && styles.pageTabActive]} onPress={() => handleTabPress(1)}>
+                <TouchableOpacity
+                    style={[styles.pageTab, pageIndex === 1 && [styles.pageTabActive, { backgroundColor: topMoodData ? topMoodData.color : '#FF7474' }]]}
+                    onPress={() => handleTabPress(1)}
+                >
                     <Text style={[styles.pageTabText, pageIndex === 1 && styles.pageTabTextActive]}>활동</Text>
                 </TouchableOpacity>
             </View>
@@ -112,7 +115,7 @@ export function SummaryScreenView({ route, navigation }) {
                                     <View style={styles.heroTextWrap}>
                                         <Text style={styles.heroLabel}>올해의 핵심 기분</Text>
                                         <Text style={styles.heroTitle}>"{topMoodData ? topMoodData.label : '기록이 없어요'}"</Text>
-                                        <Text style={styles.heroSub}>총 {totalEntries}번의 하루를 남겼어요!</Text>
+                                        <Text style={styles.heroSub}>총 {topMoodCount}번의 하루를 남겼어요!</Text>
                                     </View>
                                     {topMoodData && (
                                         <MoodCharacter character={topMoodData.character} size={70} />
@@ -157,7 +160,7 @@ export function SummaryScreenView({ route, navigation }) {
                                     <View style={styles.heroTextWrap}>
                                         <Text style={styles.heroLabel}>올해의 최다 활동</Text>
                                         <Text style={styles.heroTitle}>{getActivityByKey(activityStats[0].activity)?.label || '기록 없음'}</Text>
-                                        <Text style={styles.heroSub}>총 {activityStats.reduce((sum, a) => sum + a.count, 0)}번의 활동을 남겼어요!</Text>
+                                        <Text style={styles.heroSub}>총 {activityStats[0].count}번의 활동을 남겼어요!</Text>
                                     </View>
                                     <View style={{ backgroundColor: '#FFFFFF', padding: 12, borderRadius: 40 }}>
                                         <ActivityIcon type={activityStats[0].activity} size={40} />

@@ -30,25 +30,26 @@ export const styles = StyleSheet.create({
     headerTitle: { ...FONTS.subtitle },
     headerSpacer: { width: 40 },
 
-    // 페이지 인디케이터 (탭)
+    // 페이지 인디케이터 (탭) - Doodle Flash 스타일 🎨
     pageIndicator: {
         flexDirection: 'row',
         justifyContent: 'center',
-        paddingBottom: SPACING.sm,
-        gap: 8,
+        paddingBottom: SPACING.md,
+        gap: 16,
     },
     pageTab: {
-        paddingVertical: 6,
-        paddingHorizontal: 20,
+        paddingVertical: 8,
+        paddingHorizontal: 24,
         borderRadius: RADIUS.full,
-        backgroundColor: COLORS.card,
-        ...SOFT_SHADOW.card,
+        backgroundColor: '#FFFFFF',
     },
     pageTabActive: {
-        backgroundColor: COLORS.text,
+        backgroundColor: '#FF7474',
     },
     pageTabText: {
-        fontSize: 14, fontWeight: '600', color: COLORS.textSecondary,
+        fontSize: 16,
+        fontWeight: '800',
+        color: '#CB9D6C', // 부드러운 쿠키 반죽 색상으로 디폴트 텍스트 처리
     },
     pageTabTextActive: {
         color: '#FFFFFF',
