@@ -108,6 +108,17 @@ export async function getMoodStats(yearMonth) {
     });
 }
 
+export async function getMoodStatsByDateRange(startDate, endDate) {
+    return enqueueDBTask(async () => {
+        const d = ensureDB();
+        const result = await d.getAllAsync(
+            "SELECT mood, COUNT(*) as count FROM diary WHERE date >= ? AND date <= ? GROUP BY mood",
+            [startDate, endDate]
+        );
+        return result;
+    });
+}
+
 export async function getYearDiaries(year) {
     return enqueueDBTask(async () => {
         const d = ensureDB();

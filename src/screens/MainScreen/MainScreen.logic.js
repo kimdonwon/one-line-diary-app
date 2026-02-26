@@ -106,48 +106,13 @@ export function useMainLogic(navigation) {
         return { ...mood, count: stat ? stat.count : 0 };
     });
 
-    /**
-     * 이번 주 가장 많은 기분 캐릭터를 뽑아내는 로직 (헤더 장식용)
-     */
-    const headerMood = useMemo(() => {
-        if (diaries.length === 0) return getMoodByKey('HAPPY');
 
-        // 이번 주 단위 계산
-        const now = new Date();
-        const dayOfWeek = now.getDay();
-        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-        const monday = new Date(now);
-        monday.setDate(now.getDate() + mondayOffset);
-        monday.setHours(0, 0, 0, 0);
-
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sunday.setHours(23, 59, 59, 999);
-
-        const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        const monStr = fmt(monday);
-        const sunStr = fmt(sunday);
-
-        const weekDiaries = diaries.filter((d) => d.date >= monStr && d.date <= sunStr);
-        if (weekDiaries.length === 0) return getMoodByKey('HAPPY');
-
-        const counts = {};
-        weekDiaries.forEach((d) => {
-            counts[d.mood] = (counts[d.mood] || 0) + 1;
-        });
-
-        const entries = Object.entries(counts);
-        if (entries.length === 0) return getMoodByKey('HAPPY');
-
-        const topKey = entries.reduce((a, b) => b[1] > a[1] ? b : a)[0];
-        return getMoodByKey(topKey);
-    }, [diaries]);
 
     return {
         // Properties
         year, month,
         diaries, stats, activityStats, diaryMap,
-        firstDay, daysInMonth, topMoodData, allMoodStats, headerMood, maxCount,
+        firstDay, daysInMonth, topMoodData, allMoodStats, maxCount,
 
         // Settings/Check
         isToday,

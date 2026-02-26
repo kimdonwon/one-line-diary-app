@@ -126,7 +126,6 @@ export function SummaryScreenView({ route, navigation }) {
                                     {allMoodStats.map((mood) => (
                                         <TouchableOpacity key={mood.key} onPress={() => handleMoodPress(mood.key)}>
                                             <MoodBar mood={mood} count={mood.count} maxCount={maxCount} color={mood.color} />
-                                            <Text style={styles.navIconArrow}>› 자세히</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </Card>
@@ -169,19 +168,29 @@ export function SummaryScreenView({ route, navigation }) {
                                     <View style={styles.sectionRow}>
                                         <Text style={styles.sectionTitle}>활동 분야별 요약</Text>
                                     </View>
-                                    <View style={styles.activityGridContainer}>
-                                        {activityStats.map((stat) => {
-                                            const act = getActivityByKey(stat.activity);
-                                            return (
-                                                <TouchableOpacity key={stat.activity} style={styles.activityGridButton} onPress={() => handleActivityPress(stat.activity)}>
-                                                    <View style={styles.activityGridIconWrap}>
-                                                        <ActivityIcon type={act.key} size={28} />
-                                                    </View>
-                                                    <Text style={styles.activityGridLabel}>{act.label}</Text>
-                                                </TouchableOpacity>
-                                            );
-                                        })}
-                                    </View>
+                                    {activityStats.map((stat) => {
+                                        const act = getActivityByKey(stat.activity);
+                                        const maxActCount = activityStats[0]?.count || 1;
+                                        const ratio = stat.count / maxActCount;
+                                        return (
+                                            <TouchableOpacity key={stat.activity} style={styles.activityBarRow} onPress={() => handleActivityPress(stat.activity)}>
+                                                <View style={styles.activityBarIcon}>
+                                                    <ActivityIcon type={act.key} size={20} />
+                                                </View>
+                                                <Text style={styles.activityBarLabel}>{act.label}</Text>
+                                                <View style={styles.activityBarTrack}>
+                                                    <View style={[
+                                                        styles.activityBarFill,
+                                                        {
+                                                            width: `${Math.max(ratio * 100, 10)}%`,
+                                                            backgroundColor: act.color,
+                                                        },
+                                                    ]} />
+                                                </View>
+                                                <Text style={styles.activityBarCount}>{stat.count}</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
                                     <View style={styles.spacer40} />
                                 </Card>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getYearDiaries, getYearAllActivities } from '../../database/db';
+import { getYearDiaries, getYearAllActivities } from '../database/db';
 import { getActivityByKey } from '../constants/activities';
 
 export function useSearchLogic(year) {

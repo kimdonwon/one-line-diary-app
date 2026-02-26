@@ -7,8 +7,8 @@ import {
   StyleSheet,
 } from "react-native";
 import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW } from '../constants/theme';
-import { SearchIcon, CloseIcon } from "./icons";
-import { BackButton } from "./components";
+import { SearchIcon, CloseIcon } from "../constants/icons";
+import { BackButton } from "./index";
 
 export function SearchBar({ value, onChangeText, onClear, onCancel }) {
   return (

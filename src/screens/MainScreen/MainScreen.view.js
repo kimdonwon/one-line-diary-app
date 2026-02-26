@@ -15,6 +15,7 @@ import {
     formatDate
 } from './MainScreen.logic';
 import { styles } from './MainScreen.styles';
+import { useGlobalWeeklyMood } from '../../context/MoodContext';
 
 /**
  * 🎨 화면 렌더링을 담당하는 뷰 모듈
@@ -23,10 +24,13 @@ export function MainScreenView({ navigation }) {
     const {
         year, month,
         diaries, activityStats, diaryMap,
-        firstDay, daysInMonth, topMoodData, allMoodStats, headerMood, maxCount,
+        firstDay, daysInMonth, topMoodData, allMoodStats, maxCount,
         isToday,
         goToPrevMonth, goToNextMonth, onDayPress, onDiaryPress
     } = useMainLogic(navigation);
+
+    const weeklyMood = useGlobalWeeklyMood();
+    const currentHeaderMood = weeklyMood || getMoodByKey('SOSO');
 
     /**
      * 📅 캘린더 그리드 블록을 렌더링하는 헬퍼 함수
@@ -76,7 +80,7 @@ export function MainScreenView({ navigation }) {
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Text style={styles.headerTitle}>한줄일기</Text>
                             <View style={styles.headerSmallCharWrap}>
-                                <MoodCharacter character={headerMood.character} size={28} />
+                                <MoodCharacter character={currentHeaderMood.character} size={28} />
                             </View>
                         </View>
                         <View style={styles.headerBadge}>

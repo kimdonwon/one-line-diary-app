@@ -23,6 +23,7 @@ import {
     SearchIcon,
     SettingsTabIcon, SelectedSettingsTabIcon
 } from './src/constants/icons';
+import { MoodProvider, useGlobalWeeklyMood } from './src/context/MoodContext';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -91,14 +92,16 @@ function LoadingScreen() {
     );
 }
 
-// ─── 하단 탭 내비게이터 ───
 function MainTabs({ navigation }) {
+    const weeklyMood = useGlobalWeeklyMood();
+    const activeColor = weeklyMood ? weeklyMood.color : '#8A2BE2';
+
     return (
         <Tab.Navigator
             screenOptions={{
                 headerShown: false,
                 tabBarShowLabel: true,
-                tabBarActiveTintColor: '#8A2BE2', // 보라색 활성 톤
+                tabBarActiveTintColor: activeColor,
                 tabBarInactiveTintColor: COLORS.textSecondary,
                 tabBarStyle: {
                     backgroundColor: '#FFFFFF',
@@ -151,11 +154,11 @@ function MainTabs({ navigation }) {
                             width: 56,
                             height: 56,
                             borderRadius: 28,
-                            backgroundColor: '#9B51E0', // 보라색 버튼
+                            backgroundColor: activeColor, // 동적 활성 색상 적용
                             alignItems: 'center',
                             justifyContent: 'center',
                             marginTop: -28, // 탭바 위로 튀어나오게
-                            shadowColor: '#9B51E0',
+                            shadowColor: activeColor,
                             shadowOffset: { width: 0, height: 4 },
                             shadowOpacity: 0.3,
                             shadowRadius: 8,
@@ -218,7 +221,7 @@ export default function App() {
     }
 
     return (
-        <>
+        <MoodProvider>
             <StatusBar style="auto" />
             <NavigationContainer theme={AppTheme}>
                 <Stack.Navigator
@@ -236,7 +239,7 @@ export default function App() {
                     <Stack.Screen name="MoodList" component={MoodListScreen} />
                 </Stack.Navigator>
             </NavigationContainer>
-        </>
+        </MoodProvider>
     );
 }
 

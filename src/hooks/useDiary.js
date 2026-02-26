@@ -16,7 +16,10 @@ import {
     getYearMonthlyActivities,
     getMonthActivities,
     getYearSpecificActivities,
-} from '../../database/db';
+    getMoodStatsByDateRange,
+} from '../database/db';
+import { DeviceEventEmitter } from 'react-native';
+import { getMoodByKey } from '../constants/mood';
 
 export function useDiaryForDate(date) {
     const [diary, setDiary] = useState(null);
@@ -240,10 +243,12 @@ export function useYearMonthlyActivitiesStats(year) {
 
 export async function saveDiary(date, content, mood, stickers = '[]') {
     await dbSaveDiary(date, content, mood, stickers);
+    DeviceEventEmitter.emit('DIARY_UPDATED');
 }
 
 export async function saveActivities(date, activities) {
     await dbSaveActivities(date, activities);
+    DeviceEventEmitter.emit('DIARY_UPDATED');
 }
 
 export function useMonthActivityStats(yearMonth) {
