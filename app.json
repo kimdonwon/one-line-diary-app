@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "한줄일기",
+    "slug": "oneline-diary",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#FFF0F5",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.oneline.diary",
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "web": {},
+    "plugins": [
+      "expo-asset",
+      "expo-sqlite"
+    ]
+  }
+}

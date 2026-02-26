@@ -1,0 +1,148 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { StatusBar } from 'expo-status-bar';
+
+import { initDB } from './src/database/db';
+import MainScreen from './src/logic/screens/MainScreen';
+import WriteScreen from './src/logic/screens/WriteScreen';
+import SummaryScreen from './src/logic/screens/SummaryScreen';
+import ActivityListScreen from './src/logic/screens/ActivityListScreen';
+import { COLORS } from './src/design/theme';
+import { MoodCharacter } from './src/design/MoodCharacters';
+
+const Stack = createNativeStackNavigator();
+
+// 🍰 귀여운 로딩 화면 컴포넌트
+function LoadingScreen() {
+    const bounceAnim = new Animated.Value(0);
+    const fadeAnim = new Animated.Value(0);
+
+    useEffect(() => {
+        // 페이드인
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+        }).start();
+
+        // 통통 바운스
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(bounceAnim, {
+                    toValue: -12,
+                    duration: 500,
+                    easing: Easing.out(Easing.quad),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(bounceAnim, {
+                    toValue: 0,
+                    duration: 500,
+                    easing: Easing.bounce,
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+    }, []);
+
+    return (
+        <View style={styles.loadingContainer}>
+            <Animated.View style={[
+                styles.loadingCharacter,
+                {
+                    opacity: fadeAnim,
+                    transform: [{ translateY: bounceAnim }],
+                },
+            ]}>
+                <MoodCharacter character="frog" size={80} />
+            </Animated.View>
+            <Animated.View style={{ opacity: fadeAnim }}>
+                <Text style={styles.loadingTitle}>한줄일기</Text>
+                <View style={styles.dotsRow}>
+                    <Text style={styles.loadingDot}>·</Text>
+                    <Text style={styles.loadingDot}>·</Text>
+                    <Text style={styles.loadingDot}>·</Text>
+                </View>
+            </Animated.View>
+        </View>
+    );
+}
+
+export default function App() {
+    const [dbReady, setDbReady] = useState(false);
+    const [dbError, setDbError] = useState(null);
+
+    useEffect(() => {
+        async function setup() {
+            try {
+                await initDB();
+                setDbReady(true);
+            } catch (e) {
+                console.error('DB init failed:', e);
+                setDbError(e.message || String(e));
+            }
+        }
+        setup();
+    }, []);
+
+    if (dbError) {
+        return (
+            <View style={[styles.loadingContainer, { padding: 20 }]}>
+                <Text style={{ fontSize: 18, color: 'red', marginBottom: 10 }}>Database Initialization Failed!</Text>
+                <Text style={{ fontSize: 14, color: '#333' }}>{dbError}</Text>
+            </View>
+        );
+    }
+
+    if (!dbReady) {
+        return <LoadingScreen />;
+    }
+
+    return (
+        <NavigationContainer>
+            <StatusBar style="auto" />
+            <Stack.Navigator
+                screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: COLORS.background },
+                    animation: 'slide_from_right',
+                }}
+            >
+                <Stack.Screen name="Main" component={MainScreen} />
+                <Stack.Screen name="Write" component={WriteScreen} />
+                <Stack.Screen name="Summary" component={SummaryScreen} />
+                <Stack.Screen name="ActivityList" component={ActivityListScreen} />
+            </Stack.Navigator>
+        </NavigationContainer>
+    );
+}
+
+const styles = StyleSheet.create({
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: COLORS.background,
+    },
+    loadingCharacter: {
+        marginBottom: 20,
+    },
+    loadingTitle: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: '#4A3728',
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    dotsRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    loadingDot: {
+        fontSize: 28,
+        color: COLORS.happy,
+        marginHorizontal: 4,
+        fontWeight: '700',
+    },
+});
