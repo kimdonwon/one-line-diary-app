@@ -20,21 +20,21 @@ export const MOODS = {
         character: 'cat',
         description: '눈물 흘리는 파란 고양이',
     },
-    SURPRISED: {
-        key: 'SURPRISED',
-        label: '놀람',
+    ANGRY: {
+        key: 'ANGRY',
+        label: '화남',
         color: '#FFD485',
         bgColor: '#FFF8E8',
         character: 'chick',
-        description: '입 벌린 노란 병아리',
+        description: '화난 노란 병아리',
     },
     EMBARRASSED: {
         key: 'EMBARRASSED',
         label: '당황',
         color: '#FFB5B5',
         bgColor: '#FFF0F0',
-        character: 'octopus',
-        description: '빨개진 분홍 문어',
+        character: 'rabbit',
+        description: '당황한 분홍 토끼',
     },
     SOSO: {
         key: 'SOSO',

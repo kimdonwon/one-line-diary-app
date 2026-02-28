@@ -33,12 +33,14 @@ export const styles = StyleSheet.create({
         marginBottom: SPACING.lg,
         padding: SPACING.lg,
         backgroundColor: '#FFFFFF',
-        borderRadius: 24,
+        borderRadius: 12, // 노션 스타일 라운딩
+        borderWidth: 1,
+        borderColor: '#E9E9E7',
     },
     sectionTitle: {
         ...FONTS.subtitle,
         fontSize: 16,
-        color: '#FF7474', // 쨍한 플랫 포인트 컬러
+        color: '#666666', // 노션 보조 컬러
         marginBottom: SPACING.xs,
         paddingLeft: 4,
     },
@@ -49,14 +51,16 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#FFFFFF',
-        borderRadius: 24,
+        borderRadius: 12, // 노션 스타일
+        borderWidth: 1,
+        borderColor: '#E9E9E7',
         paddingVertical: 50,
         marginTop: SPACING.md,
     },
     emptyText: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: COLORS.text,
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#666666',
     },
     bottomPadding: {
         height: 120, // 하단 탭바를 가리지 않기 위한 여백

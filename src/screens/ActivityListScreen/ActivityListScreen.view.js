@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, StatusBar } from 'react-native';
-import { Card, DiaryListItem } from '../../components';
+import { Card, DiaryListItem, Header } from '../../components';
 import { ActivityIcon } from '../../constants/ActivityIcons';
 import { getMoodByKey } from '../../constants/mood';
 
@@ -40,18 +40,14 @@ export function ActivityListScreenView({ route, navigation }) {
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" />
 
-            <View style={styles.header}>
-                {/* 화면 제목 중앙 정렬 래퍼 */}
-                <View style={styles.headerTitleContainer}>
-                    <View style={styles.headerIconWrapper}>
-                        <ActivityIcon type={act.key} size={24} />
-                    </View>
-                    <Text style={styles.headerTitle}>{year}년{month ? ` ${month}월` : ''}의 {act.label} 기록</Text>
-                </View>
-
-                {/* 우측 공백 스페이서 (타이틀을 정중앙에 고정하기 위한 목적) */}
-                <View style={styles.spacer} />
-            </View>
+            <Header
+                title={`${year}년${month ? ` ${month}월` : ''}의 ${act.label} 기록`}
+                leftButton={
+                    <TouchableOpacity onPress={handleGoBack} style={{ marginRight: 8 }}>
+                        <Text style={{ fontSize: 28, color: '#4A3728' }}>‹</Text>
+                    </TouchableOpacity>
+                }
+            />
 
             {loading ? (
                 // 로딩 레이어 출력

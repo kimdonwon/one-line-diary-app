@@ -1,13 +1,27 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { getSetting, saveSetting } from '../database/db';
 
 const LockContext = createContext();
 
 export function LockProvider({ children }) {
-    const [isLockEnabled, setIsLockEnabled] = useState(false); // 잠금 기능 활성화 여부
-    const [password, setPassword] = useState(''); // 설정된 비밀번호
-    const [isLocked, setIsLocked] = useState(false); // 현재 화면이 잠겨있는지 여부
+    const [isLockEnabled, setIsLockEnabled] = useState(false);
+    const [password, setPassword] = useState('');
+    const [isLocked, setIsLocked] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+    const [showPinFallback, setShowPinFallback] = useState(false);
+
+    // 🔐 생체인증 가용 여부 확인
+    const checkBiometric = useCallback(async () => {
+        try {
+            const compatible = await LocalAuthentication.hasHardwareAsync();
+            const enrolled = await LocalAuthentication.isEnrolledAsync();
+            setIsBiometricAvailable(compatible && enrolled);
+        } catch (e) {
+            setIsBiometricAvailable(false);
+        }
+    }, []);
 
     // 🔐 초기 설정값 로드
     const loadSettings = useCallback(async () => {
@@ -20,9 +34,9 @@ export function LockProvider({ children }) {
             setIsLockEnabled(isEnabled);
             setPassword(pass || '');
 
-            // 잠금이 켜져있고 비밀번호가 있다면 잠금 상태로 시작
             if (isEnabled && pass && pass.length === 4) {
                 setIsLocked(true);
+                setShowPinFallback(false);
             } else {
                 setIsLocked(false);
             }
@@ -34,13 +48,46 @@ export function LockProvider({ children }) {
     }, []);
 
     useEffect(() => {
+        checkBiometric();
         loadSettings();
-    }, [loadSettings]);
+    }, [checkBiometric, loadSettings]);
 
-    // 🔑 잠금 해제 시도
+    // 🔑 생체인증 시도
+    const tryBiometricAuth = async () => {
+        if (!isBiometricAvailable) {
+            setShowPinFallback(true);
+            return false;
+        }
+
+        try {
+            const result = await LocalAuthentication.authenticateAsync({
+                promptMessage: '오늘조각 잠금 해제',
+                cancelLabel: '비밀번호 입력',
+                disableDeviceFallback: true,
+                fallbackLabel: '비밀번호 입력',
+            });
+
+            if (result.success) {
+                setIsLocked(false);
+                setShowPinFallback(false);
+                return true;
+            } else {
+                // 생체인증 실패/취소 → PIN 화면으로 전환
+                setShowPinFallback(true);
+                return false;
+            }
+        } catch (e) {
+            console.error('Biometric auth error:', e);
+            setShowPinFallback(true);
+            return false;
+        }
+    };
+
+    // 🔑 PIN 코드로 잠금 해제 시도
     const unlock = (input) => {
         if (input === password) {
             setIsLocked(false);
+            setShowPinFallback(false);
             return true;
         }
         return false;
@@ -54,9 +101,9 @@ export function LockProvider({ children }) {
         setIsLockEnabled(enabled);
         setPassword(newPass);
 
-        // 설정을 끄면 즉시 잠금 해제
         if (!enabled) {
             setIsLocked(false);
+            setShowPinFallback(false);
         }
     };
 
@@ -66,7 +113,11 @@ export function LockProvider({ children }) {
             password,
             isLocked,
             isLoading,
+            isBiometricAvailable,
+            showPinFallback,
+            setShowPinFallback,
             unlock,
+            tryBiometricAuth,
             updateLockSettings,
             setIsLocked,
             reloadSettings: loadSettings

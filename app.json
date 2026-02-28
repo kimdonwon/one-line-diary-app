@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "한줄일기",
-    "slug": "oneline-diary",
+    "name": "오늘조각",
+    "slug": "today-piece",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -23,6 +23,12 @@
     "plugins": [
       "expo-asset",
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d5848bb5-18eb-4737-b10e-47f90e01d196"
+      }
+    },
+    "owner": "mrbob"
   }
 }

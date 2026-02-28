@@ -5,58 +5,73 @@
 ## 1. 최상단 네비게이션 및 라우터 (`App.js`)
 
 - **경로**: `/App.js`
-- **역할**: SQLite 데이터베이스 초기화(앱 구동 시 로딩 화면 렌더링)가 끝나면 `react-navigation`의 라우팅 구조(Bottom Tabs + Stack)를 사용해 화면들을 연결합니다.
-  - **하단 탭 바 (`MainTabs`)**: Home, Stats, +(Write), Search, Settings 등 주요 기능 요소들이 배치된 커스텀 네비게이션 뷰.
-  - **스택 라우팅 (`Stack.Navigator`)**: `MainTabs`, `Write`, `Summary`, `ActivityList`, `MoodList` 등.
+- **역할**: SQLite 데이터베이스 초기화 후 네비게이션 구조(Bottom Tabs + Stack) 연결.
+  - **하단 탭 바 (`MainTabs`)**: Home, Stats, +(Write), Search, Settings
+  - **스택 라우팅 (`Stack.Navigator`)**: `MainTabs`, `Write`, `Summary`, `ActivityList`, `MoodList`
+- **기본 색상 규칙**: 기분 데이터 없을 때 HAPPY(초록, #7CD4A0)를 기본값으로 사용
 
 ## 2. 메인 스크린 (캘린더 및 일기 목록)
 
-- **파일명**: `MainScreen.js`
-- **경로**: `/src/logic/screens/MainScreen.js`
-- **역할**: 앱 탭 바의 'Home' 탭에 해당하며 가장 중요한 캘린더 화면입니다. 기분 캐릭터와 달력 레이아웃을 제공하고 한 주, 한 달의 데일리 기록을 렌더링합니다.
-- **주요 UI 컴포넌트**: `MoodCharacter`, `DiaryListItem`, `MoodBar`
-- **특징**: 상단 헤더 영역이 스크롤(`ScrollView`) 내부에 있어 컨텐츠와 혼연일체로 부드럽게 감겨 올라갑니다.
+- **파일명**: `MainScreen.view.js`, `MainScreen.logic.js`, `MainScreen.styles.js`
+- **경로**: `/src/screens/MainScreen/`
+- **역할**: 캘린더 + 월간 기분/활동 요약 + 일기 목록
+- **주요 기능**:
+  - 📅 **캘린더 터치 효과**: 날짜 셀 터치 시 `Animated.spring` scale bounce (0.85 → 1.0)
+  - 📅 **스와이프 제스처**: `PanResponder`로 좌우 드래그 시 이전/다음 달 이동 (50px 이상 dx)
+  - 🎨 **주간 기분 색상**: 해당 주의 가장 빈번한 기분의 `bgColor`로 셀 배경 tinting
+  - 📊 **게이지 애니메이션**: MoodBar + 활동 바 모두 0% → 목표%까지 600ms 게이지 차오름
+  - 🎉 **팡 효과**: "이번 달 주인공" 배너 터치 → `ConfettiEffect` 파티클 발사
 
 ## 3. 요약 스크린 (데이터 시각화 차트)
 
-- **파일명**: `SummaryScreen.js`
-- **경로**: `/src/logic/screens/SummaryScreen.js`
-- **역할**: 지난 1년 동안의 기분과 활동 통계를 가로 스크롤 가능한 페이저 형태로 보여줍니다 (1페이지: 기분, 2페이지: 활동). 꺾은선 그래프와 같은 시각화가 포함되어 있습니다.
-- **주요 이벤트**: `MoodBar`나 활동 비율을 터치하면 해당하는 상세 리스트 화면으로 넘어갑니다.
+- **파일명**: `SummaryScreen.view.js`, `SummaryScreen.logic.js`, `SummaryScreen.styles.js`
+- **경로**: `/src/screens/SummaryScreen/`
+- **역할**: 연간 기분/활동 통계 (2페이지 가로 스크롤)
+- **주요 기능**:
+  - 📊 **게이지 애니메이션**: 전체 밸런스, 활동 분야별 요약 바 차오름 효과
+  - 🎉 **팡 효과**: "올해의 핵심 기분", "올해의 최다 활동" 배너 터치 → `ConfettiEffect`
 
 ## 4. 글쓰기/수정 스크린
 
-- **파일명**: `WriteScreen.js`
-- **경로**: `/src/logic/screens/WriteScreen.js`
-- **역할**: 캘린더에 기분과 기록을 작성하거나 수정할 때 사용되는 화면입니다.
-- **주요 UI 컴포넌트**: 활동 선택용 Chip 버튼, 기분 선택용 카드 그리드.
+- **파일명**: `WriteScreen.view.js`, `WriteScreen.logic.js`, `WriteScreen.styles.js`
+- **경로**: `/src/screens/WriteScreen/`
+- **역할**: 기분 + 일기 + 활동 + 스티커 작성/수정
+- **프리미엄 연동**: `isPremium` 상태에 따라 스티커 최대 개수 조절 (free: 5, premium: 99)
 
-## 5. 활동별 리스트 스크린
+## 5. 잠금 화면 (LockScreen) — Doodle Flash 스타일 리디자인
 
-- **파일명**: `ActivityListScreen.js`
-- **경로**: `/src/logic/screens/ActivityListScreen.js`
-- **역할**: `SummaryScreen`에서 특정 '활동 요약 바'를 눌렀을 때 진입하는 화면입니다. 해당 활동을 했던 날들의 **일기 기록(DiaryListItem)** 들을 모아서 리스트 형태로 렌더링합니다.
+- **파일명**: `LockScreen.view.js`, `LockScreen.styles.js`
+- **경로**: `/src/screens/LockScreen/`
+- **디자인 특징** (Doodle Flash 원칙 적용):
+  - 🎨 외곽선 없는 파스텔 면 기반 숫자 패드 (borderWidth 제거)
+  - ✦ 반짝이 데코 장식 (position: absolute)
+  - 🔐 초록색(HAPPY) 포인트 컬러 도트 + scale 애니메이션
+  - 📳 오류 시 도트 줄 전체 shake 애니메이션
+  - 🫳 지문 아이콘 SVG + "생체인증으로 열기" 링크
 
-## 6. 기분별 리스트 스크린
+## 6. PIN 설정 모달 (PinSetupModal)
 
-- **파일명**: `MoodListScreen.js`
-- **경로**: `/src/logic/screens/MoodListScreen.js`
-- **역할**: `SummaryScreen`에서 특정 '감정 비율 바(`MoodBar`)'를 눌렀을 때 진입하며, 1년간 해당 기분(Mood)으로 작성된 일기 기록들을 정렬해서 보여줍니다.
+- **파일명**: `PinSetupModal.js`
+- **경로**: `/src/components/PinSetupModal/`
+- **역할**: 설정 화면에서 비밀번호 설정/변경 시 사용하는 bottom-sheet 스타일 모달
+- **2단계 플로우**: "새 비밀번호 입력" → "비밀번호 확인" (불일치 시 shake + 진동)
 
-## 7. 검색 모듈 (SearchScreen)
+## 7. ConfettiEffect 컴포넌트
 
-- **파일명**: `SearchScreen.js`, `SearchLayer.js`
-- **경로**: `/src/logic/screens/SearchScreen.js`, `/src/design/SearchLayer.js`
-- **역할**: 하단 탭 바의 'Search' 탭에 해당하며 `SearchLayer` 기반의 검색창(`SearchBar`)을 렌더링합니다.
-- **최신 디자인 변경**: MainScreen으로부터 완전히 독립된 뷰(Route)를 갖도록 분리되었으며, 렌더링 모듈 분리를 위해 `useSearchLogic`과 통합되었습니다.
+- **파일명**: `ConfettiEffect.js`
+- **경로**: `/src/components/ConfettiEffect.js`
+- **역할**: 이모지/텍스트가 중심에서 사방으로 팡 터지는 파티클 효과
+- **트리거**: `trigger` prop 증가 시 `particleCount`개 파티클 생성 + scale/translate/opacity 애니메이션
 
-## 8. 공통 UI 컴포넌트 및 에셋 모음
+## 8. 설정 스크린
 
-- **파일명**: `components.js`, `theme.js`, `stickers.js`, `DoodleStickers.js`, `DraggableSticker.js`
-- **경로**: `/src/design/` 하위
-- **역할**:
-  - `components.js`: 공통 버튼, 카드 등 UI 컴포넌트.
-  - `theme.js`: 색상, 여백, 그림자 등 테마 정보.
-  - `stickers.js`: '다꾸' 기능을 위한 텍스트(Emoji/Kaomoji) 및 커스텀 그래픽(SVG) 스티커 리스트.
-  - `DoodleStickers.js`: 'Doodle Flash' 스타일(No Outlines)이 적용된 SVG 기반 브랜드 스티커 컴포넌트 모음.
-  - `DraggableSticker.js`: `PanResponder`를 활용하여 자유롭게 드래그하고 위치를 조정할 수 있는 스티커 컴포넌트 (일기 작성 화면 내부 등에서 사용).
+- **파일명**: `SettingsScreen.view.js`, `SettingsScreen.logic.js`, `SettingsScreen.styles.js`
+- **경로**: `/src/screens/SettingsScreen/`
+- **주요 섹션**:
+  - **보안**: 암호 잠금 스위치 + 비밀번호 변경 (PinSetupModal 연동)
+  - **프리미엄**: 업그레이드 토글 버튼 (스티커 제한 해제)
+
+## 9. 공통 UI 컴포넌트
+
+- **파일명**: `components/index.js`, `theme.js`, `stickers.js`, `DoodleStickers.js`, `DraggableSticker.js`
+- **MoodBar**: 게이지 차오름 애니메이션 적용 (`Animated.timing`, 600ms)

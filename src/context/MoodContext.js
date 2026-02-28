@@ -7,7 +7,7 @@ const MoodContext = createContext();
 
 export function MoodProvider({ children }) {
     // 디폴트 기분: 작성된 기록이 없을 땐 'SOSO' (곰돌이, 베이지색)
-    const [weeklyMood, setWeeklyMood] = useState(getMoodByKey('SOSO'));
+    const [weeklyMood, setWeeklyMood] = useState(getMoodByKey('HAPPY'));
 
     const loadWeeklyMood = useCallback(async () => {
         try {
@@ -32,7 +32,7 @@ export function MoodProvider({ children }) {
                 const top = stats.reduce((prev, current) => (prev.count > current.count) ? prev : current);
                 setWeeklyMood(getMoodByKey(top.mood));
             } else {
-                setWeeklyMood(getMoodByKey('SOSO'));
+                setWeeklyMood(getMoodByKey('HAPPY'));
             }
         } catch (e) {
             console.log('Failed to load weekly mood app-wide:', e);

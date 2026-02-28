@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { MOOD_LIST } from '../../constants/mood';
 import { ACTIVITIES } from '../../constants/activities';
+import { STICKER_CATEGORIES, STICKER_PACK_DATA } from '../../constants/stickers';
 import { useDiaryForDate, useActivitiesForDate, saveDiary, saveActivities } from '../../hooks/useDiary';
+import { getSetting, saveSetting } from '../../database/db';
 
 /**
  * ⚙️ 작성(Write) 화면의 모든 비즈니스 로직과 폼 상태 관리를 담당하는 커스텀 훅입니다.
@@ -27,6 +29,18 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const [inputBoxBounds, setInputBoxBounds] = useState({ width: 0, height: 0, x: 0, y: 0 });
     const [isStickerLimitModalVisible, setStickerLimitModalVisible] = useState(false);
 
+    // 🔔 커스텀 알림 상태 추가
+    const [showAlert, setShowAlert] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
+
+    // 프리미엄 상태
+    const [isPremium, setIsPremium] = useState(false);
+
+    // 스티커 서랍 관리 상태
+    const defaultCats = STICKER_PACK_DATA.filter(p => p.isDefault).map(p => p.catId);
+    const [enabledCatIds, setEnabledCatIds] = useState(defaultCats);
+    const [showManager, setShowManager] = useState(false);
+
     // 활동 선택 및 서술 관리를 위한 상태 (메타데이터 배열)
     const [activityStates, setActivityStates] = useState(
         ACTIVITIES.map(a => ({ key: a.key, selected: false, title: '', note: '' }))
@@ -49,6 +63,68 @@ export function useWriteLogic(route, navigation, scrollRef) {
         }
     }, [diary]);
 
+    // 프리미엄 상태 및 스티커 설정 로드
+    useEffect(() => {
+        (async () => {
+            try {
+                const premiumVal = await getSetting('isPremium');
+                setIsPremium(premiumVal === 'true');
+
+                const enabledVal = await getSetting('enabledStickerCats');
+                if (enabledVal) {
+                    setEnabledCatIds(JSON.parse(enabledVal));
+                }
+            } catch (e) {
+                console.log('Failed to load settings in WriteScreen:', e);
+            }
+        })();
+    }, []);
+
+    const toggleCategory = async (catId) => {
+        const nextIds = enabledCatIds.includes(catId)
+            ? enabledCatIds.filter(id => id !== catId)
+            : [...enabledCatIds, catId];
+
+        // 최소 하나의 카테고리는 남겨둠
+        if (nextIds.length === 0) return;
+
+        setEnabledCatIds(nextIds);
+        await saveSetting('enabledStickerCats', JSON.stringify(nextIds));
+    };
+
+    // 카테고리 순서 (전체 팩 순서 관리)
+    const [catOrder, setCatOrder] = useState(defaultCats);
+
+    useEffect(() => {
+        (async () => {
+            const orderVal = await getSetting('stickerCatOrder');
+            if (orderVal) setCatOrder(JSON.parse(orderVal));
+        })();
+    }, []);
+
+    const moveCategory = async (catId, direction) => {
+        const idx = catOrder.indexOf(catId);
+        if (idx < 0) return;
+        const targetIdx = idx + direction;
+        if (targetIdx < 0 || targetIdx >= catOrder.length) return;
+
+        const newOrder = [...catOrder];
+        [newOrder[idx], newOrder[targetIdx]] = [newOrder[targetIdx], newOrder[idx]];
+        setCatOrder(newOrder);
+        await saveSetting('stickerCatOrder', JSON.stringify(newOrder));
+    };
+
+    const swapCategory = async (id1, id2) => {
+        const idx1 = catOrder.indexOf(id1);
+        const idx2 = catOrder.indexOf(id2);
+        if (idx1 < 0 || idx2 < 0 || idx1 === idx2) return;
+
+        const newOrder = [...catOrder];
+        [newOrder[idx1], newOrder[idx2]] = [newOrder[idx2], newOrder[idx1]];
+        setCatOrder(newOrder);
+        await saveSetting('stickerCatOrder', JSON.stringify(newOrder));
+    };
+
     /**
      * 기존에 저장된 활동 기록(Activities)이 있다면 상태를 복원합니다.
      */
@@ -70,9 +146,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
      * 📖 일기 본문 입력 헨들러 (최대 5줄 제한 적용)
      */
     const handleContentChange = (text) => {
-        const safeText = text || '';
-        if (safeText.split('\n').length > 5) return;
-        setContent(safeText);
+        setContent(text || '');
     };
 
     /**
@@ -82,7 +156,8 @@ export function useWriteLogic(route, navigation, scrollRef) {
      * @param {boolean} isGraphic - 그래픽 스티커 여부 판별 플래그
      */
     const handleStickerPress = (stickerId, isGraphic = false) => {
-        if (stickers.length >= 5) {
+        const MAX_STICKERS = isPremium ? 99 : 5;
+        if (stickers.length >= MAX_STICKERS) {
             setStickerLimitModalVisible(true);
             return;
         }
@@ -133,13 +208,11 @@ export function useWriteLogic(route, navigation, scrollRef) {
      */
     const handleSave = async () => {
         if (!selectedMood) {
-            Alert.alert('알림', '기분을 선택해주세요!');
+            setAlertConfig({ title: '기분을 정해주세요!', message: '오늘의 조각을 완성하려면\n기분 선택이 필요해요 ✨' });
+            setShowAlert(true);
             return;
         }
-        if (!content.trim()) {
-            Alert.alert('알림', '일기를 작성해주세요!');
-            return;
-        }
+
 
         try {
             await saveDiary(date, content.trim(), selectedMood, JSON.stringify(stickers));
@@ -176,6 +249,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
         inputBoxBounds,
         isStickerLimitModalVisible,
         activityStates,
+        showAlert,
+        setShowAlert,
+        alertConfig,
 
         // Settings
         setSelectedMood,
@@ -192,6 +268,15 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setActivityTitle,
         setActivityNote,
         handleSave,
-        slideToBottom
+        slideToBottom,
+
+        // Drawer Manager
+        enabledCatIds,
+        catOrder,
+        showManager,
+        setShowManager,
+        toggleCategory,
+        moveCategory,
+        swapCategory
     };
 }

@@ -3,7 +3,6 @@
 // react-native-svg 기반 - 모든 사이즈에서 선명한 벡터 렌더링
 
 import React from 'react';
-import { View } from 'react-native';
 import Svg, { Circle, Ellipse, Path, Rect, G, Line } from 'react-native-svg';
 
 const LINE = '#5C4033';  // 따뜻한 브라운 라인 (검정 대신)
@@ -14,17 +13,15 @@ const LW = 2.5;          // 기본 선 두께 (4 → 2.5로 가벼워짐)
 function FrogCharacter({ size = 48 }) {
     return (
         <Svg width={size} height={size} viewBox="0 0 100 100">
-            {/* 왼쪽 눈 배경 */}
+            {/* 왼쪽 눈 */}
             <Circle cx="32" cy="28" r="18" fill="#7CD4A0" stroke={LINE} strokeWidth={LW} />
             <Circle cx="32" cy="28" r="12" fill="#fff" stroke={LINE} strokeWidth={LW - 0.5} />
-            <Circle cx="34" cy="26" r="5" fill="#4A3728" />
-            <Circle cx="36" cy="23" r="3" fill="#fff" />
+            <Circle cx="32" cy="28" r="4" fill={LINE} />
 
-            {/* 오른쪽 눈 배경 */}
+            {/* 오른쪽 눈 */}
             <Circle cx="68" cy="28" r="18" fill="#7CD4A0" stroke={LINE} strokeWidth={LW} />
             <Circle cx="68" cy="28" r="12" fill="#fff" stroke={LINE} strokeWidth={LW - 0.5} />
-            <Circle cx="70" cy="26" r="5" fill="#4A3728" />
-            <Circle cx="72" cy="23" r="3" fill="#fff" />
+            <Circle cx="68" cy="28" r="4" fill={LINE} />
 
             {/* 몸통 */}
             <Ellipse cx="50" cy="62" rx="38" ry="30" fill="#7CD4A0" stroke={LINE} strokeWidth={LW} />
@@ -44,128 +41,95 @@ function FrogCharacter({ size = 48 }) {
 }
 
 // ─── 🐱 고양이 (슬픔 / SAD) ───
-// 파스텔 블루, 작은 귀, 검은 눈동자, 잘 보이는 눈물
+// 유저 제공 도안 기반: 파란색 몸체, U자형 감은 눈, 눈물 한 방울
 function CatCharacter({ size = 48 }) {
+    const BODY = "#8BBFEF"; // 파란색 고양이
     return (
-        <Svg width={size} height={size} viewBox="0 0 100 100">
-            {/* 귀 (작게) */}
-            <Path d="M 22 38 L 18 22 L 38 32 Z" fill="#8BBFEF" stroke={LINE} strokeWidth={LW} strokeLinejoin="round" />
-            <Path d="M 25 35 L 22 27 L 34 33 Z" fill="#FFDDE4" />
+        <Svg width={size} height={size} viewBox="-2 -2 104 104">
+            <G transform="translate(50, 55) scale(1.2) translate(-50, -55)">
+                {/* 🐱 고양이 실루엣 (Body & Ears combined) */}
+                <Path
+                    d="M 22 50 C 22 25, 25 18, 32 15 L 38 32 Q 50 28 62 32 L 68 15 C 75 18, 78 25, 78 50 C 78 85, 22 85, 22 50"
+                    fill={BODY}
+                    stroke={LINE}
+                    strokeWidth={LW}
+                    strokeLinejoin="round"
+                />
 
-            <Path d="M 78 38 L 82 22 L 62 32 Z" fill="#8BBFEF" stroke={LINE} strokeWidth={LW} strokeLinejoin="round" />
-            <Path d="M 75 35 L 78 27 L 66 33 Z" fill="#FFDDE4" />
+                {/* 🐱 귀 안쪽 라인 (Inner Ear Outlines) */}
+                <Path d="M 28 22 L 32 32" fill="none" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+                <Path d="M 72 22 L 68 32" fill="none" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
 
-            {/* 얼굴 */}
-            <Ellipse cx="50" cy="58" rx="40" ry="34" fill="#8BBFEF" stroke={LINE} strokeWidth={LW} />
+                {/* 🐱 눈 (U-shaped Closed Eyes) */}
+                <Path d="M 36 48 Q 41 53 46 48" fill="none" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+                <Path d="M 54 48 Q 59 53 64 48" fill="none" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
 
-            {/* 눈 ( >< 감은 눈 ) */}
-            <Path d="M 28 44 L 34 50 L 28 56" fill="none" stroke={LINE} strokeWidth={LW} strokeLinecap="round" strokeLinejoin="round" />
-            <Path d="M 72 44 L 66 50 L 72 56" fill="none" stroke={LINE} strokeWidth={LW} strokeLinecap="round" strokeLinejoin="round" />
+                {/* 🐱 코 (Circular Nose) */}
+                <Circle cx="50" cy="56" r="3" fill="none" stroke={LINE} strokeWidth={LW} />
 
-            {/* 눈물 (흰색으로 잘 보이게) */}
-            <Line x1="34" y1="54" x2="34" y2="76" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
-            <Line x1="66" y1="54" x2="66" y2="76" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
+                {/* 🐱 볼 홍조 (Blush - 더 작게) */}
+                <Ellipse cx="33" cy="58" rx="4" ry="2" fill="#FFB5B5" opacity="0.6" />
+                <Ellipse cx="67" cy="58" rx="4" ry="2" fill="#FFB5B5" opacity="0.6" />
 
-            {/* 볼 홍조 */}
-            <Ellipse cx="20" cy="60" rx="7" ry="4" fill="#FFB5B5" opacity="0.8" />
-            <Ellipse cx="80" cy="60" rx="7" ry="4" fill="#FFB5B5" opacity="0.8" />
+                {/* 🐱 눈물 (Single Teardrop on the right) */}
+                <Path d="M 62 55 Q 59 61 62 67 Q 65 61 62 55" fill="#fff" stroke={LINE} strokeWidth="1" />
 
-            {/* 코 */}
-            <Ellipse cx="50" cy="60" rx="4" ry="2.5" fill="#FFB5B5" stroke={LINE} strokeWidth="1.5" />
+                {/* 🐱 입 (Sad Curve) */}
+                <Path d="M 43 72 Q 50 65 57 72" fill="none" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
 
-            {/* 입 (처진 입) */}
-            <Path d="M 44 67 Q 50 63 56 67" fill="none" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+                {/* 🐱 수염 (Whiskers - 더욱 짧고 귀엽게) */}
+                <Path d="M 29 55 L 22 52" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+                <Path d="M 29 62 L 20 62" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+                <Path d="M 29 69 L 22 72" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
 
-            {/* 수염 */}
-            <Line x1="14" y1="58" x2="26" y2="60" stroke={LINE} strokeWidth="1.5" strokeLinecap="round" />
-            <Line x1="12" y1="65" x2="25" y2="64" stroke={LINE} strokeWidth="1.5" strokeLinecap="round" />
-            <Line x1="86" y1="58" x2="74" y2="60" stroke={LINE} strokeWidth="1.5" strokeLinecap="round" />
-            <Line x1="88" y1="65" x2="75" y2="64" stroke={LINE} strokeWidth="1.5" strokeLinecap="round" />
+                <Path d="M 71 55 L 78 52" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+                <Path d="M 71 62 L 80 62" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+                <Path d="M 71 69 L 78 72" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+            </G>
         </Svg>
     );
 }
 
-// ─── 🐥 병아리 (놀람 / SURPRISED) ───
-// 파스텔 옐로우, 입을 쫙 벌린 놀란 표정
+// ─── 🐥 병아리 (화남 / ANGRY) ───
+// 새 도안 기반 재설계: 동그란 얼굴, 삐죽한 눈썹, 다이아몬드 부리
 function ChickCharacter({ size = 48 }) {
+    const YELLOW = "#FFD485";
     return (
-        <Svg width={size} height={size} viewBox="0 0 100 100">
-            {/* 머리 깃 */}
-            <Path d="M 50 14 Q 44 4 48 10 Q 42 2 50 8 Q 58 2 52 10 Q 56 4 50 14" fill="#FFD485" stroke={LINE} strokeWidth="1.5" />
+        <Svg width={size} height={size} viewBox="-2 -2 104 104">
+            {/* 🐥 몸통/머리 (동그란 형태) */}
+            <Circle cx="50" cy="55" r="40" fill={YELLOW} stroke={LINE} strokeWidth={LW} />
 
-            {/* 몸통 */}
-            <Ellipse cx="50" cy="52" rx="36" ry="34" fill="#FFD485" stroke={LINE} strokeWidth={LW} />
+            {/* 🐥 머리 깃 (단순한 세 줄기) */}
+            <Line x1="50" y1="15" x2="50" y2="5" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+            <Line x1="50" y1="15" x2="43" y2="7" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+            <Line x1="50" y1="15" x2="57" y2="7" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
 
-            {/* 왼쪽 날개 (위로 올림 — 놀라서!) */}
-            <Path d="M 14 44 Q 6 36 16 30" fill="#F5C34B" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
-            {/* 오른쪽 날개 */}
-            <Path d="M 86 44 Q 94 36 84 30" fill="#F5C34B" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+            {/* 🐥 화난 눈 eyebrow ( \ / ) */}
+            <Path d="M 30 38 L 44 42" stroke={LINE} strokeWidth={LW + 0.5} fill="none" strokeLinecap="round" />
+            <Path d="M 70 38 L 56 42" stroke={LINE} strokeWidth={LW + 0.5} fill="none" strokeLinecap="round" />
 
-            {/* 왼쪽 눈 (크게 놀란!) */}
-            <Circle cx="36" cy="42" r="12" fill="#fff" stroke={LINE} strokeWidth={LW} />
-            <Circle cx="38" cy="40" r="5.5" fill="#4A3728" />
-            <Circle cx="40" cy="37" r="2.5" fill="#fff" />
+            {/* 🐥 눈 (작은 점 눈) */}
+            <Circle cx="38" cy="51" r="2.5" fill={LINE} />
+            <Circle cx="62" cy="51" r="2.5" fill={LINE} />
 
-            {/* 오른쪽 눈 */}
-            <Circle cx="64" cy="42" r="12" fill="#fff" stroke={LINE} strokeWidth={LW} />
-            <Circle cx="66" cy="40" r="5.5" fill="#4A3728" />
-            <Circle cx="68" cy="37" r="2.5" fill="#fff" />
+            {/* 🐥 부리 (다이아몬드 형태 + 가운데 선) */}
+            <Path
+                d="M 50 48 L 58 63 L 50 78 L 42 63 Z"
+                fill="#FF8C2D"
+                stroke={LINE}
+                strokeWidth={LW}
+                strokeLinejoin="round"
+            />
+            <Line x1="42" y1="63" x2="58" y2="63" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
 
-            {/* 부리 — 쫙 벌린 입 (위아래 크게!) */}
-            <Path d="M 38 58 L 50 50 L 62 58 Z" fill="#FFA94D" stroke={LINE} strokeWidth="1.5" strokeLinejoin="round" />
-            <Path d="M 38 62 L 50 78 L 62 62 Z" fill="#FF8C2D" stroke={LINE} strokeWidth="1.5" strokeLinejoin="round" />
-
-            {/* 볼 홍조 */}
-            <Ellipse cx="20" cy="52" rx="7" ry="4" fill="#FFB5B5" opacity="0.8" />
-            <Ellipse cx="80" cy="52" rx="7" ry="4" fill="#FFB5B5" opacity="0.8" />
+            {/* 🐥 볼 홍조 (가로로 긴 타원) */}
+            <Ellipse cx="26" cy="65" rx="8" ry="4" fill="#FF7676" opacity="0.4" />
+            <Ellipse cx="74" cy="65" rx="8" ry="4" fill="#FF7676" opacity="0.4" />
         </Svg>
     );
 }
 
-// ─── 🐙 문어 (당황 / EMBARRASSED) ───
-// 파스텔 핑크, 눈이 옆을 봄, 머쓱한 입, 땀방울
-function OctopusCharacter({ size = 48 }) {
-    return (
-        <Svg width={size} height={size} viewBox="0 0 100 100">
-            {/* 머리 */}
-            <Path d="M 20 55 Q 20 12 50 12 Q 80 12 80 55 L 80 58 L 20 58 Z"
-                fill="#FFB5B5" stroke={LINE} strokeWidth={LW} />
 
-            {/* 눈 (옆을 보는 머쓱한 눈) */}
-            <Circle cx="36" cy="38" r="10" fill="#fff" stroke={LINE} strokeWidth={LW} />
-            <Circle cx="40" cy="38" r="4" fill="#4A3728" />
-            <Circle cx="42" cy="36" r="1.5" fill="#fff" />
-
-            <Circle cx="64" cy="38" r="10" fill="#fff" stroke={LINE} strokeWidth={LW} />
-            <Circle cx="68" cy="38" r="4" fill="#4A3728" />
-            <Circle cx="70" cy="36" r="1.5" fill="#fff" />
-
-            {/* 볼 홍조 (당황! 크고 선명하게) */}
-            <Ellipse cx="24" cy="48" rx="9" ry="5" fill="#FF8FAB" opacity="0.9" />
-            <Ellipse cx="76" cy="48" rx="9" ry="5" fill="#FF8FAB" opacity="0.9" />
-
-            {/* 입 (머쓱한 일자 + 살짝 비뚤어진 입) */}
-            <Path d="M 40 53 L 48 51 L 52 54 L 60 52" fill="none" stroke={LINE} strokeWidth={LW} strokeLinecap="round" strokeLinejoin="round" />
-
-            {/* 다리들 (곱슬) */}
-            <Path d="M 22 58 Q 16 70 22 80 Q 28 90 22 95" fill="none" stroke="#FFB5B5" strokeWidth="7" strokeLinecap="round" />
-            <Path d="M 22 58 Q 16 70 22 80 Q 28 90 22 95" fill="none" stroke={LINE} strokeWidth="7.5" strokeLinecap="round" opacity="0.08" />
-
-            <Path d="M 38 60 Q 32 72 38 82 Q 44 92 38 97" fill="none" stroke="#FFB5B5" strokeWidth="7" strokeLinecap="round" />
-            <Path d="M 38 60 Q 32 72 38 82 Q 44 92 38 97" fill="none" stroke={LINE} strokeWidth="7.5" strokeLinecap="round" opacity="0.08" />
-
-            <Path d="M 62 60 Q 68 72 62 82 Q 56 92 62 97" fill="none" stroke="#FFB5B5" strokeWidth="7" strokeLinecap="round" />
-            <Path d="M 62 60 Q 68 72 62 82 Q 56 92 62 97" fill="none" stroke={LINE} strokeWidth="7.5" strokeLinecap="round" opacity="0.08" />
-
-            <Path d="M 78 58 Q 84 70 78 80 Q 72 90 78 95" fill="none" stroke="#FFB5B5" strokeWidth="7" strokeLinecap="round" />
-            <Path d="M 78 58 Q 84 70 78 80 Q 72 90 78 95" fill="none" stroke={LINE} strokeWidth="7.5" strokeLinecap="round" opacity="0.08" />
-
-            {/* 땀방울 2개 */}
-            <Path d="M 82 20 Q 85 14 88 20 Q 88 26 82 26 Q 79 26 82 20" fill="#D4EEFF" stroke="#8BBFEF" strokeWidth="1.5" />
-            <Path d="M 76 12 Q 78 8 80 12 Q 80 16 76 16 Q 74 16 76 12" fill="#D4EEFF" stroke="#8BBFEF" strokeWidth="1" />
-        </Svg>
-    );
-}
 
 // ─── 🐻 곰 (쏘쏘 / SOSO) ───
 // 파스텔 그레이, 동그란 귀, 살짝 미소 (무표정 → 미소로 변경)
@@ -200,8 +164,56 @@ function BearCharacter({ size = 48 }) {
             <Ellipse cx="50" cy="60" rx="6" ry="4" fill="#4A3728" />
             <Ellipse cx="49" cy="59" rx="2" ry="1.2" fill="#7A6555" />
 
-            {/* 입 (살짝 미소 ← 무표정에서 변경) */}
-            <Path d="M 42 68 Q 50 74 58 68" fill="none" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+            {/* 입 (일직선 'ㅡ' 모양으로 변경) */}
+            <Line x1="44" y1="72" x2="56" y2="72" stroke={LINE} strokeWidth={LW} strokeLinecap="round" />
+        </Svg>
+    );
+}
+
+// ─── 🐰 토끼 (당황 / CONFUSED) ───
+// 파스텔 핑크, 긴 귀, 동그란 눈, 물음표
+function RabbitCharacter({ size = 48 }) {
+    return (
+        <Svg width={size} height={size} viewBox="-2 -2 104 104">
+            {/* 🐰 머리와 귀가 하나로 이어진 실루엣 (선 두께 살짝 조정) */}
+            <Path
+                d="M 33.5 37.5 L 26 11 Q 34 1 42 11 L 43.5 32.5 A 34 34 0 0 1 56.5 32.5 L 58 11 Q 66 1 74 11 L 66.5 37.5 A 34 34 0 1 1 33.5 37.5"
+                fill="#FFDDE4"
+                stroke={LINE}
+                strokeWidth={LW - 0.4}
+                strokeLinejoin="round"
+            />
+
+            {/* 속귀 (귀 모양 그대로 사이즈만 줄여서 재현) */}
+            <Path d="M 34.5 33 L 30 15 Q 34 8 38 15 L 39 33 Z" fill="#FFFFFF" />
+            <Path d="M 61 33 L 62 15 Q 66 8 70 15 L 65.5 33 Z" fill="#FFFFFF" />
+
+            {/* 눈 (흰색 눈 확대 + 눈동자 점 유지) */}
+            <Circle cx="40" cy="62" r="10" fill="#fff" stroke={LINE} strokeWidth={LW - 1} />
+            <Circle cx="40" cy="62" r="2" fill={LINE} />
+            <Circle cx="60" cy="62" r="10" fill="#fff" stroke={LINE} strokeWidth={LW - 1} />
+            <Circle cx="60" cy="62" r="2" fill={LINE} />
+
+            {/* 입 (더 큰 삼각형 입) */}
+            <Path d="M 44 74 L 50 86 L 56 74 Z" fill="#FFA94D" stroke={LINE} strokeWidth="1.5" strokeLinejoin="round" />
+
+            {/* 볼 홍조 */}
+            <Ellipse cx="25" cy="72" rx="8" ry="4" fill="#FFB5B5" opacity="0.8" />
+            <Ellipse cx="75" cy="72" rx="8" ry="4" fill="#FFB5B5" opacity="0.8" />
+
+            {/* 물음표 3개 (Doodle 스타일) */}
+            <G transform="translate(82, 28) rotate(15)">
+                <Path d="M -4 -6 C -4 -12, 4 -12, 4 -6 C 4 -3, 0 -3, 0 2" fill="none" stroke={LINE} strokeWidth="2.5" strokeLinecap="round" />
+                <Circle cx="0" cy="7" r="2" fill={LINE} />
+            </G>
+            <G transform="translate(92, 40) rotate(10) scale(0.7)">
+                <Path d="M -4 -6 C -4 -12, 4 -12, 4 -6 C 4 -3, 0 -3, 0 2" fill="none" stroke={LINE} strokeWidth="2.5" strokeLinecap="round" />
+                <Circle cx="0" cy="7" r="2" fill={LINE} />
+            </G>
+            <G transform="translate(74, 44) rotate(-10) scale(0.6)">
+                <Path d="M -4 -6 C -4 -12, 4 -12, 4 -6 C 4 -3, 0 -3, 0 2" fill="none" stroke={LINE} strokeWidth="2.5" strokeLinecap="round" />
+                <Circle cx="0" cy="7" r="2" fill={LINE} />
+            </G>
         </Svg>
     );
 }
@@ -211,8 +223,8 @@ const CHARACTER_MAP = {
     frog: FrogCharacter,
     cat: CatCharacter,
     chick: ChickCharacter,
-    octopus: OctopusCharacter,
     bear: BearCharacter,
+    rabbit: RabbitCharacter,
 };
 
 export function MoodCharacter({ character, size = 48 }) {
@@ -221,4 +233,4 @@ export function MoodCharacter({ character, size = 48 }) {
     return <CharComponent size={size} />;
 }
 
-export { FrogCharacter, CatCharacter, ChickCharacter, OctopusCharacter, BearCharacter };
+export { FrogCharacter, CatCharacter, ChickCharacter, BearCharacter, RabbitCharacter };

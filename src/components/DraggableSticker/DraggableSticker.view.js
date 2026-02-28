@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Animated } from 'react-native';
-import { GRAPHIC_STICKERS } from '../../constants/stickers';
+import { getStickerComponent } from '../../constants/stickers';
 
 import { useDraggableLogic } from './DraggableSticker.logic';
 import { styles } from './DraggableSticker.styles';
@@ -16,7 +16,7 @@ export function DraggableStickerView({ sticker, bounds, onDelete, onDragEnd }) {
 
     const renderContent = () => {
         if (sticker.isGraphic) {
-            const GraphicComponent = GRAPHIC_STICKERS.find(g => g.key === sticker.type)?.Component;
+            const GraphicComponent = getStickerComponent(sticker.type);
             if (GraphicComponent) {
                 return <GraphicComponent size={36} />;
             }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { getMoodByKey, MOOD_LIST } from '../../constants/mood';
 import { ACTIVITIES, getActivityByKey } from '../../constants/activities';
@@ -83,9 +83,27 @@ export function useSummaryLogic(route, navigation, scrollRef) {
         ? Math.max(...activityStats.map(a => a.count))
         : 1;
 
+    // 프로그래밍 방식 스크롤 중인지 추적하는 플래그 (탭 버튼 클릭 시)
+    const isProgrammaticScroll = useRef(false);
+
     const onPageScroll = (e) => {
+        // 탭 버튼으로 트리거된 스크롤 중이면 pageIndex 업데이트 무시
+        if (isProgrammaticScroll.current) return;
         const page = Math.round(e.nativeEvent.contentOffset.x / (chartConstants.SCREEN_WIDTH - 32));
-        setPageIndex(page);
+        if (page >= 0 && page <= 1) setPageIndex(page);
+    };
+
+    // 스크롤이 완전히 멈춘 뒤에만 최종 페이지 확정
+    const onMomentumScrollEnd = (e) => {
+        isProgrammaticScroll.current = false;
+        const page = Math.round(e.nativeEvent.contentOffset.x / (chartConstants.SCREEN_WIDTH - 32));
+        if (page >= 0 && page <= 1) setPageIndex(page);
+    };
+
+    const handleTabPress = (i) => {
+        isProgrammaticScroll.current = true; // 스크롤 이벤트 차단
+        setPageIndex(i); // 즉시 탭 UI 반영
+        scrollRef.current?.scrollTo({ x: i * (chartConstants.SCREEN_WIDTH - 32), animated: true });
     };
 
     // 활동 꺾은선 그래프 데이터
@@ -100,11 +118,6 @@ export function useSummaryLogic(route, navigation, scrollRef) {
         return { ...act, values: monthlyValues };
     });
     const maxActivityLineValue = Math.max(...activityLineData.flatMap(a => a.values), 1);
-
-    const handleTabPress = (i) => {
-        scrollRef.current?.scrollTo({ x: i * (chartConstants.SCREEN_WIDTH - 32), animated: true });
-        setPageIndex(i);
-    };
 
     const handleGoBack = () => navigation.goBack();
     const handleMoodPress = (moodKey) => navigation.navigate('MoodList', { year, moodKey });
@@ -128,6 +141,7 @@ export function useSummaryLogic(route, navigation, scrollRef) {
         maxActivityLineValue,
         activityLineData,
         onPageScroll,
+        onMomentumScrollEnd,
         handleTabPress,
         handleGoBack,
         handleMoodPress,

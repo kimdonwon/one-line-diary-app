@@ -30,29 +30,24 @@ export const styles = StyleSheet.create({
     headerTitle: { ...FONTS.subtitle },
     headerSpacer: { width: 40 },
 
-    // 페이지 인디케이터 (탭) - Doodle Flash 스타일 🎨
+    // 간단한 대시 형태의 페이지 인디케이터 (ㅡ ㅡ) 스타일 🎨
     pageIndicator: {
         flexDirection: 'row',
-        justifyContent: 'center',
-        paddingBottom: SPACING.md,
-        gap: 16,
+        alignItems: 'center',
+        alignSelf: 'center',
+        gap: 12,
+        marginTop: SPACING.sm,
+        marginBottom: SPACING.md,
     },
-    pageTab: {
-        paddingVertical: 8,
-        paddingHorizontal: 24,
-        borderRadius: RADIUS.full,
-        backgroundColor: '#FFFFFF',
+    dot: {
+        width: 14,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#E9E9E7',
     },
-    pageTabActive: {
-        backgroundColor: '#FF7474',
-    },
-    pageTabText: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: '#CB9D6C', // 부드러운 쿠키 반죽 색상으로 디폴트 텍스트 처리
-    },
-    pageTabTextActive: {
-        color: '#FFFFFF',
+    dotActive: {
+        width: 24,
+        backgroundColor: '#37352F',
     },
 
     scrollView: { flex: 1 },
@@ -63,9 +58,12 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: SPACING.lg,
-        borderRadius: RADIUS.lg,
+        borderRadius: 12, // 노션 스타일 컨테이너 라운딩
         marginBottom: SPACING.lg,
-        ...SOFT_SHADOW.button,
+        overflow: 'visible', // 폭죽이 밖으로 나갈 수 있게 허용
+        position: 'relative',
+        zIndex: 10, // 폭죽이 다른 카드 위로 보이게 함
+        elevation: 10,
     },
     heroTextWrap: { flex: 1, marginLeft: SPACING.md },
     heroLabel: { fontSize: 13, fontWeight: '600', color: '#FFFFFF', opacity: 0.85 },
@@ -77,7 +75,7 @@ export const styles = StyleSheet.create({
     emptyText: { ...FONTS.body, color: COLORS.textSecondary },
 
     sectionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md },
-    sectionTitle: { ...FONTS.subtitle, fontSize: 18 },
+    sectionTitle: { ...FONTS.subtitle, fontSize: 18, color: '#37352F' },
     chartCard: { marginBottom: SPACING.lg },
 
     monthlyCard: { marginBottom: SPACING.lg },
@@ -129,13 +127,13 @@ export const styles = StyleSheet.create({
     activityGridButton: {
         width: '31%',
         backgroundColor: '#FFFFFF',
-        borderRadius: RADIUS.md,
+        borderRadius: 12, // 노션 스타일 라운딩
         paddingVertical: 14,
         alignItems: 'center', justifyContent: 'center',
-        borderWidth: 1, borderColor: '#F0EBE6',
+        borderWidth: 1, borderColor: '#E9E9E7', // 노션 스타일 얇은 실선
     },
     activityGridIconWrap: { marginBottom: 6 },
-    activityGridLabel: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+    activityGridLabel: { fontSize: 13, fontWeight: '600', color: '#37352F' },
 
     // 유틸
     flexRow: { flexDirection: 'row', alignItems: 'center' },

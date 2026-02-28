@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, FlatList, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StatusBar } from 'react-native';
 
-import { DiaryListItem } from '../../components';
+import { DiaryListItem, Header } from '../../components';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { getMoodByKey } from '../../constants/mood';
 
@@ -39,16 +39,14 @@ export function MoodListScreenView({ route, navigation }) {
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" />
 
-            <View style={styles.header}>
-                <View style={styles.headerTitleContainer}>
-                    <View style={styles.headerIconWrapper}>
-                        <MoodCharacter character={mood.character} size={28} />
-                    </View>
-                    <Text style={styles.headerTitle}>{year}년{month ? ` ${month}월` : ''}의 {mood.label}</Text>
-                </View>
-
-                <View style={styles.spacer} />
-            </View>
+            <Header
+                title={`${year}년${month ? ` ${month}월` : ''}의 ${mood.label}`}
+                leftButton={
+                    <TouchableOpacity onPress={handleGoBack} style={{ marginRight: 8 }}>
+                        <Text style={{ fontSize: 28, color: '#4A3728' }}>‹</Text>
+                    </TouchableOpacity>
+                }
+            />
 
             {loading ? (
                 <View style={styles.centerBox}>

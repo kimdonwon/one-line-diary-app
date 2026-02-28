@@ -2,12 +2,12 @@
 // BRUTALISM 제거 → SOFT_SHADOW 도입
 
 export const COLORS = {
-    background: '#FFF0F5',   // 라벤더 핑크 (부드러운 배경)
+    background: '#F7F3F0',   // 웜 오트밀 (힙하고 중성적인 배경)
     card: '#FFFFFF',
-    text: '#4A3728',         // 따뜻한 다크 브라운 (눈 편한 텍스트)
-    textSecondary: '#9E8E82', // 연한 브라운
-    todayHighlight: '#FF8FAB', // 부드러운 핑크 (오늘 강조)
-    border: '#E8D5CC',       // 연한 베이지 보더
+    text: '#4A3728',         // 따뜻한 다크 브라운
+    textSecondary: '#9E8E82',
+    todayHighlight: '#FF8FAB',
+    border: '#E2DED0',       // 웜톤에 맞춘 연한 베이지 보더
 
     // Mood colors (파스텔 톤)
     happy: '#7CD4A0',        // 파스텔 그린

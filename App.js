@@ -4,6 +4,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { initDB } from './src/database/db';
 import MainScreen from './src/screens/MainScreen';
@@ -40,7 +41,7 @@ const AppTheme = {
 };
 
 // 🍰 귀여운 로딩 화면 컴포넌트
-function LoadingScreen({ title = '한줄일기' }) {
+function LoadingScreen({ title = '오늘조각' }) {
     const bounceAnim = new Animated.Value(0);
     const fadeAnim = new Animated.Value(0);
 
@@ -96,29 +97,32 @@ function LoadingScreen({ title = '한줄일기' }) {
 
 function MainTabs({ navigation }) {
     const weeklyMood = useGlobalWeeklyMood();
-    const activeColor = weeklyMood ? weeklyMood.color : '#8A2BE2';
+    const activeColor = weeklyMood ? weeklyMood.color : COLORS.happy;
+    const insets = useSafeAreaInsets();
 
     return (
         <Tab.Navigator
             screenOptions={{
                 headerShown: false,
                 tabBarShowLabel: false,
-                tabBarActiveTintColor: activeColor,
-                tabBarInactiveTintColor: COLORS.textSecondary,
+                tabBarActiveTintColor: activeColor, // 이번주 기분 색상
+                tabBarInactiveTintColor: '#999999', // 노션 비활성 컬러
                 tabBarStyle: {
                     position: 'absolute',
-                    bottom: 24,
+                    bottom: 16 + insets.bottom,
                     left: 20,
                     right: 20,
                     backgroundColor: '#FFFFFF',
-                    borderRadius: 35,
-                    borderTopWidth: 0,
-                    height: 70,
-                    paddingBottom: 0, // 플로팅 탭바는 하단 패딩 제외
-                    elevation: 8,
-                    shadowColor: '#C9A8B2',
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.3,
+                    borderRadius: 16,   // 노션 컨테이너 라운딩
+                    borderWidth: 1,
+                    borderColor: '#E9E9E7', // 노션 테두리 실선
+                    borderTopWidth: 1,
+                    height: 64, // 약간 더 슬림하게
+                    paddingBottom: 0,
+                    elevation: 4,
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.05,
                     shadowRadius: 10,
                 },
             }}
@@ -151,22 +155,22 @@ function MainTabs({ navigation }) {
                 options={{
                     tabBarIcon: () => (
                         <View style={{
-                            width: 62,
-                            height: 62,
-                            borderRadius: 31,
-                            backgroundColor: activeColor,
+                            width: 56,
+                            height: 56,
+                            borderRadius: 16, // 노션의 스쿼클(Squircle) 스타일
+                            backgroundColor: activeColor, // 이번주 기분 색상으로 복원
                             alignItems: 'center',
                             justifyContent: 'center',
-                            marginTop: -24, // 둥둥 떠오른 느낌
-                            borderWidth: 4,
-                            borderColor: '#FFFFFF', // 흰색 테두리로 스티커 아트웍 느낌 강조
-                            shadowColor: activeColor,
+                            marginTop: -20, // 살짝 떠있도록
+                            borderWidth: 3,
+                            borderColor: '#FFFFFF', // 흰색 테두리
+                            shadowColor: '#000000',
                             shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.4,
+                            shadowOpacity: 0.15,
                             shadowRadius: 8,
-                            elevation: 6,
+                            elevation: 5,
                         }}>
-                            <PlusButtonIcon size={26} />
+                            <PlusButtonIcon size={24} color="#FFFFFF" />
                         </View>
                     ),
                 }}
@@ -221,11 +225,13 @@ export default function App() {
     }
 
     return (
-        <LockProvider>
-            <MoodProvider>
-                <AppContent />
-            </MoodProvider>
-        </LockProvider>
+        <SafeAreaProvider>
+            <LockProvider>
+                <MoodProvider>
+                    <AppContent />
+                </MoodProvider>
+            </LockProvider>
+        </SafeAreaProvider>
     );
 }
 

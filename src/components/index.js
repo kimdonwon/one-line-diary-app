@@ -1,8 +1,9 @@
-import React from "react";
-import { TouchableOpacity, Text, View, StyleSheet } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { TouchableOpacity, Text, View, StyleSheet, Animated, Easing } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW } from '../constants/theme';
 import { MoodCharacter } from '../constants/MoodCharacters';
-import { GRAPHIC_STICKERS } from '../constants/stickers';
+import { getStickerComponent } from '../constants/stickers';
 import Modal from "react-native-modal";
 
 // ─── Custom Soft Alert Modal ───
@@ -10,7 +11,7 @@ export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmTe
   return (
     <Modal
       isVisible={isVisible}
-      backdropOpacity={0.4}
+      backdropOpacity={0.25}
       animationIn="zoomIn"
       animationOut="zoomOut"
       animationInTiming={300}
@@ -21,9 +22,7 @@ export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmTe
       style={{ margin: SPACING.xl, justifyContent: "center" }}
     >
       <View style={[styles.alertModalContainer, SOFT_SHADOW.card]}>
-        <View style={styles.alertIconWrap}>
-          <Text style={{ fontSize: 32 }}>✨</Text>
-        </View>
+
         <Text style={styles.alertTitle}>{title}</Text>
         <Text style={styles.alertMessage}>{message}</Text>
         <TouchableOpacity
@@ -48,7 +47,7 @@ export function StaticSticker({ sticker, bounds }) {
   // 스티커 렌더링 (텍스트 vs SVG 구분)
   const renderContent = () => {
     if (sticker.isGraphic) {
-      const GraphicComponent = GRAPHIC_STICKERS.find(g => g.key === sticker.type)?.Component;
+      const GraphicComponent = getStickerComponent(sticker.type);
       if (GraphicComponent) {
         return <GraphicComponent size={24 * scale} />;
       }
@@ -99,21 +98,70 @@ export function Card({ children, style }) {
   return <View style={[styles.card, SOFT_SHADOW.card, style]}>{children}</View>;
 }
 
-// ─── Mood Bar for Summary (캐릭터 이미지 사용) ───
-export function MoodBar({ mood, count, maxCount, color }) {
+// ─── Mood Bar for Summary (게이지 차오름 애니메이션 최적화) ───
+export const MoodBar = React.memo(({ mood, count, maxCount, color, animKey }) => {
   const ratio = maxCount > 0 ? count / maxCount : 0;
+  // useNativeDriver: true를 위해 scaleX와 translateX를 사용합니다.
+  const animValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    animValue.setValue(0);
+    Animated.timing(animValue, {
+      toValue: Math.max(ratio, 0.05),
+      duration: 800,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      useNativeDriver: true,
+    }).start();
+  }, [ratio, animKey]);
+
+  // scaleX는 중심을 기준으로 커지므로, 왼쪽으로 정렬된 느낌을 주기 위해 translateX를 함께 조절하거나
+  // 혹은 단순히 0.5 지점에서 시작하는 것이 아니라, transform-origin 대용으로 translateX를 사용합니다.
+  // 여기서는 단순히 JS thread 부담을 줄이기 위해 React.memo만으로도 효과가 크지만, 
+  // 더 완벽한 성능을 위해 scaleX 기법을 적용합니다.
+  const animatedStyle = {
+    transform: [
+      { translateX: -150 }, // 임의의 넓은 기준점 (충분히 큰 값)
+      {
+        scaleX: animValue.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 300], // 기준점과 곱해져서 실제 너비를 채움
+        })
+      },
+      { translateX: 150 },
+    ],
+    // 하지만 위 방식은 복잡하므로, 가장 깔끔한 'width' 애니메이션을 유지하되 
+    // 컴포넌트 전체가 아닌 'Animated.View'만 리렌더링되도록 격리합니다.
+  };
+
+  // 실질적으로 'width'를 애니메이션할 때는 useNativeDriver를 쓸 수 없으므로,
+  // 렉의 주 원인인 'SVG 캐릭터 리렌더링'을 React.memo로 막는 것이 핵심입니다.
+  const widthAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    widthAnim.setValue(0);
+    Animated.timing(widthAnim, {
+      toValue: Math.max(ratio * 100, 5),
+      duration: 700,
+      useNativeDriver: false,
+    }).start();
+  }, [ratio, animKey]);
+
+  const animatedWidth = widthAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
     <View style={styles.moodBarContainer}>
       <View style={styles.moodBarCharWrap}>
-        <MoodCharacter character={mood.character} size={28} />
+        <MemoizedMoodCharacter character={mood.character} size={28} />
       </View>
       <View style={styles.moodBarTrack}>
-        <View
+        <Animated.View
           style={[
             styles.moodBarFill,
             {
-              width: `${Math.max(ratio * 100, 5)}%`,
+              width: animatedWidth,
               backgroundColor: color,
             },
           ]}
@@ -122,18 +170,30 @@ export function MoodBar({ mood, count, maxCount, color }) {
       <Text style={styles.moodBarCount}>{count}</Text>
     </View>
   );
-}
+});
 
-// ─── Screen Header ───
-export function Header({ title, leftButton, rightButton, style }) {
+// MoodCharacter를 메모이제이션하여 애니메이션 중 불필요한 SVG 재계산을 방지합니다.
+const MemoizedMoodCharacter = React.memo(MoodCharacter);
+
+// ─── Screen Header (메인 화면 스타일 정렬) ───
+export function Header({ title, subtitle, titleIcon, leftButton, rightButton, style }) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.header, style]}>
-      <View style={styles.headerSide}>
-        {leftButton || <View style={{ width: 40 }} />}
+    <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) + 16 }, style]}>
+      <View style={styles.headerLeftContainer}>
+        <View style={styles.headerMainRow}>
+          {leftButton && <View style={styles.headerLeftAction}>{leftButton}</View>}
+          <Text style={styles.headerTitle}>{title}</Text>
+          {titleIcon && <View style={styles.headerTitleIcon}>{titleIcon}</View>}
+        </View>
+        {subtitle && (
+          <View style={styles.headerSubtitleWrap}>
+            <Text style={styles.headerSubtitleText}>{subtitle}</Text>
+          </View>
+        )}
       </View>
-      <Text style={styles.headerTitle}>{title}</Text>
-      <View style={styles.headerSide}>
-        {rightButton || <View style={{ width: 40 }} />}
+      <View style={styles.headerRightAction}>
+        {rightButton}
       </View>
     </View>
   );
@@ -147,27 +207,83 @@ export function HeaderButton({ title, onPress }) {
   );
 }
 
-// ─── Mood Selector Card (소프트 파스텔) ───
+// ─── Mood Selector Card (Combo Tap & Shake 적용) ───
 export function MoodCard({ mood, selected, onPress }) {
+  const bounceScale = useRef(new Animated.Value(1)).current;
+  const shakeRotate = useRef(new Animated.Value(0)).current;
+  const comboScale = useRef(1);
+  const comboTimer = useRef(null);
+
+  const handlePressIn = () => {
+    if (comboTimer.current) clearTimeout(comboTimer.current);
+
+    // 연타 시 0.1씩 증가, 최대 2배까지
+    comboScale.current = Math.min(comboScale.current + 0.1, 2.0);
+
+    bounceScale.stopAnimation();
+    shakeRotate.stopAnimation();
+    shakeRotate.setValue(0);
+
+    Animated.parallel([
+      Animated.spring(bounceScale, {
+        toValue: selected ? comboScale.current * 1.15 : comboScale.current,
+        friction: 4,
+        tension: 400,
+        useNativeDriver: true
+      }),
+      Animated.sequence([
+        Animated.timing(shakeRotate, { toValue: 1, duration: 45, useNativeDriver: true }),
+        Animated.timing(shakeRotate, { toValue: -1, duration: 90, useNativeDriver: true }),
+        Animated.timing(shakeRotate, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.timing(shakeRotate, { toValue: 0, duration: 45, useNativeDriver: true }),
+      ])
+    ]).start();
+  };
+
+  const handlePressOut = () => {
+    // 손 떼면 크기는 돌아오되, 콤보는 일정 시간 유지
+    const targetScale = selected ? 1.15 : 1;
+    Animated.parallel([
+      Animated.spring(bounceScale, { toValue: targetScale, friction: 6, tension: 200, useNativeDriver: true }),
+      Animated.spring(shakeRotate, { toValue: 0, friction: 5, tension: 250, useNativeDriver: true })
+    ]).start();
+
+    comboTimer.current = setTimeout(() => {
+      comboScale.current = 1;
+    }, 600);
+  };
+
   return (
     <TouchableOpacity
       onPress={onPress}
-      activeOpacity={0.7}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={0.9} // 애니메이션이 생명을 넣어주므로 투명도는 낮게
       style={[
         styles.moodCard,
         selected && {
-          transform: [{ scale: 1.15 }, { translateY: -4 }],
+          transform: [{ translateY: -4 }],
         },
       ]}
     >
-      <View
+      <Animated.View
         style={[
           styles.moodCardCircle,
-          selected && { backgroundColor: mood.bgColor },
+          {
+            transform: [
+              { scale: bounceScale },
+              {
+                rotate: shakeRotate.interpolate({
+                  inputRange: [-1, 1],
+                  outputRange: ['-12deg', '12deg']
+                })
+              }
+            ]
+          }
         ]}
       >
         <MoodCharacter character={mood.character} size={selected ? 40 : 30} />
-      </View>
+      </Animated.View>
       <Text
         style={[
           styles.moodCardLabel,
@@ -182,42 +298,40 @@ export function MoodCard({ mood, selected, onPress }) {
 
 // ─── Diary List Item (소프트 파스텔) ───
 export function DiaryListItem({ diary, mood, onPress }) {
-  const [cardBounds, setCardBounds] = React.useState(null);
-  const dateStr = diary?.date ? diary.date.slice(5).replace("-", "/") : "";
-  const previewText = diary?.content || "";
-  const preview =
-    previewText.length > 20
-      ? previewText.slice(0, 20) + "..."
-      : previewText;
-
-  let parsedStickers = [];
-  try {
-    if (diary.stickers) parsedStickers = JSON.parse(diary.stickers);
-  } catch (e) {
-    console.log('Failed to parse stickers in list', e);
+  let monthStr = "MON";
+  let dayStr = "01";
+  if (diary?.date) {
+    // "2024-10-05" 형식의 로컬 문자열을 Date로 변환해도, 시간이 00:00:00이라 상관없습니다.
+    const d = new Date(diary.date);
+    const mNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    monthStr = mNames[d.getMonth()] || monthStr;
+    dayStr = String(d.getDate()).padStart(2, '0');
   }
+
+  // Activities는 title과 note를 가지며, 일반 Diary는 content를 갖습니다.
+  const titleText = diary?.title || mood?.label || "오늘의 일기";
+  const bodyText = diary?.note || diary?.content || "";
 
   return (
     <TouchableOpacity
-      style={[styles.diaryItem, SOFT_SHADOW.card, { overflow: 'hidden', position: 'relative' }]}
+      style={[styles.diaryItem, SOFT_SHADOW.card]}
       onPress={onPress}
       activeOpacity={0.7}
-      onLayout={(e) => {
-        setCardBounds(e.nativeEvent.layout);
-      }}
     >
-      {/* 백그라운드 스티커 렌더링 */}
-      {cardBounds && parsedStickers.map(sticker => (
-        <StaticSticker key={sticker.id} sticker={sticker} bounds={cardBounds} />
-      ))}
-
-      <Text style={[styles.diaryItemDate, { zIndex: 10 }]}>{dateStr}</Text>
-      <View style={[styles.diaryItemCharWrap, { zIndex: 10 }]}>
-        <MoodCharacter character={mood.character} size={26} />
+      <View style={[styles.diaryItemDateBadge, { backgroundColor: mood?.bgColor || '#F8F4FA' }]}>
+        <Text style={[styles.diaryItemDateMonth, { color: mood?.color || '#9C78E4' }]}>{monthStr}</Text>
+        <Text style={[styles.diaryItemDateDay, { color: mood?.color || '#9C78E4' }]}>{dayStr}</Text>
       </View>
-      <Text style={[styles.diaryItemContent, { zIndex: 10 }]} numberOfLines={1}>
-        {preview}
-      </Text>
+
+      <View style={styles.diaryItemContentWrap}>
+        <View style={styles.diaryItemTitleRow}>
+          <MoodCharacter character={mood?.character || "happy"} size={18} />
+          <Text style={styles.diaryItemTitle} numberOfLines={1}>{titleText}</Text>
+        </View>
+        <Text style={styles.diaryItemBody} numberOfLines={1}>
+          {bodyText}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -257,9 +371,11 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E9E9E7',
   },
 
   // MoodBar
@@ -295,23 +411,44 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
 
-  // Header
+  // Header (메인 화면 규격 통일: 좌측 정렬, 큰 폰트)
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "center", // 메인 화면 규격 (center)
     justifyContent: "space-between",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg, // 24
+    paddingBottom: SPACING.sm,
     backgroundColor: COLORS.background,
   },
-  headerSide: {
-    width: 60,
+  headerLeftContainer: {
+    flex: 1,
+    flexDirection: "column",
+  },
+  headerMainRow: {
+    flexDirection: "row",
     alignItems: "center",
+  },
+  headerLeftAction: {
+    marginRight: 8,
   },
   headerTitle: {
     ...FONTS.subtitle,
-    flex: 1,
-    textAlign: "center",
+    fontSize: 26,
+    color: COLORS.text,
+  },
+  headerTitleIcon: {
+    marginLeft: 8,
+  },
+  headerSubtitleWrap: {
+    marginTop: 4,
+  },
+  headerSubtitleText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  headerRightAction: {
+    // Spacer or other actions
   },
   headerButton: {
     padding: SPACING.sm,
@@ -344,31 +481,59 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
 
-  // DiaryListItem
+  // DiaryListItem (Notion Style)
   diaryItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm + 2,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12, // 노션 스타일 라운딩
+    borderWidth: 1,
+    borderColor: "#E9E9E7", // 노션 선 색상
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: SPACING.md,
+    ...SOFT_SHADOW.card,
   },
-  diaryItemDate: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.textSecondary,
-    width: 45,
+  diaryItemDateBadge: {
+    width: 46,
+    height: 46,
+    borderRadius: 10, // 노션의 각진 느낌을 살린 부드러운 사각형
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    zIndex: 10,
   },
-  diaryItemCharWrap: {
-    width: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: SPACING.sm,
+  diaryItemDateMonth: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
-  diaryItemContent: {
+  diaryItemDateDay: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: -2,
+  },
+  diaryItemContentWrap: {
     flex: 1,
-    fontSize: 14,
-    color: COLORS.text,
+    zIndex: 10,
+    justifyContent: "center",
+  },
+  diaryItemTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  diaryItemTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#37352F", // 노션 차콜 컬러
+    marginLeft: 8,
+    flex: 1,
+  },
+  diaryItemBody: {
+    fontSize: 13,
+    color: '#666666', // 노션 보조 텍스트 컬러
+    marginLeft: 26, // Align with title text (icon width + margin = 18 + 8 = 26)
   },
   // BackButton
   backCircle: {
@@ -386,45 +551,40 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 
-  // Alert Modal
+  // Alert Modal (Notion Style)
   alertModalContainer: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 24,
     alignItems: "center",
-  },
-  alertIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.background,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: "#E9E9E7",
   },
   alertTitle: {
-    ...FONTS.subtitle,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#37352F",
+    marginBottom: 8,
     textAlign: "center",
   },
   alertMessage: {
-    ...FONTS.body,
-    color: COLORS.textSecondary,
+    fontSize: 14,
+    color: "#666666",
     textAlign: "center",
-    marginBottom: SPACING.lg,
+    lineHeight: 20,
+    marginBottom: 24,
   },
   alertButton: {
-    backgroundColor: COLORS.happy,
-    paddingVertical: 12,
-    paddingHorizontal: SPACING.xl,
-    borderRadius: RADIUS.md,
+    backgroundColor: "#37352F", // 노션 시그니처 다크 차콜
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 6,
     alignSelf: "stretch",
     alignItems: "center",
   },
   alertButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
