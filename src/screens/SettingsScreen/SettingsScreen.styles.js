@@ -305,12 +305,34 @@ export const styles = StyleSheet.create({
 
     footer: {
         alignItems: 'center',
-        marginTop: 'auto',
+        marginTop: 40,
         paddingBottom: 40,
     },
     versionText: {
         ...FONTS.caption,
         marginTop: 10,
         color: COLORS.textSecondary,
+    },
+
+    // ─── 개발자 설정 (Reset) ───
+    devSection: {
+        marginTop: 40,
+        paddingTop: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#E9E9E7',
+    },
+    dangerButton: {
+        backgroundColor: '#FFEBE9', // 연한 빨강 (노션 위험 액션 배경)
+        paddingVertical: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#FFC1C0',
+        marginTop: 10,
+    },
+    dangerButtonText: {
+        color: '#D13438',
+        fontSize: 14,
+        fontWeight: '600',
     }
 });

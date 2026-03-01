@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getMoodByKey } from '../../constants/mood';
 import { useLock } from '../../context/LockContext';
 import { getSetting, saveSetting } from '../../database/db';
+import { STICKER_PACK_DATA } from '../../constants/stickers';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 /**
@@ -48,35 +49,48 @@ export function useSettingsLogic() {
 
     // 스티커 팩 (무료) 다운로드 / 구매 처리
     const handleBuyStickerPack = async (pack) => {
-        if (!pack.isFree && !isPremium) {
-            handlePremiumPress();
+        // 이미 보유 중인지 확인
+        if (purchasedPacks.includes(pack.catId)) return;
+
+        // 무료가 아닌 경우 결제 로직 (현재는 더미)
+        if (!pack.isFree) {
+            setAlertConfig({
+                title: '스티커 팩 구매 💳',
+                message: `[${pack.title}] 팩을 ${pack.price || '1,100'}원에 구매하시겠습니까? (더미 결제)`
+            });
+            setShowAlert(true);
             return;
         }
 
-        const newPurchased = [...purchasedPacks, pack.catId];
+        // 무료 팩 바로 다운로드
+        await confirmBuyPack(pack.catId, pack.title);
+    };
+
+    const confirmBuyPack = async (catId, title) => {
+        const newPurchased = [...purchasedPacks, catId];
         setPurchasedPacks(newPurchased);
         await saveSetting('purchasedPacks', JSON.stringify(newPurchased));
 
-        // 서랍 상태에도 강제로 추가해줌 (Sticker Pack Manager 연동)
+        // 서랍 상태에도 강제로 추가해줌
         try {
             const enabledVal = await getSetting('enabledStickerCats');
             const enabled = enabledVal ? JSON.parse(enabledVal) : ['emoji', 'legacy', 'pastel'];
-            if (!enabled.includes(pack.catId)) {
-                await saveSetting('enabledStickerCats', JSON.stringify([...enabled, pack.catId]));
+            if (!enabled.includes(catId)) {
+                await saveSetting('enabledStickerCats', JSON.stringify([...enabled, catId]));
             }
 
             // 순서에도 추가
             const orderVal = await getSetting('stickerCatOrder');
             const order = orderVal ? JSON.parse(orderVal) : ['emoji', 'legacy', 'pastel'];
-            if (!order.includes(pack.catId)) {
-                await saveSetting('stickerCatOrder', JSON.stringify([...order, pack.catId]));
+            if (!order.includes(catId)) {
+                await saveSetting('stickerCatOrder', JSON.stringify([...order, catId]));
             }
         } catch (e) { }
 
         setShowPreview(false);
         setAlertConfig({
             title: '다운로드 완료! 🎉',
-            message: `[${pack.title}] 팩이 스티커 서랍에 추가되었습니다.`
+            message: `[${title}] 팩이 스티커 서랍에 추가되었습니다.`
         });
         setShowAlert(true);
     };
@@ -161,14 +175,26 @@ export function useSettingsLogic() {
 
         setAlertConfig({
             title: '프리미엄 구매 (더미) 💳',
-            message: '구글 플레이 결제 창이 나중에 여기에 연동될 예정입니다. 지금은 테스트를 위해 바로 활성화해 드릴까요?'
+            message: '5,000원으로 오늘조각 프리미엄을 평생 소장하시겠습니까? (한 번 결제로 모든 기능 영구 이용)'
         });
         setShowAlert(true);
     };
 
     const confirmPremium = async () => {
+        const isBuyingPack = alertConfig.title === '스티커 팩 구매 💳';
+        const isBuyingPremium = alertConfig.title === '프리미엄 구매 (더미) 💳';
         setShowAlert(false);
-        if (!isPremium) {
+
+        if (isBuyingPack) {
+            // 현재 미리보기 중인 팩 결제 완료 처리
+            if (selectedPack) {
+                await confirmBuyPack(selectedPack.catId, selectedPack.title);
+            }
+            return;
+        }
+
+        // 프리미엄 결제 모달을 통한 명시적 확인 시에만 프리미엄이 되도록 조건을 엄격하게 체크
+        if (isBuyingPremium && !isPremium) {
             await togglePremium();
         }
     };
@@ -178,6 +204,32 @@ export function useSettingsLogic() {
 
     // 스티커 상점 접기/펴기 상태
     const [isShopExpanded, setIsShopExpanded] = useState(true);
+
+    // 모든 구매 내역 및 프리미엄 초기화 (테스트용)
+    const resetPurchases = async () => {
+        try {
+            // 1. 상태 초기화
+            setIsPremium(false);
+            setPurchasedPacks([]);
+
+            // 2. DB 업데이트 (app_settings)
+            await saveSetting('isPremium', 'false');
+            await saveSetting('purchasedPacks', JSON.stringify([]));
+
+            // 3. 스티커 카테고리 설정 초기화 (기본값으로 복구)
+            const defaultCats = STICKER_PACK_DATA.filter(p => p.isDefault).map(p => p.catId);
+            await saveSetting('enabledStickerCats', JSON.stringify(defaultCats));
+            await saveSetting('stickerCatOrder', JSON.stringify(defaultCats));
+
+            setAlertConfig({
+                title: '초기화 완료! ♻️',
+                message: '프리미엄 상태 및 스티커 구매 내역이 모두 초기화되었습니다.'
+            });
+            setShowAlert(true);
+        } catch (e) {
+            console.log('Failed to reset purchases:', e);
+        }
+    };
 
     return {
         defaultMood,
@@ -198,6 +250,7 @@ export function useSettingsLogic() {
         showPreview, setShowPreview,
         selectedPack, setSelectedPack,
         isShopExpanded, setIsShopExpanded,
-        purchasedPacks, handleBuyStickerPack
+        purchasedPacks, handleBuyStickerPack,
+        resetPurchases
     };
 }

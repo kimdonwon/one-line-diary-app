@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { COLORS, FONTS, SPACING, RADIUS } from '../constants/theme';
-import { SearchIcon, CloseIcon } from "../constants/icons";
+import { SearchIcon, XIcon } from "../constants/icons";
 
 export function SearchBar({ value, onChangeText, onClear, onCancel }) {
   return (
@@ -31,7 +31,7 @@ export function SearchBar({ value, onChangeText, onClear, onCancel }) {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <View style={styles.clearIconCircle}>
-              <CloseIcon size={12} color="#666666" strokeWidth="2.5" />
+              <XIcon size={12} color="#666666" strokeWidth="2.5" />
             </View>
           </TouchableOpacity>
         )}

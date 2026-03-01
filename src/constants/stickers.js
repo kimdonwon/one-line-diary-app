@@ -19,20 +19,35 @@ import {
     FoodFries, FoodSoftServe, FoodTanghulu, FoodCroffle, FoodMintChoco,
     FoodMatchaCake, FoodPudding, FoodBun
 } from './FoodStickers';
+import {
+    LineSmile, LineSad, LineAngryRabbit, LineHeart, LineFlower,
+    LineCrown, LineCamera, LineThumbsUp, LineCloud, LineBubble,
+    LineSparkle, LineCircle, LineSquare, LineCat, LineLeaf,
+    LineWing, LineDash, LineHighlight
+} from './MZLineStickers';
+import {
+    FaceBoyBrown, FaceGirlPink, FaceGirlBrownHair, FaceBoyCap, FaceTanGirl,
+    FaceAfroDark, FaceGirlBlueHair, FaceBearHat, FaceBaby, FaceCoolBoy,
+    FaceHappyGirl, FaceHeadphones
+} from './FaceStickers';
 
 // ─── 카테고리 탭 정의 ───────────────────────────────────────
 export const STICKER_CATEGORIES = [
     { id: 'emoji', label: '이모지' },
     { id: 'legacy', label: '기본' },
     { id: 'pastel', label: '파스텔' },
-    { id: 'food', label: '푸드' }, // 추가
+    { id: 'food', label: '푸드' },
+    { id: 'mzline', label: '라인' },
+    { id: 'people', label: '피플' },
 ];
 
 export const STICKER_PACK_DATA = [
     { id: 'pack1', title: '기본 다꾸 이모지 팩', desc: '다양한 감정 표현', icon: '🐾', isFree: true, isDefault: true, catId: 'emoji' },
     { id: 'pack2', title: '기본 캐릭터 팩', desc: '오늘조각 시그니처', icon: '✨', isFree: true, isDefault: true, catId: 'legacy' },
-    { id: 'pack3', title: '몽글몽글 파스텔 팩', desc: '프리미엄 전용 컬러', icon: '🎨', isFree: false, isDefault: true, catId: 'pastel' },
-    { id: 'pack4', title: 'MZ 냠냠 먹방 팩', desc: '커피, 마라탕, 탕후루까지!', icon: '🍡', isFree: true, isDefault: false, catId: 'food', tagLabel: '푸드' },
+    { id: 'pack3', title: '몽글몽글 파스텔 팩', desc: '몽글몽글한 손그림 느낌', icon: '🎨', isFree: false, isDefault: false, catId: 'pastel', price: '1,100' },
+    { id: 'pack4', title: '냠냠 먹방 팩', desc: '커피, 마라탕, 탕후루까지!', icon: '🍡', isFree: true, isDefault: false, catId: 'food', tagLabel: '푸드' },
+    { id: 'pack5', title: '삐뚤빼뚤 라인 팩', desc: '대충 그린 꾸안꾸 갬성', icon: '〰️', isFree: true, isDefault: false, catId: 'mzline', tagLabel: '라인' },
+    { id: 'pack7', title: '오밀조밀 동네 친구들', desc: '귀엽고 다양한 얼굴 모음!', icon: '👦', isFree: false, isDefault: false, catId: 'people', tagLabel: '피플', price: '1,500' },
 ];
 
 // ─── 카테고리별 스티커 모음 ────────────────────────────────
@@ -107,6 +122,44 @@ export const CATEGORIZED_STICKERS = {
         { key: 'f_matcha', label: '말차케이크', Component: FoodMatchaCake },
         { key: 'f_pudding', label: '푸딩', Component: FoodPudding },
         { key: 'f_bun', label: '찐빵', Component: FoodBun },
+    ],
+
+    /** 〰️ 라인 — MZ 감성 손그림 라인 드로잉 */
+    mzline: [
+        { key: 'ml_smile', label: '웃음', Component: LineSmile },
+        { key: 'ml_sad', label: '슬픔', Component: LineSad },
+        { key: 'ml_angry', label: '화남토끼', Component: LineAngryRabbit },
+        { key: 'ml_heart', label: '하트선', Component: LineHeart },
+        { key: 'ml_flower', label: '꽃', Component: LineFlower },
+        { key: 'ml_crown', label: '왕관', Component: LineCrown },
+        { key: 'ml_cam', label: '카메라', Component: LineCamera },
+        { key: 'ml_thumb', label: '따봉', Component: LineThumbsUp },
+        { key: 'ml_cloud', label: '구름', Component: LineCloud },
+        { key: 'ml_bub', label: '말풍선', Component: LineBubble },
+        { key: 'ml_sparkle', label: '반짝이', Component: LineSparkle },
+        { key: 'ml_cir', label: '동그라미', Component: LineCircle },
+        { key: 'ml_sq', label: '네모', Component: LineSquare },
+        { key: 'ml_cat', label: '고양이', Component: LineCat },
+        { key: 'ml_leaf', label: '나뭇잎', Component: LineLeaf },
+        { key: 'ml_wing', label: '날개', Component: LineWing },
+        { key: 'ml_dash', label: '점선', Component: LineDash },
+        { key: 'ml_high', label: '강조', Component: LineHighlight },
+    ],
+
+    /** 👦 피플 — 오밀조밀 귀여운 사람 얼굴 컬렉션 */
+    people: [
+        { key: 'pp_boy_br', label: '밤송이', Component: FaceBoyBrown },
+        { key: 'pp_girl_pk', label: '핑크소녀', Component: FaceGirlPink },
+        { key: 'pp_girl_br', label: '갈색머리', Component: FaceGirlBrownHair },
+        { key: 'pp_boy_cap', label: '모자소년', Component: FaceBoyCap },
+        { key: 'pp_tan_g', label: '태닝소녀', Component: FaceTanGirl },
+        { key: 'pp_afro', label: '아프로', Component: FaceAfroDark },
+        { key: 'pp_girl_bl', label: '단발소녀', Component: FaceGirlBlueHair },
+        { key: 'pp_bear_h', label: '곰돌모자', Component: FaceBearHat },
+        { key: 'pp_baby', label: '아기', Component: FaceBaby },
+        { key: 'pp_cool', label: '쿨보이', Component: FaceCoolBoy },
+        { key: 'pp_happy', label: '양갈래', Component: FaceHappyGirl },
+        { key: 'pp_hp', label: '헤드폰', Component: FaceHeadphones },
     ],
 };
 

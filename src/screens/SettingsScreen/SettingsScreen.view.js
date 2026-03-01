@@ -1,6 +1,6 @@
 import { View, Text, Switch, TouchableOpacity, ScrollView, Animated, Modal, Pressable, StyleSheet } from 'react-native';
 import { Header, Card, SoftAlertModal } from '../../components';
-import { CATEGORIZED_STICKERS, STICKER_CATEGORIES } from '../../constants/stickers';
+import { CATEGORIZED_STICKERS, STICKER_CATEGORIES, STICKER_PACK_DATA } from '../../constants/stickers';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { COLORS } from '../../constants/theme';
 import { PinSetupModal } from '../../components/PinSetupModal';
@@ -16,15 +16,10 @@ export function SettingsScreenView({ navigation }) {
         toggleLock, changePassword, handlePinComplete, handlePremiumPress,
         showPreview, setShowPreview, selectedPack, setSelectedPack,
         isShopExpanded, setIsShopExpanded,
-        purchasedPacks, handleBuyStickerPack
+        purchasedPacks, handleBuyStickerPack, resetPurchases
     } = useSettingsLogic();
 
-    const STICKER_PACK_DATA = [
-        { id: 'pack1', title: '기본 다꾸 이모지 팩', desc: '다양한 감정 표현', icon: '🐾', isFree: true, isDefault: true, catId: 'emoji' },
-        { id: 'pack2', title: '기본 캐릭터 팩', desc: '오늘조각 시그니처', icon: '✨', isFree: true, isDefault: true, catId: 'legacy' },
-        { id: 'pack3', title: '몽글몽글 파스텔 팩', desc: '프리미엄 전용 컬러', icon: '🎨', isFree: false, isDefault: true, catId: 'pastel' },
-        { id: 'pack4', title: 'MZ 냠냠 먹방 팩', desc: '커피, 마라탕, 탕후루까지!', icon: '🍡', isFree: true, isDefault: false, catId: 'food', tagLabel: '푸드' },
-    ];
+
 
     const handlePackPress = (pack) => {
         setSelectedPack(pack);
@@ -87,26 +82,20 @@ export function SettingsScreenView({ navigation }) {
                                     let statusStyle = styles.shopCardOwned;
 
                                     if (pack.isDefault) {
-                                        if (pack.isFree || isPremium) {
+                                        statusText = pack.isFree ? '보유 중' : '₩1,100';
+                                        statusStyle = pack.isFree ? styles.shopCardOwned : styles.shopCardPrice;
+                                        // 단, 구매 여부 체크 로직 통합 필요 시 else와 합침
+                                        if (!pack.isFree && purchasedPacks.includes(pack.catId)) {
                                             statusText = '보유 중';
                                             statusStyle = styles.shopCardOwned;
-                                        } else {
-                                            statusText = 'PREMIUM';
-                                            statusStyle = styles.shopCardPrice;
                                         }
                                     } else {
-                                        const isPurchased = purchasedPacks.includes(pack.catId);
-                                        if (isPurchased) {
+                                        if (purchasedPacks.includes(pack.catId)) {
                                             statusText = '보유 중';
                                             statusStyle = styles.shopCardOwned;
                                         } else {
-                                            if (pack.isFree) {
-                                                statusText = '무료';
-                                                statusStyle = styles.shopCardPrice;
-                                            } else {
-                                                statusText = isPremium ? '다운로드' : 'PREMIUM';
-                                                statusStyle = styles.shopCardPrice;
-                                            }
+                                            statusText = pack.isFree ? '무료' : '₩' + (pack.price || '1,100');
+                                            statusStyle = styles.shopCardPrice;
                                         }
                                     }
 
@@ -169,10 +158,11 @@ export function SettingsScreenView({ navigation }) {
                             <Text style={styles.premiumBadgeText}>PRO</Text>
                         </View>
                     </View>
-                    <Text style={styles.premiumPrice}>₩2,900 <Text style={styles.premiumPriceUnit}>/ 월</Text></Text>
+                    <Text style={styles.premiumPrice}>₩5,000 <Text style={styles.premiumPriceUnit}>(한번 결제로 평생 소장)</Text></Text>
 
                     <View style={styles.premiumBenefits}>
-                        <Text style={styles.premiumBenefitItem}>✓ 모든 테마 및 파스텔 스티커 잠금 해제</Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 스티커 최대 15개 부착 가능 </Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 스티커 서랍장 카테고리 6개 </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 광고 없는 쾌적한 다이어리 작성</Text>
                     </View>
 
@@ -185,10 +175,22 @@ export function SettingsScreenView({ navigation }) {
                         activeOpacity={0.8}
                     >
                         <Text style={styles.premiumSubscribeText}>
-                            {isPremium ? '프리미엄 혜택 이용 중 ✨' : '7일 무료 체험 시작하기'}
+                            {isPremium ? '프리미엄 혜택 이용 중 ✨' : '프리미엄 평생 소장하기'}
                         </Text>
                     </TouchableOpacity>
-                    <Text style={styles.premiumSubText}>구글 플레이를 통해 정기 결제됩니다. 언제든 취소 가능해요.</Text>
+                    <Text style={styles.premiumSubText}>한 번 결제하면 추가 청구 없이 영구적으로 이용 가능합니다.</Text>
+                </View>
+
+                {/* 개발자 도구 (테스트용) */}
+                <View style={styles.devSection}>
+                    <Text style={styles.sectionHeader}>개발자 도구 (테스트)</Text>
+                    <TouchableOpacity
+                        style={styles.dangerButton}
+                        onPress={resetPurchases}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.dangerButtonText}>모든 결제 및 프리미엄 내역 초기화 ♻️</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.footer}>
@@ -287,7 +289,7 @@ export function SettingsScreenView({ navigation }) {
                 title={alertConfig.title}
                 message={alertConfig.message}
                 onConfirm={confirmPremium}
-                confirmText={isPremium ? "확인" : "체험 시작하기"}
+                confirmText={isPremium ? "확인" : "완료"}
             />
         </View>
     );

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import 'react-native-reanimated';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -14,15 +16,16 @@ import ActivityListScreen from './src/screens/ActivityListScreen';
 import MoodListScreen from './src/screens/MoodListScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import SearchScreen from './src/screens/SearchScreen';
+import DiaryFeedScreen from './src/screens/DiaryFeedScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import LockScreen from './src/screens/LockScreen';
 import { COLORS, SOFT_SHADOW } from './src/constants/theme';
 import { MoodCharacter } from './src/constants/MoodCharacters';
 import {
     HomeTabIcon, SelectedHomeTabIcon,
-    StatsTabIcon, SelectedStatsTabIcon,
+    DiaryTabIcon, SelectedDiaryTabIcon,
+    SummaryTabIcon, SelectedSummaryTabIcon,
     PlusButtonIcon,
-    SearchIcon,
     SettingsTabIcon, SelectedSettingsTabIcon
 } from './src/constants/icons';
 import { MoodProvider, useGlobalWeeklyMood } from './src/context/MoodContext';
@@ -136,11 +139,11 @@ function MainTabs({ navigation }) {
                 }}
             />
             <Tab.Screen
-                name="StatsTab"
-                component={SummaryScreen}
+                name="DiaryTab"
+                component={DiaryFeedScreen}
                 options={{
                     tabBarIcon: ({ color, focused }) =>
-                        focused ? <SelectedStatsTabIcon size={24} color={color} /> : <StatsTabIcon size={24} color={color} />
+                        focused ? <SelectedDiaryTabIcon size={24} color={color} /> : <DiaryTabIcon size={24} color={color} />
                 }}
             />
             <Tab.Screen
@@ -176,10 +179,11 @@ function MainTabs({ navigation }) {
                 }}
             />
             <Tab.Screen
-                name="SearchTab"
-                component={SearchScreen}
+                name="SummaryTab"
+                component={SummaryScreen}
                 options={{
-                    tabBarIcon: ({ color }) => <SearchIcon size={24} color={color} />
+                    tabBarIcon: ({ color, focused }) =>
+                        focused ? <SelectedSummaryTabIcon size={24} color={color} /> : <SummaryTabIcon size={24} color={color} />
                 }}
             />
             <Tab.Screen
@@ -250,7 +254,7 @@ function AppContent() {
     }
 
     return (
-        <View style={{ flex: 1 }}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
             <StatusBar style="auto" />
             <NavigationContainer theme={AppTheme}>
                 <Stack.Navigator
@@ -268,11 +272,12 @@ function AppContent() {
                         options={{ animation: 'fade' }}
                     />
                     <Stack.Screen name="Summary" component={SummaryScreen} />
+                    <Stack.Screen name="Search" component={SearchScreen} />
                     <Stack.Screen name="ActivityList" component={ActivityListScreen} />
                     <Stack.Screen name="MoodList" component={MoodListScreen} />
                 </Stack.Navigator>
             </NavigationContainer>
-        </View>
+        </GestureHandlerRootView>
     );
 }
 

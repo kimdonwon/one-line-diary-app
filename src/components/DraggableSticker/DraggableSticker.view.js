@@ -18,7 +18,7 @@ export function DraggableStickerView({ sticker, bounds, onDelete, onDragEnd }) {
         if (sticker.isGraphic) {
             const GraphicComponent = getStickerComponent(sticker.type);
             if (GraphicComponent) {
-                return <GraphicComponent size={36} />;
+                return <GraphicComponent size={29} />;
             }
         }
         return <Text style={styles.textSticker}>{sticker.type}</Text>;

@@ -1,5 +1,16 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW } from '../../constants/theme';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+export const chartConstants = {
+    SCREEN_WIDTH,
+    chartW: SCREEN_WIDTH - 80,
+    chartH: 140,
+    pLeft: 0,
+    pTop: 10,
+    pBot: 20,
+};
 
 /**
  * 🎨 메인(홈) 화면 전용 스타일 시트
@@ -111,6 +122,21 @@ export const styles = StyleSheet.create({
     },
     actBarFill: { height: '100%', borderRadius: RADIUS.full },
     actBarCount: { width: 24, textAlign: 'right', fontSize: 14, fontWeight: '700', color: COLORS.text },
+
+    // 꺾은선 그래프 (Summary 참고)
+    chartContainer: { alignSelf: 'center', marginTop: 10 },
+    lineChartLabels: {
+        flexDirection: 'row', justifyContent: 'space-between',
+        paddingHorizontal: 0, marginTop: -4,
+    },
+    lineChartLabel: { fontSize: 8, fontWeight: '600', color: COLORS.textSecondary, textAlign: 'center' },
+    legendRow: {
+        flexDirection: 'row', justifyContent: 'center',
+        flexWrap: 'wrap', marginTop: SPACING.md, gap: 10,
+    },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    legendText: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
+    legendColor: { width: 8, height: 8, borderRadius: 4 },
 
     bottomSpacer: { height: 130 }
 });

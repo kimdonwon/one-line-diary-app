@@ -31,6 +31,12 @@ export async function initDB() {
                     note TEXT DEFAULT '',
                     UNIQUE(date, activity)
                 );
+                CREATE TABLE IF NOT EXISTS comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    diary_date TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS app_settings (
                     key TEXT PRIMARY KEY,
                     value TEXT
@@ -137,6 +143,14 @@ export async function getMonthDiaries(yearMonth) {
         return await d.getAllAsync(
             "SELECT * FROM diary WHERE date LIKE ? ORDER BY date ASC",
             [`${yearMonth}%`]
+        );
+    });
+}
+
+export async function getAllDiaries() {
+    return enqueueDBTask(async (d) => {
+        return await d.getAllAsync(
+            "SELECT * FROM diary ORDER BY date ASC"
         );
     });
 }
@@ -258,6 +272,43 @@ export async function getYearSpecificActivities(year, activity) {
         return await d.getAllAsync(
             "SELECT * FROM activities WHERE date LIKE ? AND activity = ? ORDER BY date DESC",
             [`${year}%`, activity]
+        );
+    });
+}
+
+// ─── 댓글 (Comments) ───
+
+export async function saveComment(diary_date, content, created_at) {
+    return enqueueDBTask(async (d) => {
+        await d.runAsync(
+            'INSERT INTO comments (diary_date, content, created_at) VALUES (?, ?, ?)',
+            [diary_date, content, created_at]
+        );
+    });
+}
+
+export async function getComments(diary_date) {
+    return enqueueDBTask(async (d) => {
+        return await d.getAllAsync(
+            'SELECT * FROM comments WHERE diary_date = ? ORDER BY created_at ASC',
+            [diary_date]
+        );
+    });
+}
+
+export async function deleteComment(id) {
+    return enqueueDBTask(async (d) => {
+        await d.runAsync(
+            'DELETE FROM comments WHERE id = ?',
+            [id]
+        );
+    });
+}
+
+export async function getAllCommentCounts() {
+    return enqueueDBTask(async (d) => {
+        return await d.getAllAsync(
+            'SELECT diary_date, COUNT(*) as count FROM comments GROUP BY diary_date'
         );
     });
 }

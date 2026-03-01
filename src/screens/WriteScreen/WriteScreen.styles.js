@@ -300,7 +300,7 @@ export const styles = StyleSheet.create({
     // 입력 창 (스티커 장식 레이어 포함)
     inputCard: {
         backgroundColor: COLORS.card,
-        minHeight: 280,
+        height: 340, // 입력박스 크기 고정 (글이 길어져도 늘어나지 않음)
         borderRadius: 12, // 노션 스타일의 라운딩
         padding: 0,
         overflow: 'hidden',
@@ -318,6 +318,8 @@ export const styles = StyleSheet.create({
         fontWeight: '500',
         color: COLORS.text,
         lineHeight: 20,
+        padding: 0,  // Android의 기본 TextInput 패딩을 제거하여 Text 컴포넌트와 동일한 래핑 보장
+        margin: 0,
     },
     inputFooter: {
         flexDirection: 'row',
@@ -366,36 +368,53 @@ export const styles = StyleSheet.create({
         paddingVertical: 4,
     },
 
-    // 하단 바
+    // 하단 바 (App.js의 Notion 탭바 스타일과 완벽히 동기화)
     floatingTabBar: {
         position: 'absolute',
-        bottom: 30,
-        left: SPACING.lg,
-        right: SPACING.lg,
+        bottom: 30, // insets.bottom 을 고려한 고정 여백
+        left: 20,
+        right: 20,
         height: 64,
         backgroundColor: '#FFFFFF',
-        borderRadius: RADIUS.full,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#E9E9E7',
+        borderTopWidth: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: SPACING.md,
-        ...SOFT_SHADOW.button,
+        elevation: 4,
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
     },
     fakeTabButton: {
-        width: 48,
-        height: 48,
+        flex: 1,
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    saveWrap: {
+        flex: 1,
+        height: '100%',
         alignItems: 'center',
         justifyContent: 'center',
     },
     saveCircle: {
         width: 56,
         height: 56,
-        borderRadius: 28,
+        borderRadius: 16, // 노션의 스쿼클(Squircle) 스타일 중앙 버튼
         backgroundColor: COLORS.happy,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: -30,
-        ...SOFT_SHADOW.button,
+        marginTop: -20, // App.js 중앙 버튼과 동일한 돌출
+        borderWidth: 3,
+        borderColor: '#FFFFFF', // 흰색 테두리
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 5,
     },
     bottomSpacer: {
         height: 120,

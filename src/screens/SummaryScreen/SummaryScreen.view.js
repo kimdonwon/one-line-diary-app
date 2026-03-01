@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Animated, TextInput } from 'react-native';
+import Reanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, withDelay, useAnimatedProps } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path, Polyline, Circle as SvgCircle } from 'react-native-svg';
@@ -14,26 +15,37 @@ import { useSummaryLogic, MONTH_NAMES } from './SummaryScreen.logic';
 import { styles, chartConstants } from './SummaryScreen.styles';
 
 /**
- * 📊 애니메이션 활동 바 (외부 추출)
+ * 📊 애니메이션 활동 바 (Reanimated v4 기반)
  */
+const AnimatedTextInput = Reanimated.createAnimatedComponent(TextInput);
+
 const AnimatedActivityBar = React.memo(({ stat, maxActCount, triggerKey, getActivityByKey, handleActivityPress }) => {
     const act = getActivityByKey(stat.activity);
-    const ratio = stat.count / maxActCount;
-    const widthAnim = useRef(new Animated.Value(0)).current;
+    const ratio = maxActCount > 0 ? stat.count / maxActCount : 0;
+
+    const widthSV = useSharedValue(0);
+    const countSV = useSharedValue(0);
 
     useEffect(() => {
-        widthAnim.setValue(0);
-        Animated.timing(widthAnim, {
-            toValue: Math.max(ratio * 100, 10),
-            duration: 600,
-            delay: 100,
-            useNativeDriver: false,
-        }).start();
-    }, [triggerKey]);
+        widthSV.value = 0;
+        countSV.value = 0;
 
-    const animatedWidth = widthAnim.interpolate({
-        inputRange: [0, 100],
-        outputRange: ['0%', '100%'],
+        widthSV.value = withDelay(100, withSpring(ratio, { damping: 14, stiffness: 90, mass: 0.8 }));
+        countSV.value = withDelay(100, withTiming(stat.count, { duration: 700 }));
+    }, [triggerKey, ratio, stat.count]);
+
+    const animatedStyle = useAnimatedStyle(() => {
+        return {
+            width: `${Math.max(widthSV.value * 100, 10)}%`, // 최소 폭 10%
+            backgroundColor: act.color,
+        };
+    });
+
+    const animatedProps = useAnimatedProps(() => {
+        return {
+            text: Math.round(countSV.value).toString(),
+            value: Math.round(countSV.value).toString(),
+        };
     });
 
     return (
@@ -43,15 +55,14 @@ const AnimatedActivityBar = React.memo(({ stat, maxActCount, triggerKey, getActi
             </View>
             <Text style={styles.activityBarLabel}>{act.label}</Text>
             <View style={styles.activityBarTrack}>
-                <Animated.View style={[
-                    styles.activityBarFill,
-                    {
-                        width: animatedWidth,
-                        backgroundColor: act.color,
-                    },
-                ]} />
+                <Reanimated.View style={[styles.activityBarFill, animatedStyle]} />
             </View>
-            <Text style={styles.activityBarCount}>{stat.count}</Text>
+            <AnimatedTextInput
+                underlineColorAndroid="transparent"
+                editable={false}
+                animatedProps={animatedProps}
+                style={[styles.activityBarCount, { padding: 0 }]}
+            />
         </TouchableOpacity>
     );
 });

@@ -102,26 +102,8 @@ export function useWriteLogic(route, navigation, scrollRef) {
         })();
     }, []);
 
-    const moveCategory = async (catId, direction) => {
-        const idx = catOrder.indexOf(catId);
-        if (idx < 0) return;
-        const targetIdx = idx + direction;
-        if (targetIdx < 0 || targetIdx >= catOrder.length) return;
-
-        const newOrder = [...catOrder];
-        [newOrder[idx], newOrder[targetIdx]] = [newOrder[targetIdx], newOrder[idx]];
-        setCatOrder(newOrder);
-        await saveSetting('stickerCatOrder', JSON.stringify(newOrder));
-    };
-
-    const swapCategory = async (id1, id2) => {
-        const idx1 = catOrder.indexOf(id1);
-        const idx2 = catOrder.indexOf(id2);
-        if (idx1 < 0 || idx2 < 0 || idx1 === idx2) return;
-
-        const newOrder = [...catOrder];
-        [newOrder[idx1], newOrder[idx2]] = [newOrder[idx2], newOrder[idx1]];
-        setCatOrder(newOrder);
+    const reorderCategories = async (newOrder) => {
+        setCatOrder([...newOrder]);
         await saveSetting('stickerCatOrder', JSON.stringify(newOrder));
     };
 
@@ -156,7 +138,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
      * @param {boolean} isGraphic - 그래픽 스티커 여부 판별 플래그
      */
     const handleStickerPress = (stickerId, isGraphic = false) => {
-        const MAX_STICKERS = isPremium ? 99 : 5;
+        const MAX_STICKERS = isPremium ? 15 : 5;
         if (stickers.length >= MAX_STICKERS) {
             setStickerLimitModalVisible(true);
             return;
@@ -276,7 +258,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
         showManager,
         setShowManager,
         toggleCategory,
-        moveCategory,
-        swapCategory
+        reorderCategories,
+        isPremium,
     };
 }

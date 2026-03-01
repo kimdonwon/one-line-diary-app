@@ -1,8 +1,8 @@
 import React, { useRef } from 'react';
-import { View, Text, ScrollView, Animated, Pressable } from 'react-native';
+import { View, Text, ScrollView, Animated, Pressable, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-import { Card, DiaryListItem } from '../../components';
+import { Card, DiaryListItem, BackButton } from '../../components';
 import { SearchBar } from '../../components/SearchLayer';
 import { getMoodByKey } from '../../constants/mood';
 import { MoodCharacter } from '../../constants/MoodCharacters';
@@ -10,7 +10,7 @@ import { MoodCharacter } from '../../constants/MoodCharacters';
 import { useSearchScreenLogic } from './SearchScreen.logic';
 import { styles } from './SearchScreen.styles';
 
-export function SearchScreenView() {
+export function SearchScreenView({ navigation }) {
     const {
         searchQuery,
         filteredResults,
@@ -69,6 +69,7 @@ export function SearchScreenView() {
             <StatusBar style="dark" />
 
             <View style={styles.header}>
+                <BackButton onPress={() => navigation.goBack()} />
                 <Text style={styles.headerTitle}>기록 찾기</Text>
                 <View style={styles.headerSpacer} />
             </View>

@@ -6,8 +6,8 @@
 
 - **경로**: `/App.js`
 - **역할**: SQLite 데이터베이스 초기화 후 네비게이션 구조(Bottom Tabs + Stack) 연결.
-  - **하단 탭 바 (`MainTabs`)**: Home, Stats, +(Write), Search, Settings
-  - **스택 라우팅 (`Stack.Navigator`)**: `MainTabs`, `Write`, `Summary`, `ActivityList`, `MoodList`
+  - **하단 탭 바 (`MainTabs`)**: Home, Diary, +(Write), Summary, Settings
+  - **스택 라우팅 (`Stack.Navigator`)**: `MainTabs`, `Write`, `Summary`, `Search`, `ActivityList`, `MoodList`
 - **기본 색상 규칙**: 기분 데이터 없을 때 HAPPY(초록, #7CD4A0)를 기본값으로 사용
 
 ## 2. 메인 스크린 (캘린더 및 일기 목록)
@@ -21,8 +21,22 @@
   - 🎨 **주간 기분 색상**: 해당 주의 가장 빈번한 기분의 `bgColor`로 셀 배경 tinting
   - 📊 **게이지 애니메이션**: MoodBar + 활동 바 모두 0% → 목표%까지 600ms 게이지 차오름
   - 🎉 **팡 효과**: "이번 달 주인공" 배너 터치 → `ConfettiEffect` 파티클 발사
+  - 🔍 **검색 버튼**: 헤더 우측 상단에 돋보기 아이콘 → `SearchScreen` 스택 진입
 
-## 3. 요약 스크린 (데이터 시각화 차트)
+## 3. 다이어리 피드 스크린 (인스타 피드 + 드로잉)
+
+- **파일명**: `DiaryFeedScreen.view.js`, `DiaryFeedScreen.logic.js`, `DiaryFeedScreen.styles.js`
+- **경로**: `/src/screens/DiaryFeedScreen/`
+- **역할**: 인스타 피드 스타일로 모든 일기를 열람 + 형광펜 드로잉
+- **주요 기능**:
+  - 📱 **피드 스크롤**: 최신 일기가 아래, 위로 올리면 예전 일기
+  - 📝 **일기 카드**: 쓰기 화면과 동일한 크기(280px min) + 스티커 표시
+  - 📅 **날짜/기분**: 카드 하단에 깨끗한 날짜 + MoodCharacter 이모지
+  - ✏️ **형광펜 드로잉**: 노란 형광펜 (opacity 45%, 16px 두께)
+  - 💡 **플로팅 펜 버튼**: 탭으로 드로잉 모드 진입, 다시 탭으로 메뉴, 길게 누르면 모드 종료
+  - 🔒 **드로잉 모드시 스크롤 비활성화**: 펜 입력과 스크롤 충돌 방지
+
+## 4. 요약 스크린 (데이터 시각화 차트)
 
 - **파일명**: `SummaryScreen.view.js`, `SummaryScreen.logic.js`, `SummaryScreen.styles.js`
 - **경로**: `/src/screens/SummaryScreen/`

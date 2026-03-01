@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
         ...SOFT_SHADOW.button,
     },
     textSticker: {
-        fontSize: 32,
-        lineHeight: 38, // 텍스트 짤림 방지
+        fontSize: 26,
+        lineHeight: 31, // 텍스트 짤림 방지
     }
 });

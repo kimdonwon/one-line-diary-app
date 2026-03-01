@@ -1,10 +1,13 @@
-import React, { useEffect, useRef } from "react";
-import { TouchableOpacity, Text, View, StyleSheet, Animated, Easing } from "react-native";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { TouchableOpacity, Text, View, StyleSheet, Animated, Easing, Pressable, TextInput } from "react-native";
+import Reanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, withDelay, useAnimatedProps } from 'react-native-reanimated';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW } from '../constants/theme';
 import { MoodCharacter } from '../constants/MoodCharacters';
 import { getStickerComponent } from '../constants/stickers';
 import Modal from "react-native-modal";
+import { ComboShakeWrapper } from "./ComboShakeWrapper";
+export { ComboShakeWrapper };
 
 // ─── Custom Soft Alert Modal ───
 export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmText = "확인" }) {
@@ -41,25 +44,23 @@ export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmTe
 export function StaticSticker({ sticker, bounds }) {
   if (!sticker) return null;
 
-  // 리스트 뷰 등 더 작은 영역에서의 렌더링을 위한 스케일 다운 비율 산정 (선택사항)
-  const scale = bounds ? bounds.width / 300 : 1;
-
-  // 스티커 렌더링 (텍스트 vs SVG 구분)
+  // 스티커 렌더링 (WriteScreen의 DraggableSticker와 동일한 사이즈 적용)
   const renderContent = () => {
     if (sticker.isGraphic) {
       const GraphicComponent = getStickerComponent(sticker.type);
       if (GraphicComponent) {
-        return <GraphicComponent size={24 * scale} />;
+        return <GraphicComponent size={29} />;
       }
     }
-    return <Text style={{ fontSize: 20 * scale }}>{sticker.type}</Text>;
+    return <Text style={{ fontSize: 26, lineHeight: 31 }}>{sticker.type}</Text>;
   };
 
   return (
     <View style={{
       position: 'absolute',
-      left: sticker.x * scale,
-      top: sticker.y * scale,
+      left: sticker.x,
+      top: sticker.y,
+      padding: 4, // DraggableSticker 컨테이너 패딩 보정
       zIndex: 5,
     }}>
       {renderContent()}
@@ -99,56 +100,41 @@ export function Card({ children, style }) {
 }
 
 // ─── Mood Bar for Summary (게이지 차오름 애니메이션 최적화) ───
+const AnimatedTextInput = Reanimated.createAnimatedComponent(TextInput);
+
 export const MoodBar = React.memo(({ mood, count, maxCount, color, animKey }) => {
   const ratio = maxCount > 0 ? count / maxCount : 0;
-  // useNativeDriver: true를 위해 scaleX와 translateX를 사용합니다.
-  const animValue = useRef(new Animated.Value(0)).current;
+
+  const widthSV = useSharedValue(0.05);
+  const countSV = useSharedValue(0);
 
   useEffect(() => {
-    animValue.setValue(0);
-    Animated.timing(animValue, {
-      toValue: Math.max(ratio, 0.05),
-      duration: 800,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      useNativeDriver: true,
-    }).start();
-  }, [ratio, animKey]);
+    widthSV.value = 0.05;
+    countSV.value = 0;
 
-  // scaleX는 중심을 기준으로 커지므로, 왼쪽으로 정렬된 느낌을 주기 위해 translateX를 함께 조절하거나
-  // 혹은 단순히 0.5 지점에서 시작하는 것이 아니라, transform-origin 대용으로 translateX를 사용합니다.
-  // 여기서는 단순히 JS thread 부담을 줄이기 위해 React.memo만으로도 효과가 크지만, 
-  // 더 완벽한 성능을 위해 scaleX 기법을 적용합니다.
-  const animatedStyle = {
-    transform: [
-      { translateX: -150 }, // 임의의 넓은 기준점 (충분히 큰 값)
-      {
-        scaleX: animValue.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, 300], // 기준점과 곱해져서 실제 너비를 채움
-        })
-      },
-      { translateX: 150 },
-    ],
-    // 하지만 위 방식은 복잡하므로, 가장 깔끔한 'width' 애니메이션을 유지하되 
-    // 컴포넌트 전체가 아닌 'Animated.View'만 리렌더링되도록 격리합니다.
-  };
+    // 자석 같은 탄성 효과 (Spring)
+    widthSV.value = withDelay(50, withSpring(Math.max(ratio, 0.05), {
+      damping: 14,
+      stiffness: 90,
+      mass: 0.8,
+    }));
 
-  // 실질적으로 'width'를 애니메이션할 때는 useNativeDriver를 쓸 수 없으므로,
-  // 렉의 주 원인인 'SVG 캐릭터 리렌더링'을 React.memo로 막는 것이 핵심입니다.
-  const widthAnim = useRef(new Animated.Value(0)).current;
+    // 숫자 카운팅 동기화
+    countSV.value = withDelay(50, withTiming(count, { duration: 700 }));
+  }, [ratio, animKey, count]);
 
-  useEffect(() => {
-    widthAnim.setValue(0);
-    Animated.timing(widthAnim, {
-      toValue: Math.max(ratio * 100, 5),
-      duration: 700,
-      useNativeDriver: false,
-    }).start();
-  }, [ratio, animKey]);
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      width: `${widthSV.value * 100}%`,
+      backgroundColor: color,
+    };
+  });
 
-  const animatedWidth = widthAnim.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
+  const animatedProps = useAnimatedProps(() => {
+    return {
+      text: Math.round(countSV.value).toString(),
+      value: Math.round(countSV.value).toString(),
+    };
   });
 
   return (
@@ -157,23 +143,38 @@ export const MoodBar = React.memo(({ mood, count, maxCount, color, animKey }) =>
         <MemoizedMoodCharacter character={mood.character} size={28} />
       </View>
       <View style={styles.moodBarTrack}>
-        <Animated.View
+        <Reanimated.View
           style={[
             styles.moodBarFill,
-            {
-              width: animatedWidth,
-              backgroundColor: color,
-            },
+            animatedStyle
           ]}
         />
       </View>
-      <Text style={styles.moodBarCount}>{count}</Text>
+      <AnimatedTextInput
+        underlineColorAndroid="transparent"
+        editable={false}
+        animatedProps={animatedProps}
+        style={[styles.moodBarCount, { padding: 0 }]}
+      />
     </View>
   );
 });
 
 // MoodCharacter를 메모이제이션하여 애니메이션 중 불필요한 SVG 재계산을 방지합니다.
 const MemoizedMoodCharacter = React.memo(MoodCharacter);
+
+/**
+ * 💥 기분 이모지 콤보 연타 쉐이크 효과 컴포넌트 (공통 래퍼 사용)
+ */
+export function ComboShakeMoodCharacter({ character, size = 32 }) {
+  // 콤보로 1.8배까지 커질 때의 영역을 충분히 확보 (layout clipping 방지)
+  const paddingSize = size * 0.5;
+  return (
+    <ComboShakeWrapper style={{ padding: paddingSize, margin: -paddingSize, overflow: 'visible' }}>
+      <MemoizedMoodCharacter character={character} size={size} />
+    </ComboShakeWrapper>
+  );
+}
 
 // ─── Screen Header (메인 화면 스타일 정렬) ───
 export function Header({ title, subtitle, titleIcon, leftButton, rightButton, style }) {
@@ -188,7 +189,11 @@ export function Header({ title, subtitle, titleIcon, leftButton, rightButton, st
         </View>
         {subtitle && (
           <View style={styles.headerSubtitleWrap}>
-            <Text style={styles.headerSubtitleText}>{subtitle}</Text>
+            {typeof subtitle === 'string' ? (
+              <Text style={styles.headerSubtitleText}>{subtitle}</Text>
+            ) : (
+              subtitle
+            )}
           </View>
         )}
       </View>

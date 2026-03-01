@@ -13,19 +13,19 @@ export function MoodProvider({ children }) {
         try {
             const now = new Date();
             const dayOfWeek = now.getDay();
-            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const sundayOffset = -dayOfWeek;
 
-            const monday = new Date(now);
-            monday.setDate(now.getDate() + mondayOffset);
-            monday.setHours(0, 0, 0, 0);
+            const sunday = new Date(now);
+            sunday.setDate(now.getDate() + sundayOffset);
+            sunday.setHours(0, 0, 0, 0);
 
-            const sunday = new Date(monday);
-            sunday.setDate(monday.getDate() + 6);
-            sunday.setHours(23, 59, 59, 999);
+            const saturday = new Date(sunday);
+            saturday.setDate(sunday.getDate() + 6);
+            saturday.setHours(23, 59, 59, 999);
 
             const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-            const stats = await getMoodStatsByDateRange(fmt(monday), fmt(sunday));
+            const stats = await getMoodStatsByDateRange(fmt(sunday), fmt(saturday));
 
             if (stats && stats.length > 0) {
                 // 이번 주 통계 중 가장 많은 횟수의 기분을 추출

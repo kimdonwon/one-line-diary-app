@@ -90,9 +90,6 @@ export function useMainLogic(navigation) {
         navigation.navigate('Write', { date });
     };
 
-    const onDiaryPress = (diary) => {
-        navigation.navigate('Write', { date: diary.date });
-    };
 
     const onMoodPress = (moodKey) => {
         navigation.navigate('MoodList', { year, month, moodKey });
@@ -114,18 +111,43 @@ export function useMainLogic(navigation) {
         return { ...mood, count: stat ? stat.count : 0 };
     });
 
+    // 기분별 가중치 (Y축 높이 결정)
+    const MOOD_SCORE = {
+        HAPPY: 5,
+        SOSO: 4,
+        EMBARRASSED: 3,
+        ANGRY: 2,
+        SAD: 1
+    };
+
+    // 일별 기분 흐름 데이터 (단일 궤적 그래프용)
+    const dailyMoodFlow = Array.from({ length: daysInMonth }).map((_, i) => {
+        const date = formatDate(year, month, i + 1);
+        const diary = diaryMap[date];
+        if (diary) {
+            const mood = getMoodByKey(diary.mood);
+            return {
+                day: i + 1,
+                score: MOOD_SCORE[diary.mood] || 3,
+                color: mood.color,
+                moodKey: diary.mood
+            };
+        }
+        return { day: i + 1, score: null }; // 기록 없는 날
+    });
+
 
 
     return {
         // Properties
         year, month,
         diaries, stats, activityStats, diaryMap,
-        firstDay, daysInMonth, topMoodData, allMoodStats, maxCount,
+        firstDay, daysInMonth, topMoodData, allMoodStats, maxCount, dailyMoodFlow,
 
         // Settings/Check
         isToday,
 
         // Handlers
-        goToPrevMonth, goToNextMonth, onDayPress, onSummaryPress, onTodayWrite, onDiaryPress, onMoodPress, onActivityPress
+        goToPrevMonth, goToNextMonth, onDayPress, onSummaryPress, onTodayWrite, onMoodPress, onActivityPress
     };
 }

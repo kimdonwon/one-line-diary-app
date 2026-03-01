@@ -127,3 +127,102 @@ export function PlusButtonIcon({ size = 28, color = "#FFFFFF" }) {
         </Svg>
     );
 }
+
+// ─── 다이어리 피드 탭 아이콘 (Book/Journal) ───
+export function DiaryTabIcon({ size = 24, color }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <Path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </Svg>
+    );
+}
+
+export function SelectedDiaryTabIcon({ size = 24, color }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <Path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </Svg>
+    );
+}
+
+// ─── 요약 탭 아이콘 (Pie Chart) ───
+export function SummaryTabIcon({ size = 24, color }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+            <Path d="M22 12A10 10 0 0 0 12 2v10z" />
+        </Svg>
+    );
+}
+
+export function SelectedSummaryTabIcon({ size = 24, color }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+            <Path d="M22 12A10 10 0 0 0 12 2v10z" />
+        </Svg>
+    );
+}
+
+// ─── 형광펜 아이콘 ───
+export function HighlighterIcon({ size = 24, color = '#FFE066' }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M18.37 2.63L14 7l-1.59-1.59a2 2 0 00-2.82 0L8 7l9 9 1.59-1.59a2 2 0 000-2.82L17 10l4.37-4.37a2.12 2.12 0 10-3-3z" />
+            <Path d="M9 8l-5 5v4h4l5-5" />
+            <Path d="M14.5 17.5L4.5 21.5l4-10" />
+        </Svg>
+    );
+}
+
+// ─── 되돌리기 (Undo) 아이콘 ───
+export function UndoIcon({ size = 20, color = "#37352F" }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M3 7v6h6" />
+            <Path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+        </Svg>
+    );
+}
+
+// ─── 전체 지우기 (Trash) 아이콘 ───
+export function TrashIcon({ size = 20, color = "#37352F" }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M3 6h18" />
+            <Path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        </Svg>
+    );
+}
+
+// ─── 펜 메뉴 아이콘 ───
+export function PenMenuIcon({ size = 24, color = "#37352F" }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <Circle cx="12" cy="12" r="1.5" />
+            <Circle cx="12" cy="5" r="1.5" />
+            <Circle cx="12" cy="19" r="1.5" />
+        </Svg>
+    );
+}
+
+// ─── X 아이콘 ───
+export function XIcon({ size = 24, color = "#37352F" }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <Line x1="18" y1="6" x2="6" y2="18" />
+            <Line x1="6" y1="6" x2="18" y2="18" />
+        </Svg>
+    );
+}
+
+// ─── 메시지/댓글 다이어로그 아이콘 ───
+export function MessageCircleIcon({ size = 20, color = "#666666" }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </Svg>
+    );
+}

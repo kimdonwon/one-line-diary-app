@@ -6,6 +6,7 @@ import {
     saveDiary as dbSaveDiary,
     getDiary,
     getMonthDiaries,
+    getAllDiaries,
     getMoodStats,
     getYearDiaries,
     getYearMoodStats,
@@ -17,6 +18,10 @@ import {
     getMonthActivities,
     getYearSpecificActivities,
     getMoodStatsByDateRange,
+    saveComment as dbSaveComment,
+    getComments,
+    getAllCommentCounts,
+    deleteComment as dbDeleteComment
 } from '../database/db';
 import { DeviceEventEmitter } from 'react-native';
 import { getMoodByKey } from '../constants/mood';
@@ -249,6 +254,7 @@ export async function saveDiary(date, content, mood, stickers = '[]') {
 export async function saveActivities(date, activities) {
     await dbSaveActivities(date, activities);
     DeviceEventEmitter.emit('DIARY_UPDATED');
+    DeviceEventEmitter.emit('ACTIVITIES_SAVED');
 }
 
 export function useMonthActivityStats(yearMonth) {
@@ -299,4 +305,106 @@ export function useYearSpecificActivities(year, activity, skip = false) {
     }, [load, skip]);
 
     return { activities, loading, reload: load };
+}
+
+export function useAllDiaries() {
+    const [diaries, setDiaries] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        try {
+            const results = await getAllDiaries();
+            setDiaries(results);
+        } catch (e) {
+            console.error('Failed to load all diaries:', e);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        load();
+    }, [load]);
+
+    return { diaries, loading, reload: load };
+}
+
+// ─── 댓글 관련 훅스 ───
+
+export function useCommentsForDiary(diary_date) {
+    const [comments, setComments] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const load = useCallback(async () => {
+        if (!diary_date) {
+            setComments([]);
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
+        try {
+            const results = await getComments(diary_date);
+            setComments(results);
+        } catch (e) {
+            console.error('Failed to load comments:', e);
+        } finally {
+            setLoading(false);
+        }
+    }, [diary_date]);
+
+    useEffect(() => {
+        load();
+    }, [load]);
+
+    // 댓글 추가 이벤트 감지하여 갱신
+    useEffect(() => {
+        const sub = DeviceEventEmitter.addListener('COMMENT_ADDED', load);
+        return () => sub.remove();
+    }, [load]);
+
+    return { comments, loading, reload: load };
+}
+
+export function useAllCommentCounts() {
+    const [commentCounts, setCommentCounts] = useState({});
+    const [loading, setLoading] = useState(true);
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        try {
+            const results = await getAllCommentCounts();
+            const countsMap = {};
+            results.forEach((row) => {
+                countsMap[row.diary_date] = row.count;
+            });
+            setCommentCounts(countsMap);
+        } catch (e) {
+            console.error('Failed to load all comment counts:', e);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        load();
+    }, [load]);
+
+    // 댓글 추가 이벤트 감지하여 갱신
+    useEffect(() => {
+        const sub = DeviceEventEmitter.addListener('COMMENT_ADDED', load);
+        return () => sub.remove();
+    }, [load]);
+
+    return { commentCounts, loading, reload: load };
+}
+export async function saveComment(diary_date, content) {
+    const created_at = new Date().toISOString();
+    await dbSaveComment(diary_date, content, created_at);
+    DeviceEventEmitter.emit('COMMENT_ADDED');
+}
+
+export async function deleteCommentById(id) {
+    await dbDeleteComment(id);
+    DeviceEventEmitter.emit('COMMENT_ADDED'); // 동일 이벤트 재사용하여 목록/카운트 갱신
 }

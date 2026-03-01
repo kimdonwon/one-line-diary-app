@@ -3,19 +3,21 @@ import { View, Text, TouchableOpacity, ScrollView, Animated, PanResponder } from
 import { StatusBar } from 'expo-status-bar';
 
 import { COLORS } from '../../constants/theme';
-import { Card, MoodBar, DiaryListItem, Header } from '../../components';
+import { Card, MoodBar, Header } from '../../components';
+import { SearchIcon } from '../../constants/icons';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { ActivityIcon } from '../../constants/ActivityIcons';
 import { getMoodByKey } from '../../constants/mood';
 import { getActivityByKey } from '../../constants/activities';
 import { ConfettiEffect } from '../../components/ConfettiEffect';
+import Svg, { Polyline, Circle as SvgCircle } from 'react-native-svg';
 
 import {
     useMainLogic,
     DAY_NAMES,
     formatDate
 } from './MainScreen.logic';
-import { styles } from './MainScreen.styles';
+import { styles, chartConstants } from './MainScreen.styles';
 import { useGlobalWeeklyMood } from '../../context/MoodContext';
 
 /**
@@ -132,8 +134,8 @@ const AnimatedActivityBar = ({ stat, maxActCount, onPress }) => {
 export function MainScreenView({ navigation }) {
     const {
         year, month, diaries, activityStats, diaryMap,
-        firstDay, daysInMonth, topMoodData, allMoodStats, maxCount,
-        isToday, goToPrevMonth, goToNextMonth, onDayPress, onDiaryPress, onMoodPress, onActivityPress
+        firstDay, daysInMonth, topMoodData, allMoodStats, maxCount, dailyMoodFlow,
+        isToday, goToPrevMonth, goToNextMonth, onDayPress, onMoodPress, onActivityPress
     } = useMainLogic(navigation);
 
     const weeklyMood = useGlobalWeeklyMood();
@@ -210,6 +212,80 @@ export function MainScreenView({ navigation }) {
         return getMoodByKey(topMoodKey)?.color || COLORS.happy;
     }, [year, month, daysInMonth, diaryMap]);
 
+    /**
+     * 📈 일별 기분 흐름 차트 렌더링 (단일 궤적 스타일)
+     */
+    const renderDailyMoodFlow = () => {
+        // 기록이 있는 날들만 추출해서 선으로 잇기
+        const existingEntries = dailyMoodFlow.filter(d => d.score !== null);
+
+        const getY = (score) => {
+            // score 1(Sad) -> 5(Happy)를 차트 안의 Y 좌표로 변환
+            const availableH = chartConstants.chartH - chartConstants.pTop - chartConstants.pBot;
+            return chartConstants.pTop + (availableH - ((score - 1) / 4) * availableH);
+        };
+
+        const getX = (itemDay) => ((itemDay - 1) / (daysInMonth - 1)) * (chartConstants.chartW - 45) + 35;
+
+        const points = existingEntries.map((d) => `${getX(d.day)},${getY(d.score)}`).join(' ');
+
+        return (
+            <View style={styles.chartContainer}>
+                {/* Y축 기분 아이콘 라벨 */}
+                <View style={{ position: 'absolute', left: 5, top: chartConstants.pTop - 8, height: chartConstants.chartH - chartConstants.pBot - chartConstants.pTop + 16, justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+                    <MoodCharacter character="frog" size={18} />
+                    <MoodCharacter character="cat" size={18} />
+                </View>
+
+                <Svg width={chartConstants.chartW} height={chartConstants.chartH}>
+                    {/* 가이드 라인 (3점 중심선 강조) */}
+                    {[1, 2, 3, 4, 5].map((s) => {
+                        const isMiddle = s === 3;
+                        return (
+                            <Polyline
+                                key={s}
+                                points={`35,${getY(s)} ${chartConstants.chartW},${getY(s)}`}
+                                fill="none"
+                                stroke={isMiddle ? "#E0E0DE" : "#F0F0EE"}
+                                strokeWidth={isMiddle ? "2" : "1"}
+                                strokeDasharray={isMiddle ? "none" : "4,4"}
+                            />
+                        );
+                    })}
+
+                    {/* 기분 흐름 선 */}
+                    {existingEntries.length > 1 && (
+                        <Polyline
+                            points={points}
+                            fill="none"
+                            stroke="#E9E9E7"
+                            strokeWidth="2"
+                        />
+                    )}
+
+                    {/* 기록 점 */}
+                    {existingEntries.map((d) => (
+                        <SvgCircle
+                            key={d.day}
+                            cx={getX(d.day)}
+                            cy={getY(d.score)}
+                            r="4.5"
+                            fill={d.color}
+                            stroke="#FFFFFF"
+                            strokeWidth="2"
+                        />
+                    ))}
+                </Svg>
+
+                <View style={[styles.lineChartLabels, { paddingLeft: 35 }]}>
+                    {[1, 10, 20, daysInMonth].map((day) => (
+                        <Text key={day} style={[styles.lineChartLabel, { width: 30 }]}>{day}일</Text>
+                    ))}
+                </View>
+            </View>
+        );
+    };
+
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
@@ -218,6 +294,15 @@ export function MainScreenView({ navigation }) {
                     title="오늘조각"
                     subtitle={`${year}년 ${month}월`}
                     titleIcon={<MoodCharacter character={currentHeaderMood.character} size={28} />}
+                    rightButton={
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Search')}
+                            style={{ padding: 8 }}
+                            activeOpacity={0.7}
+                        >
+                            <SearchIcon size={22} color="#37352F" />
+                        </TouchableOpacity>
+                    }
                 />
 
                 <Animated.View
@@ -310,17 +395,12 @@ export function MainScreenView({ navigation }) {
 
                             <Card style={styles.chartCard}>
                                 <View style={styles.sectionRow}>
-                                    <Text style={styles.sectionTitle}>일기 목록</Text>
+                                    <Text style={styles.sectionTitle}>{month}월 기분 흐름</Text>
                                 </View>
-                                {diaries.map((diary) => (
-                                    <DiaryListItem
-                                        key={diary.id}
-                                        diary={diary}
-                                        mood={getMoodByKey(diary.mood)}
-                                        onPress={() => onDiaryPress(diary)}
-                                    />
-                                ))}
+                                {renderDailyMoodFlow()}
                             </Card>
+
+                            {/* 일기 목록 카드 제거됨 */}
                         </>
                     ) : (
                         <Card style={styles.emptyCard}>
