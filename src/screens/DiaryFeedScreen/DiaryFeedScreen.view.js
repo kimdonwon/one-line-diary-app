@@ -16,74 +16,16 @@ import Modal from 'react-native-modal';
 
 import { COLORS } from '../../constants/theme';
 import { Header, StaticSticker, ComboShakeMoodCharacter } from '../../components';
+import { DiaryEntryCard } from '../../components/DiaryEntryCard';
 import { MessageCircleIcon, XIcon } from '../../constants/icons';
+import { ActivityIcon } from '../../constants/ActivityIcons';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { getMoodByKey } from '../../constants/mood';
 
 import { useDiaryFeedLogic } from './DiaryFeedScreen.logic';
 import { styles } from './DiaryFeedScreen.styles';
 
-/**
- * 📄 단일 일기 카드 컴포넌트
- */
-const DiaryEntryCard = React.memo(({ diary, commentCount, onOpenComment }) => {
-    const mood = getMoodByKey(diary.mood);
-    let stickers = [];
-    try {
-        stickers = JSON.parse(diary.stickers || '[]');
-    } catch (e) {
-        stickers = [];
-    }
 
-    // 날짜 포맷
-    const d = new Date(diary.date);
-    const day = d.getDate();
-    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-    const dayName = dayNames[d.getDay()];
-    const dateStr = `${day}일 ${dayName}요일`;
-
-    return (
-        <View style={styles.diaryCard}>
-            {/* 일기 본문 + 스티커 */}
-            <View style={styles.diaryCardInner}>
-                {/* 스티커 오버레이 */}
-                <View style={styles.stickerOverlay} pointerEvents="none">
-                    {stickers.map((sticker, idx) => (
-                        <StaticSticker
-                            key={`sticker-${idx}`}
-                            sticker={sticker}
-                            bounds={{ width: 300 }}
-                        />
-                    ))}
-                </View>
-
-                {/* 텍스트 */}
-                <Text style={styles.diaryContent}>{diary.content}</Text>
-            </View>
-
-            {/* 하단 메타 정보 */}
-            <View style={styles.diaryMeta}>
-                <Text style={styles.diaryDateText}>{dateStr}</Text>
-
-                <View style={styles.diaryMetaRight}>
-                    {/* 댓글 버튼 (우측 정렬) */}
-                    <TouchableOpacity
-                        style={styles.commentButton}
-                        activeOpacity={0.7}
-                        onPress={() => onOpenComment(diary)}
-                    >
-                        <MessageCircleIcon size={16} color="#666666" />
-                        <Text style={styles.commentButtonText}>{commentCount}</Text>
-                    </TouchableOpacity>
-
-                    <View style={styles.diaryMoodWrap}>
-                        <ComboShakeMoodCharacter character={mood.character} size={36} />
-                    </View>
-                </View>
-            </View>
-        </View>
-    );
-});
 
 /**
  * 💬 개별 댓글 아이템 (길게 눌렀을 때 삭제 버튼 표시)
@@ -186,6 +128,7 @@ export function DiaryFeedScreenView({ navigation }) {
         isYearMonthPickerVisible,
         diaries,
         loading,
+        activitiesMap,
         commentCounts,
         isCommentModalVisible,
         selectedDiary,
@@ -201,7 +144,8 @@ export function DiaryFeedScreenView({ navigation }) {
         openCommentModal,
         closeCommentModal,
         submitComment,
-        handleDeleteComment
+        handleDeleteComment,
+        handleNavigateToWrite
     } = useDiaryFeedLogic(navigation);
 
     const flatListRef = useRef(null);
@@ -236,10 +180,12 @@ export function DiaryFeedScreenView({ navigation }) {
     const renderDiaryItem = useCallback(({ item }) => (
         <DiaryEntryCard
             diary={item}
+            activities={activitiesMap[item.date] || []}
             commentCount={commentCounts[item.date] || 0}
             onOpenComment={openCommentModal}
+            onPress={() => handleNavigateToWrite(item.date)}
         />
-    ), [commentCounts, openCommentModal]);
+    ), [commentCounts, activitiesMap, openCommentModal, handleNavigateToWrite]);
 
     const keyExtractor = useCallback((item) => String(item.id), []);
 

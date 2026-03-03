@@ -267,6 +267,15 @@ export async function getMonthActivities(yearMonth) {
     });
 }
 
+export async function getMonthAllActivities(yearMonth) {
+    return enqueueDBTask(async (d) => {
+        return await d.getAllAsync(
+            "SELECT * FROM activities WHERE date LIKE ? ORDER BY date ASC",
+            [`${yearMonth}%`]
+        );
+    });
+}
+
 export async function getYearSpecificActivities(year, activity) {
     return enqueueDBTask(async (d) => {
         return await d.getAllAsync(
@@ -310,5 +319,106 @@ export async function getAllCommentCounts() {
         return await d.getAllAsync(
             'SELECT diary_date, COUNT(*) as count FROM comments GROUP BY diary_date'
         );
+    });
+}
+// ─── 데이터 백업 및 복원 ───
+
+/**
+ * 모든 데이터를 하나의 JSON 객체로 가져옵니다.
+ */
+export async function getAllData() {
+    return enqueueDBTask(async (d) => {
+        const diary = await d.getAllAsync('SELECT * FROM diary');
+        const activities = await d.getAllAsync('SELECT * FROM activities');
+        const comments = await d.getAllAsync('SELECT * FROM comments');
+        const app_settings = await d.getAllAsync('SELECT * FROM app_settings');
+
+        return {
+            version: '1.0.0',
+            exported_at: new Date().toISOString(),
+            tables: {
+                diary,
+                activities,
+                comments,
+                app_settings
+            }
+        };
+    });
+}
+
+/**
+ * 이전 데이터를 모두 삭제하고 제공된 데이터로 복원합니다.
+ */
+export async function restoreFromData(data) {
+    if (!data || !data.tables) {
+        throw new Error('Invalid backup data format');
+    }
+
+    return enqueueDBTask(async (d) => {
+        try {
+            // 트랜잭션 시작 (execAsync로 수동 제어)
+            await d.execAsync('BEGIN TRANSACTION');
+
+            // 1. 기존 데이터 삭제
+            await d.execAsync('DELETE FROM diary');
+            await d.execAsync('DELETE FROM activities');
+            await d.execAsync('DELETE FROM comments');
+            await d.execAsync('DELETE FROM app_settings');
+
+            // 2. 데이터 삽입
+            const { diary, activities, comments, app_settings } = data.tables;
+
+            for (const item of diary) {
+                await d.runAsync(
+                    'INSERT INTO diary (id, date, content, mood, stickers) VALUES (?, ?, ?, ?, ?)',
+                    [item.id, item.date, item.content, item.mood, item.stickers]
+                );
+            }
+
+            for (const item of activities) {
+                await d.runAsync(
+                    'INSERT INTO activities (id, date, activity, title, note) VALUES (?, ?, ?, ?, ?)',
+                    [item.id, item.date, item.activity, item.title, item.note]
+                );
+            }
+
+            for (const item of comments) {
+                await d.runAsync(
+                    'INSERT INTO comments (id, diary_date, content, created_at) VALUES (?, ?, ?, ?)',
+                    [item.id, item.diary_date, item.content, item.created_at]
+                );
+            }
+
+            for (const item of app_settings) {
+                await d.runAsync(
+                    'INSERT INTO app_settings (key, value) VALUES (?, ?)',
+                    [item.key, item.value]
+                );
+            }
+
+            await d.execAsync('COMMIT');
+            return true;
+        } catch (error) {
+            await d.execAsync('ROLLBACK');
+            throw error;
+        }
+    });
+}
+/**
+ * 🗑️ 모든 일기, 활동, 댓글 데이터를 삭제합니다. (테스트용)
+ */
+export async function deleteAllDiaryData() {
+    return enqueueDBTask(async (d) => {
+        try {
+            await d.execAsync('BEGIN TRANSACTION');
+            await d.execAsync('DELETE FROM diary');
+            await d.execAsync('DELETE FROM activities');
+            await d.execAsync('DELETE FROM comments');
+            await d.execAsync('COMMIT');
+            return true;
+        } catch (error) {
+            await d.execAsync('ROLLBACK');
+            throw error;
+        }
     });
 }

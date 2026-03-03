@@ -20,12 +20,20 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
     // 폼(Form) 주요 상태
     const [selectedMood, setSelectedMood] = useState(null);
-    const [content, setContent] = useState('');
     const [showStickers, setShowStickers] = useState(false);
 
-    // 다꾸 스티커 관리를 위한 상태
-    // stickers: { id: string, type: string, isGraphic: boolean, x: number, y: number } 배열
-    const [stickers, setStickers] = useState([]);
+    // ─── 멀티페이지 상태 ───
+    // pages: 각 페이지의 content 문자열 배열
+    // pageStickers: 각 페이지의 스티커 배열 (2차원 배열)
+    const MAX_PAGES = 5;
+    const [pages, setPages] = useState(['']);
+    const [pageStickers, setPageStickers] = useState([[]]);
+    const [currentPageIndex, setCurrentPageIndex] = useState(0);
+
+    // 현재 페이지의 content와 stickers (편의용 alias)
+    const content = pages[currentPageIndex] || '';
+    const stickers = pageStickers[currentPageIndex] || [];
+
     const [inputBoxBounds, setInputBoxBounds] = useState({ width: 0, height: 0, x: 0, y: 0 });
     const [isStickerLimitModalVisible, setStickerLimitModalVisible] = useState(false);
 
@@ -41,6 +49,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const [enabledCatIds, setEnabledCatIds] = useState(defaultCats);
     const [showManager, setShowManager] = useState(false);
 
+    // 📺 광고 보상 추가 스티커 수
+    const [adBonusStickers, setAdBonusStickers] = useState(0);
+
     // 활동 선택 및 서술 관리를 위한 상태 (메타데이터 배열)
     const [activityStates, setActivityStates] = useState(
         ACTIVITIES.map(a => ({ key: a.key, selected: false, title: '', note: '' }))
@@ -52,14 +63,46 @@ export function useWriteLogic(route, navigation, scrollRef) {
     useEffect(() => {
         if (diary) {
             setSelectedMood(diary.mood);
-            setContent(diary.content || '');
+
+            // ── content 마이그레이션: 기존 단일 문자열 → 배열 변환 ──
+            let parsedPages = [''];
             try {
-                if (diary.stickers) {
-                    setStickers(JSON.parse(diary.stickers));
+                const parsed = JSON.parse(diary.content);
+                if (Array.isArray(parsed)) {
+                    parsedPages = parsed;
+                } else {
+                    parsedPages = [diary.content || ''];
                 }
             } catch (e) {
-                console.log("Failed to parse stickers", e);
+                // JSON이 아니면 기존 단일 문자열
+                parsedPages = [diary.content || ''];
             }
+            setPages(parsedPages);
+
+            // ── stickers 마이그레이션: 기존 1차원 배열 → 2차원 배열 변환 ──
+            let parsedStickers = [[]];
+            try {
+                if (diary.stickers) {
+                    const raw = JSON.parse(diary.stickers);
+                    if (Array.isArray(raw) && raw.length > 0) {
+                        // 첫 원소가 배열이면 이미 2차원 (새 형식)
+                        if (Array.isArray(raw[0])) {
+                            parsedStickers = raw;
+                        } else {
+                            // 1차원 배열 → 첫 페이지 스티커로 변환 (레거시)
+                            parsedStickers = [raw];
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log('Failed to parse stickers', e);
+            }
+            // 페이지 수에 맞춰 빈 스티커 배열 패딩
+            while (parsedStickers.length < parsedPages.length) {
+                parsedStickers.push([]);
+            }
+            setPageStickers(parsedStickers);
+            setCurrentPageIndex(0);
         }
     }, [diary]);
 
@@ -81,7 +124,19 @@ export function useWriteLogic(route, navigation, scrollRef) {
     }, []);
 
     const toggleCategory = async (catId) => {
-        const nextIds = enabledCatIds.includes(catId)
+        const isAlreadyEnabled = enabledCatIds.includes(catId);
+
+        // 🚫 무료 버전 3개 제한 로직 추가
+        if (!isPremium && !isAlreadyEnabled && enabledCatIds.length >= 3) {
+            setAlertConfig({
+                title: '스티커 팩 제한 🔒',
+                message: '무료 버전에서는 최대 3개의 스티커 팩만 동시에 꺼내둘 수 있어요. 프리미엄으로 무제한 사용해 보세요! ✨'
+            });
+            setShowAlert(true);
+            return;
+        }
+
+        const nextIds = isAlreadyEnabled
             ? enabledCatIds.filter(id => id !== catId)
             : [...enabledCatIds, catId];
 
@@ -125,10 +180,76 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const lineCount = safeContent.split('\n').length;
 
     /**
-     * 📖 일기 본문 입력 헨들러 (최대 5줄 제한 적용)
+     * 📖 일기 본문 입력 헨들러 (특정 페이지에 적용, 미지정 시 현재 페이지)
      */
-    const handleContentChange = (text) => {
-        setContent(text || '');
+    const handleContentChange = (text, pageIdx) => {
+        const targetIdx = pageIdx !== undefined ? pageIdx : currentPageIndex;
+        setPages(prev => {
+            const next = [...prev];
+            next[targetIdx] = text || '';
+            return next;
+        });
+    };
+
+    /**
+     * 📄 페이지 추가 (최대 MAX_PAGES까지)
+     */
+    const addPage = () => {
+        if (pages.length >= MAX_PAGES) {
+            setAlertConfig({ title: '페이지 제한', message: `일기는 최대 ${MAX_PAGES}페이지까지 추가할 수 있어요 ✧` });
+            setShowAlert(true);
+            return;
+        }
+        setPages(prev => [...prev, '']);
+        setPageStickers(prev => [...prev, []]);
+        setCurrentPageIndex(pages.length); // 새 페이지로 이동
+    };
+
+    /**
+     * 🗑️ 현재 페이지 삭제 (최소 1페이지는 유지)
+     */
+    const deletePage = (index) => {
+        if (pages.length <= 1) return;
+
+        const newPages = pages.filter((_, i) => i !== index);
+        const newPageStickers = pageStickers.filter((_, i) => i !== index);
+
+        setPages(newPages);
+        setPageStickers(newPageStickers);
+
+        // 삭제 후 이동할 인덱스: 현재 인덱스가 마지막이었으면 이전으로, 아니면 현재 인덱스 유지
+        const nextIdx = index >= newPages.length ? Math.max(0, newPages.length - 1) : index;
+        setCurrentPageIndex(nextIdx);
+
+        return nextIdx; // view에서 스크롤 처리를 위해 반환
+    };
+
+    /**
+     * 🗑️ 페이지 삭제 트리거 (사용자 확인 절차 포함)
+     */
+    const handlePageDeleteTrigger = (index, onFinish) => {
+        setAlertConfig({
+            title: '페이지 삭제',
+            message: '정말 이 페이지를 삭제할까요?\n작성된 내용은 복구되지 않아요 ✧',
+            confirmText: '삭제하기',
+            onConfirm: () => {
+                const nextIdx = deletePage(index);
+                setShowAlert(false);
+                if (onFinish) onFinish(nextIdx);
+            },
+            secondaryText: '취소',
+            onSecondaryConfirm: () => setShowAlert(false)
+        });
+        setShowAlert(true);
+    };
+
+    /**
+     * 페이지 이동
+     */
+    const goToPage = (index) => {
+        if (index >= 0 && index < pages.length) {
+            setCurrentPageIndex(index);
+        }
     };
 
     /**
@@ -138,8 +259,14 @@ export function useWriteLogic(route, navigation, scrollRef) {
      * @param {boolean} isGraphic - 그래픽 스티커 여부 판별 플래그
      */
     const handleStickerPress = (stickerId, isGraphic = false) => {
-        const MAX_STICKERS = isPremium ? 15 : 5;
-        if (stickers.length >= MAX_STICKERS) {
+        const baseLimit = isPremium ? 15 : 3;
+        // 🚫 결국 어떤 경우에도 최대 15개까지만 허용
+        const totalLimit = Math.min(baseLimit + adBonusStickers, 15);
+
+        // 🚨 모든 페이지의 스티커 개수 합산
+        const totalCurrentStickers = pageStickers.reduce((acc, current) => acc + (current?.length || 0), 0);
+
+        if (totalCurrentStickers >= totalLimit) {
             setStickerLimitModalVisible(true);
             return;
         }
@@ -154,17 +281,41 @@ export function useWriteLogic(route, navigation, scrollRef) {
             x: spawnX,
             y: spawnY,
         };
-        setStickers([...stickers, newSticker]);
+        setPageStickers(prev => {
+            const next = [...prev];
+            next[currentPageIndex] = [...(next[currentPageIndex] || []), newSticker];
+            return next;
+        });
+    };
+
+    const handleAdReward = () => {
+        // 실제로는 여기서 광고 SDK 호출
+        setAdBonusStickers(prev => prev + 2);
+        setStickerLimitModalVisible(false);
+
+        setAlertConfig({
+            title: '광고 보상 🎁',
+            message: '보너스 스티커 2개가 추가되었습니다! 마음껏 붙여보세요 ✨'
+        });
+        setTimeout(() => setShowAlert(true), 500);
     };
 
     const handleDeleteSticker = (id) => {
-        setStickers(prev => prev.filter(s => s.id !== id));
+        setPageStickers(prev => {
+            const next = [...prev];
+            next[currentPageIndex] = (next[currentPageIndex] || []).filter(s => s.id !== id);
+            return next;
+        });
     };
 
-    const handleDragEnd = (id, newX, newY) => {
-        setStickers(prev => prev.map(s =>
-            s.id === id ? { ...s, x: newX, y: newY } : s
-        ));
+    const handleDragEnd = (id, newX, newY, newRotation) => {
+        setPageStickers(prev => {
+            const next = [...prev];
+            next[currentPageIndex] = (next[currentPageIndex] || []).map(s =>
+                s.id === id ? { ...s, x: newX, y: newY, rotation: newRotation !== undefined ? newRotation : (s.rotation || 0) } : s
+            );
+            return next;
+        });
     };
 
     const toggleActivity = (key) => {
@@ -197,7 +348,19 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
 
         try {
-            await saveDiary(date, content.trim(), selectedMood, JSON.stringify(stickers));
+            // 멀티페이지: pages 배열과 pageStickers 2차원 배열을 JSON으로 저장
+            const trimmedPages = pages.map(p => (p || '').trim());
+            // 빈 후행 페이지 제거 (마지막 빈 페이지들 정리)
+            while (trimmedPages.length > 1 && trimmedPages[trimmedPages.length - 1] === '' && (pageStickers[trimmedPages.length - 1] || []).length === 0) {
+                trimmedPages.pop();
+            }
+            const stickersToSave = pageStickers.slice(0, trimmedPages.length);
+
+            // 단일 페이지면 레거시 호환을 위해 문자열/1차원 배열로 저장
+            const contentToSave = trimmedPages.length === 1 ? trimmedPages[0] : JSON.stringify(trimmedPages);
+            const stickersStrToSave = trimmedPages.length === 1 ? JSON.stringify(stickersToSave[0] || []) : JSON.stringify(stickersToSave);
+
+            await saveDiary(date, contentToSave, selectedMood, stickersStrToSave);
             await saveActivities(date, activityStates);
             navigation.goBack(); // 저장 후 목록으로 이동
         } catch (e) {
@@ -235,6 +398,16 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setShowAlert,
         alertConfig,
 
+        // 멀티페이지
+        pages,
+        pageStickers,
+        currentPageIndex,
+        MAX_PAGES,
+        addPage,
+        deletePage,
+        handlePageDeleteTrigger,
+        goToPage,
+
         // Settings
         setSelectedMood,
         setShowStickers,
@@ -260,5 +433,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
         toggleCategory,
         reorderCategories,
         isPremium,
+
+        // Ad
+        adBonusStickers,
+        handleAdReward,
     };
 }

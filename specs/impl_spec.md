@@ -30,6 +30,7 @@
 - **기본 색상**: 기분 데이터가 없을 때 기본으로 HAPPY(초록색, 개구리) 사용 (탭 바, 헤더, 효과 등 전체 통일)
 
 ### 3.3. 활동(Activity) 선택 알고리즘
+
 - **목적**: `WriteScreen`에서 27가지 활동 리스트 중 사용자가 특정 활동들을 선택/해제하는 로직.
 - **데이터 흐름**:
   1. `useWriteLogic` 호출 시 DB에서 기존 등록 활동 가져오기 (`getActivities`).
@@ -64,7 +65,7 @@
   - `app_settings`: `key` (PK), `value` — 설정값 저장 (isLockEnabled, password, isPremium)
 - **특이 사항 & 동시성 제어 (Mutex Queue)**:
   - 병렬 DB 접근 시 널포인터 예외 방지를 위해 `dbQueue` (Promise 체인)를 통해 순차 실행
-  - `diary` 테이블의 `stickers` 컬럼은 객체 배열(`[{id, type, x, y}]`)을 `JSON.stringify` 포맷으로 직렬화/역직렬화하여 관리합니다.
+  - `diary` 테이블의 `stickers` 컬럼은 객체 배열(`[{id, type, isGraphic, x, y, rotation}]`)을 `JSON.stringify` 포맷으로 직렬화/역직렬화하여 관리합니다. (`rotation`은 도(degree) 단위 회전값, 미지정 시 `0`)
   - Fast Refresh 시 `ensureDB`로 모듈 변수 초기화 문제 우회
 
 ### 3. 데이터베이스 안정성 및 예외 처리 (Concurrency & NPE)
@@ -96,8 +97,7 @@
   - `PanResponder`로 터치 입력 캡처
   - SVG 오버레이에 quadratic bezier (smooth) path 렌더링
   - 형광펜 효과: `opacity={0.45}`, `strokeWidth={16}`, `strokeLinecap="round"`
-  - 드로잉 모드에서 FlatList `scrollEnabled={false}` 처리
-  - 드로잉 영역: 하단 탭바를 제외한 전체 화면
+- **드로잉 영역**: 하단 탭바를 제외한 전체 화면
 - **데이터 흐름**:
   1. 화면 진입 → `useAllDiaries()` 전체 일기 로드
   2. FlatList 렌더링 → `onContentSizeChange` 콜백으로 최하단 스크롤
@@ -109,10 +109,61 @@
   5. 터치 드래그 → SVG path 실시간 렌더링
 - **일기 카드 구조**:
   - WriteScreen의 inputCard와 동일한 minHeight(280px) 및 스타일
-  - 스티커 오버레이 (`StaticSticker` 컴포넌트 활용)
-  - 하단 메타: 날짜 (`YYYY년 M월 D일 X요일`) + 기분 이모지 (MoodCharacter)
+  - 스티커 오버레이 (`StaticSticker` 컴포넌트 활용, 회전값 반영)
+  - 하단 메타: 날짜 (`M월 D일`) + 활동 아이콘 + 기분 캐릭터 (`MoodCharacter`)
 
-### 5. 생체인증 + PIN 잠금 시스템 (`LockContext`, `LockScreen`)
+### 5.0.1. 스티커 회전 기능 (Sticker Rotation)
+
+- **목적**: 스티커를 회전시켜 다꾸의 자유도를 높이고 더욱 개성 있는 일기 꾸미기를 지원
+- **방식 1 — 핀치 제스처 (Pinch-to-Rotate)**: `PanResponder`의 이동값을 기반으로 각도를 계산하여 실시간 회전 적용
+- **방식 2 — 회전 핸들 (Single-Handle Rotation)**: 스티커 터치(선택) 시 우하단에 `↻` 아이콘의 작은 원형 핸들이 나타남. 이 핸들을 드래그하여 정밀하게 각도 조절 가능
+- **선택 상태**: 스티커를 터치하면 점선 테두리가 나타나 활성화 상태를 시각적으로 표현. **3초** 동안 조작이 없으면 자동으로 선택 해제
+- **데이터 저장**: 스티커 객체에 `rotation` 필드(도 단위)를 추가. `handleDragEnd(id, x, y, rotation)`을 통해 DB에 영구 저장
+- **피드 반영**: `StaticSticker` 컴포넌트에서 `transform: [{ rotate }]`를 적용하여 저장된 회전값이 피드에서도 동일하게 보임
+- **구조 (Modular UI Developer 준수)**:
+  - `DraggableSticker.logic.js`: 회전 상태(`rotation`, `currentRotation`), 선택 상태(`isSelected`), `handleRotation()`, `handleRotationEnd()` 관리
+  - `DraggableSticker.view.js`: `RotationHandle` 컴포넌트, `Animated.View`에 `rotate` transform 적용
+  - `DraggableSticker.styles.js`: `selected` (점선 테두리), `rotationHandle` (핸들 원형 도트) 스타일
+
+### 5.1. 멀티페이지 일기 시스템 (Multi-Page Diary)
+
+- **목적**: 하루에 하나의 일기만 쓸 수 있는 제한을 넘어, 한 날짜에 최대 5페이지까지 작성 가능하게 확장. 피드에서는 인스타그램처럼 가로 스와이프로 페이지를 넘겨볼 수 있음.
+- **데이터 구조 (레거시 호환)**:
+  - `diary.content`: 단일 페이지면 기존과 동일한 **일반 문자열**, 멀티페이지면 **JSON 배열 문자열** (`["페이지1", "페이지2"]`)
+  - `diary.stickers`: 단일 페이지면 기존 **1차원 배열** (`[{id,type,x,y}]`), 멀티페이지면 **2차원 배열** (`[[stickers1], [stickers2]]`)
+  - DB 스키마 변경 없이 기존 데이터와 완벽한 하위 호환성 유지
+- **작성 화면 (`WriteScreen`) 변경사항**:
+  - `pages` 배열과 `pageStickers` 2차원 배열로 멀티페이지 상태 관리 (`useWriteLogic`)
+  - `currentPageIndex`로 현재 편집 중인 페이지 추적
+  - `addPage()`: 새 빈 페이지 추가 (최대 5페이지 제한, 초과 시 알림 모달)
+  - `deletePage(index)`: 페이지 삭제 (최소 1페이지 유지)
+  - `goToPage(index)`: 도트 인디케이터 탭으로 페이지 이동
+  - 저장 시 빈 후행 페이지 자동 정리, 단일 페이지면 레거시 형식으로 저장
+- **일기 카드 (`DiaryEntryCard`) 변경사항**:
+  - `parseMultiPageData()` 유틸 함수로 content/stickers를 멀티페이지 형태로 파싱
+  - 멀티페이지인 경우 `FlatList` (horizontal, pagingEnabled)로 가로 스와이프 구현
+  - 하단에 인스타그램 스타일 도트 인디케이터 표시 (활성 페이지는 넓은 바, 비활성은 원형 점)
+  - `onMomentumScrollEnd`로 현재 페이지 인덱스 추적
+  - 단일 페이지 일기는 기존과 동일하게 렌더링 (성능 보존)
+- **검색 대응 (`useSearchLogic`)**:
+  - `d.content`가 JSON 배열인 경우 모든 페이지를 합쳐서 검색 대상으로 활용 (`parsed.join(' ')`)
+- **페이지 네비게이션 UI (Floating Glass Pill)**:
+  - 입력 카드 하단에 하나의 '알약(Pill)' 조형물 형태로 묶여 공중에 띄워진 UI
+  - 배경은 반투명 글래스(`rgba(255, 255, 255, 0.9)`)와 소프트 쉐도우 적용
+  - 구성: `[ ✕ | • • • | + ]` (아이콘/텍스트 기호 기반 미니멀리즘)
+  - **삭제 확인**: `✕` 버튼 클릭 시 `SoftAlertModal`을 통해 "페이지 삭제" 확인 절차를 거침 (실수 방지)
+
+### 6. 요약 및 통계 분석 (Summary & Analysis)
+
+- **목적**: 연간/월간 일기 데이터를 시각화하여 사용자의 기분 변화와 활동 패턴을 분석.
+- **상세 내역**: 상세 디자인 및 데이터 로직은 [chart_spec.md](./chart_spec.md) 문서 참조.
+- **주요 기능**:
+  - 기분 비율 (Mood Pie/Bar) 및 월별 추이 (Line Chart)
+  - 활동 빈도 (Activity Bar) 및 월별 추이 (Line Chart)
+  - **기분 x 활동 상관관계**: 어떤 활동을 할 때 가장 행복한지 분석 (상위 5개)
+  - **자주 쓴 스티커**: 가장 많이 사용한 스티커 TOP 3 랭킹
+
+### 7. 생체인증 + PIN 잠금 시스템 (`LockContext`, `LockScreen`)
 
 - **목적**: 앱 진입 시 사용자 인증을 통한 프라이버시 보호
 - **주요 컴포넌트**:
@@ -130,10 +181,43 @@
   - 생체인증 하드웨어 미지원 시 → PIN 화면 직행
   - PIN 오류 시 → 진동 + 흔들림(shake) 애니메이션 + 자동 초기화
 
-### 5. 프리미엄 상태 관리
+---
 
-- **목적**: 유료 기능(스티커 제한 해제) 임시 구현
-- **데이터 흐름**:
-  - `app_settings` 테이블의 `isPremium` 키로 관리
-  - `SettingsScreen`에서 토글 버튼으로 활성화/비활성화
-  - `WriteScreen.logic.js`에서 `isPremium` 로드 → 스티커 최대 개수 조절 (free: 5개, premium: 99개)
+## 7. 비즈니스 모델 및 유료화 정책 (Business Model)
+
+상세한 비즈니스 스펙은 별도 문서 [business_spec.md](./business_spec.md)에서 관리합니다.
+
+### 7.1. 주요 정책 요약
+
+- **무료 사용자**: 스티커 서랍 활성화(3개), 스티커 부착(기본 3개, 광고 시청 시 최대 15개) 제한.
+- **프리미엄 사용자**: 모든 활성화 제한 해제, 스티커 부착 한도 즉시 15개 상향, 광고 제거.
+- **광고 보상형 모델**: 광고 1회 시청 시 해당 일기에 한해 스티커 한도 +2개 확장 (최대 15개).
+- **데이터 보안**: 모든 백업 데이터는 AES-256으로 로컬 암호화되어 안전하게 공유됨.
+
+---
+
+## 6. 데이터 백업 및 복구 시스템 (Backup & Restore)
+
+### 6.1. 백업 (Export)
+
+- **목적**: 서버 없이 사용자의 소중한 일기 데이터를 안전하게 외부로 내보내기.
+- **상세 설명**:
+  - `db.js`의 `getAllData()`가 모든 테이블의 로우를 긁어모아 하나의 JSON 객체로 만듭니다.
+  - `expo-file-system`을 이용해 로컬 임시 폴더에 `.json` 파일을 생성합니다.
+  - `expo-mail-composer`를 사용해 해당 파일을 메일 앱의 첨부파일로 실어 보냅니다. 메일 앱이 없는 경우 `expo-sharing`을 통해 클라우드나 메신저로 공유합니다.
+
+### 6.2. 복구 (Import)
+
+- **목적**: 기기 변경이나 앱 재설치 시 백업된 파일로 데이터를 이전 상태로 되돌리기.
+- **상세 설명**:
+  - `expo-document-picker`를 통해 사용자가 백업 파일을 직접 선택하게 합니다.
+  - `restoreFromData(data)` 함수 내에서 SQLite 트랜잭션(`BEGIN/COMMIT/ROLLBACK`)을 사용하여 기존 데이터를 모두 삭제하고 백업본을 일괄 삽입합니다.
+  - 데이터 무결성을 위해 테이블 구조와 버전이 일치하는지 최소한의 검증을 거칩니다.
+
+### 6.3. 구매 내역 복원 (Purchase Restore)
+
+- **목적**: 앱 삭제 후 재설치 시에도 사용자가 과거에 구매한 유료 혜택(프리미엄, 스티커)을 그대로 유지.
+- **상세 설명**:
+  - 인앱 결제의 '비소모성(Non-consumable) 상품' 원칙을 활용합니다.
+  - 설정 화면의 '구매 내역 복원' 버튼 클릭 시 스토어 계정 정보를 조회하여 구매 기록을 DB 및 로컬 상태에 재반영합니다.
+  - 현재는 오프라인 환경을 고려하여 2초 후 성공하는 시뮬레이션 로직으로 구현되어 있습니다.

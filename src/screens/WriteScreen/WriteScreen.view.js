@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Animated, Modal, Pressable } from 'react-native';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Animated, Modal, Pressable, FlatList, Dimensions, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
@@ -109,7 +109,9 @@ const AnimatedStickerItem = ({ children, onPress }) => {
  */
 export function WriteScreenView({ route, navigation }) {
     const scrollRef = useRef(null);
+    const pageFlatListRef = useRef(null);
     const [activeCategoryId, setActiveCategoryId] = useState(STICKER_CATEGORIES[0].id);
+    const [pageCardWidth, setPageCardWidth] = useState(0);
 
     const {
         formattedDate,
@@ -122,6 +124,16 @@ export function WriteScreenView({ route, navigation }) {
         inputBoxBounds,
         isStickerLimitModalVisible,
         activityStates,
+
+        // 멀티페이지
+        pages,
+        pageStickers,
+        currentPageIndex,
+        MAX_PAGES,
+        addPage,
+        deletePage,
+        handlePageDeleteTrigger,
+        goToPage,
 
         setSelectedMood,
         setShowStickers,
@@ -144,7 +156,15 @@ export function WriteScreenView({ route, navigation }) {
         toggleCategory,
         catOrder,
         reorderCategories,
-        isPremium
+        isPremium,
+
+        showAlert,
+        setShowAlert,
+        alertConfig,
+
+        // Ad
+        adBonusStickers,
+        handleAdReward,
     } = useWriteLogic(route, navigation, scrollRef);
 
     const insets = useSafeAreaInsets();
@@ -281,45 +301,136 @@ export function WriteScreenView({ route, navigation }) {
                         )}
                     </View>
 
-                    <Card style={styles.inputCard}>
-                        {/* 🌟 다꾸 스티커 영역 (오버레이) */}
-                        <View
-                            style={[StyleSheet.absoluteFill, { zIndex: 10 }]}
-                            pointerEvents="box-none"
-                            onLayout={(e) => {
-                                const { width, height, x, y } = e.nativeEvent.layout;
-                                setInputBoxBounds({ width, height, x, y });
-                            }}
-                        >
-                            {stickers.map(sticker => (
-                                <DraggableSticker
-                                    key={sticker.id}
-                                    sticker={sticker}
-                                    bounds={inputBoxBounds}
-                                    onDelete={handleDeleteSticker}
-                                    onDragEnd={handleDragEnd}
-                                />
-                            ))}
-                        </View>
+                    {/* ─── 멀티페이지 입력 영역 (가로 스와이프) ─── */}
+                    <View
+                        style={styles.pageContainer}
+                        onLayout={(e) => {
+                            const w = e.nativeEvent.layout.width;
+                            if (w > 0) setPageCardWidth(w);
+                        }}
+                    >
+                        {pageCardWidth > 0 && (
+                            <FlatList
+                                ref={pageFlatListRef}
+                                data={pages}
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                keyExtractor={(_, idx) => `page-${idx}`}
+                                onMomentumScrollEnd={(e) => {
+                                    const idx = Math.round(e.nativeEvent.contentOffset.x / pageCardWidth);
+                                    goToPage(idx);
+                                }}
+                                getItemLayout={(_, index) => ({
+                                    length: pageCardWidth,
+                                    offset: pageCardWidth * index,
+                                    index,
+                                })}
+                                renderItem={({ item: pageContent, index: pageIdx }) => (
+                                    <Card style={[styles.inputCard, { width: pageCardWidth }]}>
+                                        {/* 🌟 다꾸 스티커 영역 (오버레이) */}
+                                        <View
+                                            style={[StyleSheet.absoluteFill, { zIndex: 10 }]}
+                                            pointerEvents="box-none"
+                                            onLayout={(e) => {
+                                                if (pageIdx === currentPageIndex) {
+                                                    const { width, height, x, y } = e.nativeEvent.layout;
+                                                    setInputBoxBounds({ width, height, x, y });
+                                                }
+                                            }}
+                                        >
+                                            {(pageStickers[pageIdx] || []).map(sticker => (
+                                                <DraggableSticker
+                                                    key={sticker.id}
+                                                    sticker={sticker}
+                                                    bounds={inputBoxBounds}
+                                                    onDelete={handleDeleteSticker}
+                                                    onDragEnd={handleDragEnd}
+                                                />
+                                            ))}
+                                        </View>
 
-                        <View style={styles.inputInnerPad}>
-                            <TextInput
-                                style={styles.textInput}
-                                placeholder="오늘 하루를 짧게 적어보세요..."
-                                placeholderTextColor={COLORS.textSecondary}
-                                multiline
-                                maxLength={260}
-                                value={safeContent}
-                                onChangeText={handleContentChange}
-                                textAlignVertical="top"
+                                        <View style={styles.inputInnerPad}>
+                                            <TextInput
+                                                style={styles.textInput}
+                                                placeholder="오늘 하루를 짧게 적어보세요..."
+                                                placeholderTextColor={COLORS.textSecondary}
+                                                multiline
+                                                maxLength={260}
+                                                value={pageContent || ''}
+                                                onChangeText={(text) => {
+                                                    handleContentChange(text, pageIdx);
+                                                }}
+                                                textAlignVertical="top"
+                                                onFocus={() => goToPage(pageIdx)}
+                                            />
+                                            <View style={styles.inputFooter}>
+                                                <Text style={styles.charCount}>
+                                                    {(pageContent || '').length}/260
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    </Card>
+                                )}
                             />
-                            <View style={styles.inputFooter}>
-                                <Text style={styles.charCount}>
-                                    {safeContent.length}/260
-                                </Text>
+                        )}
+                    </View>
+
+                    {/* ─── 페이지 네비게이션 바 (플로팅 필) ─── */}
+                    <View style={styles.pageNavBarWrapper}>
+                        <View style={styles.pageNavBar}>
+                            {/* 삭제 버튼 (페이지가 2개 이상일 때만) */}
+                            {pages.length > 1 ? (
+                                <TouchableOpacity
+                                    style={styles.pageDeleteButton}
+                                    onPress={() => {
+                                        handlePageDeleteTrigger(currentPageIndex, (nextIdx) => {
+                                            setTimeout(() => {
+                                                pageFlatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
+                                            }, 100);
+                                        });
+                                    }}
+                                    activeOpacity={0.7}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                    <Text style={styles.pageDeleteButtonText}>✕</Text>
+                                </TouchableOpacity>
+                            ) : <View style={{ width: 14 }} />}
+
+                            {/* 페이지 인디케이터 (Dots) */}
+                            <View style={styles.pageIndicatorRow}>
+                                {pages.map((_, idx) => (
+                                    <TouchableOpacity
+                                        key={`dot-${idx}`}
+                                        onPress={() => {
+                                            goToPage(idx);
+                                            pageFlatListRef.current?.scrollToIndex({ index: idx, animated: true });
+                                        }}
+                                        activeOpacity={0.7}
+                                        hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
+                                    >
+                                        <View style={idx === currentPageIndex ? styles.pageDotActive : styles.pageDot} />
+                                    </TouchableOpacity>
+                                ))}
                             </View>
+
+                            {/* 페이지 추가 버튼 */}
+                            <TouchableOpacity
+                                style={styles.pageAddButton}
+                                onPress={() => {
+                                    addPage();
+                                    // 새 페이지 추가 후 바로 스크롤 이동
+                                    setTimeout(() => {
+                                        pageFlatListRef.current?.scrollToEnd({ animated: true });
+                                    }, 100);
+                                }}
+                                activeOpacity={0.7}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                                <Text style={styles.pageAddButtonText}>+</Text>
+                            </TouchableOpacity>
                         </View>
-                    </Card>
+                    </View>
 
                     {/* ─── 활동 기록 ─── */}
                     <Text style={styles.sectionTitle}>오늘 뭐 했어?</Text>
@@ -545,9 +656,23 @@ export function WriteScreenView({ route, navigation }) {
 
             <SoftAlertModal
                 isVisible={isStickerLimitModalVisible}
-                title="스티커 제한 안내"
-                message="무료 버전에서는 스티커를 5개까지만 붙일 수 있어요!"
+                title="스티커 제한 안내 🧸"
+                message={(isPremium || (3 + adBonusStickers) >= 15)
+                    ? `일기 전체에 스티커는 최대 15개까지만 붙일 수 있어요! (현재 ${pageStickers.reduce((acc, cur) => acc + (cur?.length || 0), 0)}개 부착) ✨`
+                    : `무료 버전에서는 일기 전체에 스티커를 ${3 + adBonusStickers}개까지만 붙일 수 있어요! (현재 ${pageStickers.reduce((acc, cur) => acc + (cur?.length || 0), 0)}개 부착)`}
                 onConfirm={() => setStickerLimitModalVisible(false)}
+                secondaryText={(!isPremium && (3 + adBonusStickers) < 15) ? "광고 보고 2개 더 붙이기 📺" : null}
+                onSecondaryConfirm={handleAdReward}
+            />
+
+            <SoftAlertModal
+                isVisible={showAlert}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                confirmText={alertConfig.confirmText || "확인"}
+                onConfirm={alertConfig.onConfirm || (() => setShowAlert(false))}
+                secondaryText={alertConfig.secondaryText}
+                onSecondaryConfirm={alertConfig.onSecondaryConfirm}
             />
         </View>
     );

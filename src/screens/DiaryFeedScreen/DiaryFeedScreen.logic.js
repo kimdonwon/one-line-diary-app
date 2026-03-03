@@ -8,7 +8,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Keyboard } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useDiariesForMonth, useAllCommentCounts, useCommentsForDiary, saveComment, deleteCommentById } from '../../hooks/useDiary';
+import { useDiariesForMonth, useAllCommentCounts, useCommentsForDiary, saveComment, deleteCommentById, useMonthAllActivities } from '../../hooks/useDiary';
 
 // ─── 현재 날짜 기준 초기값 ───
 const now = new Date();
@@ -26,9 +26,20 @@ export function useDiaryFeedLogic(navigation) {
         return `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
     }, [selectedYear, selectedMonth]);
 
-    // ─── 해당 월의 일기 로딩 ───
+    // ─── 해당 월의 일기 및 활동 로딩 ───
     const { diaries, loading, reload } = useDiariesForMonth(yearMonth);
+    const { activities } = useMonthAllActivities(yearMonth);
     const { commentCounts } = useAllCommentCounts();
+
+    // 날짜별 활동 맵핑
+    const activitiesMap = useMemo(() => {
+        const map = {};
+        activities.forEach(act => {
+            if (!map[act.date]) map[act.date] = [];
+            map[act.date].push(act);
+        });
+        return map;
+    }, [activities]);
 
     // ─── 댓글 관련 상태 ───
     const [selectedDiary, setSelectedDiary] = useState(null);
@@ -124,6 +135,7 @@ export function useDiaryFeedLogic(navigation) {
         diaries,
         loading,
         reload,
+        activitiesMap,
         commentCounts,
 
         // 모달/댓글 상태
@@ -145,6 +157,9 @@ export function useDiaryFeedLogic(navigation) {
         openCommentModal,
         closeCommentModal,
         submitComment,
-        handleDeleteComment
+        handleDeleteComment,
+
+        // 네비게이션
+        handleNavigateToWrite: (date) => navigation.navigate('Write', { date })
     };
 }

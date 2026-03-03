@@ -13,6 +13,8 @@ import { ConfettiEffect } from '../../components/ConfettiEffect';
 
 import { useSummaryLogic, MONTH_NAMES } from './SummaryScreen.logic';
 import { styles, chartConstants } from './SummaryScreen.styles';
+import { MoodActivityCorrelation } from './components/MoodActivityCorrelation';
+import { StickerRanking } from './components/StickerRanking';
 
 /**
  * 📊 애니메이션 활동 바 (Reanimated v4 기반)
@@ -72,7 +74,7 @@ export function SummaryScreenView({ route, navigation }) {
     const {
         year, pageIndex, totalEntries, maxCount, topMoodData, topMoodCount, allMoodStats,
         moodLineData, maxLineValue, activityStats, maxActivityCount,
-        maxActivityLineValue, activityLineData,
+        maxActivityLineValue, activityLineData, moodActivityCorrelation, stickerStats,
         onPageScroll, onMomentumScrollEnd, handleTabPress, handleGoBack, handleMoodPress,
         handleActivityPress, getActivityByKey
     } = useSummaryLogic(route, navigation, scrollRef);
@@ -211,6 +213,10 @@ export function SummaryScreenView({ route, navigation }) {
                                     <View style={styles.sectionRow}><Text style={styles.sectionTitle}>월별 기분 흐름</Text></View>
                                     {renderMoodLineChart()}
                                 </Card>
+                                <Card style={styles.chartCard}>
+                                    <View style={styles.sectionRow}><Text style={styles.sectionTitle}>자주 쓴 스티커</Text></View>
+                                    <StickerRanking data={stickerStats} />
+                                </Card>
                             </>
                         ) : (
                             <Card style={styles.emptyCard}>
@@ -250,6 +256,10 @@ export function SummaryScreenView({ route, navigation }) {
                                 <Card style={styles.monthlyCard}>
                                     <View style={styles.sectionRow}><Text style={styles.sectionTitle}>월별 활동 흐름</Text></View>
                                     {renderActivityLineChart()}
+                                </Card>
+                                <Card style={styles.chartCard}>
+                                    <View style={styles.sectionRow}><Text style={styles.sectionTitle}>활동별 행복 지수</Text></View>
+                                    <MoodActivityCorrelation data={moodActivityCorrelation} />
                                 </Card>
                             </>
                         ) : (

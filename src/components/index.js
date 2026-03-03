@@ -10,7 +10,7 @@ import { ComboShakeWrapper } from "./ComboShakeWrapper";
 export { ComboShakeWrapper };
 
 // ─── Custom Soft Alert Modal ───
-export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmText = "확인" }) {
+export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmText = "확인", secondaryText, onSecondaryConfirm }) {
   return (
     <Modal
       isVisible={isVisible}
@@ -21,20 +21,34 @@ export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmTe
       animationOutTiming={200}
       backdropTransitionInTiming={300}
       backdropTransitionOutTiming={200}
-      onBackdropPress={onConfirm}
+      onBackdropPress={onSecondaryConfirm || onConfirm}
+      onBackButtonPress={onSecondaryConfirm || onConfirm}
       style={{ margin: SPACING.xl, justifyContent: "center" }}
     >
       <View style={[styles.alertModalContainer, SOFT_SHADOW.card]}>
 
         <Text style={styles.alertTitle}>{title}</Text>
         <Text style={styles.alertMessage}>{message}</Text>
-        <TouchableOpacity
-          style={[styles.alertButton, SOFT_SHADOW.button]}
-          onPress={onConfirm}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.alertButtonText}>{confirmText}</Text>
-        </TouchableOpacity>
+
+        <View style={{ gap: 8, width: '100%' }}>
+          <TouchableOpacity
+            style={[styles.alertButton, SOFT_SHADOW.button]}
+            onPress={onConfirm}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.alertButtonText}>{confirmText}</Text>
+          </TouchableOpacity>
+
+          {secondaryText && (
+            <TouchableOpacity
+              style={[styles.alertButton, { backgroundColor: '#F3F3F2', borderWidth: 0 }]}
+              onPress={onSecondaryConfirm}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.alertButtonText, { color: '#37352F' }]}>{secondaryText}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </Modal>
   );
@@ -62,6 +76,7 @@ export function StaticSticker({ sticker, bounds }) {
       top: sticker.y,
       padding: 4, // DraggableSticker 컨테이너 패딩 보정
       zIndex: 5,
+      transform: [{ rotate: `${sticker.rotation || 0}deg` }],
     }}>
       {renderContent()}
     </View>

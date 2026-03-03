@@ -15,8 +15,35 @@ export const styles = StyleSheet.create({
         zIndex: 20,
         ...SOFT_SHADOW.button,
     },
+    selected: {
+        borderWidth: 1,
+        borderColor: 'rgba(232, 213, 204, 0.6)',
+        borderRadius: 4,
+        borderStyle: 'dashed',
+    },
     textSticker: {
         fontSize: 26,
         lineHeight: 31, // 텍스트 짤림 방지
-    }
+    },
+
+    // 🔄 회전 핸들 스타일
+    rotationHandle: {
+        position: 'absolute',
+        right: -12,
+        bottom: -12,
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderWidth: 1,
+        borderColor: '#E2DED0',
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...SOFT_SHADOW.button,
+    },
+    rotationHandleIcon: {
+        fontSize: 12,
+        color: '#9E8E82',
+        fontWeight: '700',
+    },
 });

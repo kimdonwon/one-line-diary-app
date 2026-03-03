@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InteractionManager } from 'react-native';
 import { getMoodByKey } from '../../constants/mood';
-import { useDiariesForYear } from '../../hooks/useDiary';
+import { useDiariesForYear, useYearAllActivities, useAllCommentCounts } from '../../hooks/useDiary';
 
 /**
  * ⚙️ 연도 및 기분 바탕으로 일기 데이터를 로딩하고 필터링하는 로직 훅입니다.
@@ -15,11 +15,22 @@ export function useMoodListLogic(route, navigation) {
      */
     const [ready, setReady] = useState(false);
 
-    // 연도별 일기 데이터를 로딩하는 커스텀 훅 (ready가 true일 때만 요청)
     const { diaries, loading: loadingDiaries } = useDiariesForYear(ready ? year : null);
+    const { activities, loading: loadingActivities } = useYearAllActivities(ready ? year : null);
+    const { commentCounts } = useAllCommentCounts();
 
     // 전체 로딩 상태 산출
-    const loading = !ready || loadingDiaries;
+    const loading = !ready || loadingDiaries || loadingActivities;
+
+    // 날짜별 활동 맵핑
+    const activitiesMap = useMemo(() => {
+        const map = {};
+        activities.forEach(act => {
+            if (!map[act.date]) map[act.date] = [];
+            map[act.date].push(act);
+        });
+        return map;
+    }, [activities]);
 
     useEffect(() => {
         // 인터랙션(애니메이션 등)이 끝난 직후 콜백을 실행하여 ready 상태로 전환합니다.
@@ -63,6 +74,8 @@ export function useMoodListLogic(route, navigation) {
         mood,
         loading,
         filteredDiaries,
+        activitiesMap,
+        commentCounts,
         handleGoBack,
         handleDiaryPress
     };

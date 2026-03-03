@@ -289,21 +289,22 @@ export function MainScreenView({ navigation }) {
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
+            <Header
+                title="오늘조각"
+                subtitle={`${year}년 ${month}월`}
+                titleIcon={<MoodCharacter character={currentHeaderMood.character} size={28} />}
+                rightButton={
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Search')}
+                        style={{ padding: 8 }}
+                        activeOpacity={0.7}
+                    >
+                        <SearchIcon size={22} color="#37352F" />
+                    </TouchableOpacity>
+                }
+            />
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                <Header
-                    title="오늘조각"
-                    subtitle={`${year}년 ${month}월`}
-                    titleIcon={<MoodCharacter character={currentHeaderMood.character} size={28} />}
-                    rightButton={
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('Search')}
-                            style={{ padding: 8 }}
-                            activeOpacity={0.7}
-                        >
-                            <SearchIcon size={22} color="#37352F" />
-                        </TouchableOpacity>
-                    }
-                />
+
 
                 <Animated.View
                     style={[styles.calendarCard, { transform: [{ translateX: slideAnim }] }]}

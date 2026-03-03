@@ -2,7 +2,8 @@ import React, { useRef } from 'react';
 import { View, Text, ScrollView, Animated, Pressable, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-import { Card, DiaryListItem, BackButton } from '../../components';
+import { Card } from '../../components';
+import { DiaryEntryCard } from '../../components/DiaryEntryCard';
 import { SearchBar } from '../../components/SearchLayer';
 import { getMoodByKey } from '../../constants/mood';
 import { MoodCharacter } from '../../constants/MoodCharacters';
@@ -14,6 +15,8 @@ export function SearchScreenView({ navigation }) {
     const {
         searchQuery,
         filteredResults,
+        activitiesMap,
+        commentCounts,
         setSearchQuery,
         handleClearSearch,
         handleDiaryPress
@@ -69,9 +72,7 @@ export function SearchScreenView({ navigation }) {
             <StatusBar style="dark" />
 
             <View style={styles.header}>
-                <BackButton onPress={() => navigation.goBack()} />
                 <Text style={styles.headerTitle}>기록 찾기</Text>
-                <View style={styles.headerSpacer} />
             </View>
 
             <View style={styles.searchHeaderWrapper}>
@@ -91,10 +92,11 @@ export function SearchScreenView({ navigation }) {
                                 <Text style={styles.sectionTitle}>찾아보니까 {filteredResults.length}개 있어요! ✧</Text>
                                 <View style={styles.spacer} />
                                 {filteredResults.map((item, index) => (
-                                    <DiaryListItem
+                                    <DiaryEntryCard
                                         key={item.id ? item.id : `search-${index}`}
                                         diary={item}
-                                        mood={getMoodByKey(item.mood)}
+                                        activities={activitiesMap[item.date] || []}
+                                        commentCount={commentCounts[item.date] || 0}
                                         onPress={() => handleDiaryPress(item)}
                                     />
                                 ))}

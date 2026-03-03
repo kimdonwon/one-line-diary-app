@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSearchLogic } from '../../hooks/useSearchLogic';
+import { useAllCommentCounts } from '../../hooks/useDiary';
 
 /**
  * 🔍 검색 화면의 비즈니스 로직을 담당하는 커스텀 훅입니다.
@@ -13,7 +14,8 @@ export function useSearchScreenLogic() {
     const [year, setYear] = useState(new Date().getFullYear());
 
     // 외부 훅 (검색 엔진)에서 핵심 검색 로직 상태를 가져옵니다.
-    const { searchQuery, setSearchQuery, filteredResults, reload: reloadSearchData } = useSearchLogic(year);
+    const { searchQuery, setSearchQuery, filteredResults, activitiesMap, reload: reloadSearchData } = useSearchLogic(year);
+    const { commentCounts } = useAllCommentCounts();
 
     // 💡 화면이 포커스 될 때마다 최신 검색 데이터를 다시 불러옵니다.
     // 사용자가 다른 화면에서 일기를 작성하거나 수정하고 돌아왔을 때 즉각 반영하기 위함입니다.
@@ -43,6 +45,8 @@ export function useSearchScreenLogic() {
         // Properties (상태)
         searchQuery,
         filteredResults,
+        activitiesMap,
+        commentCounts,
 
         // Actions (행동/메서드)
         setSearchQuery,

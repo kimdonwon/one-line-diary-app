@@ -16,7 +16,9 @@ export function SettingsScreenView({ navigation }) {
         toggleLock, changePassword, handlePinComplete, handlePremiumPress,
         showPreview, setShowPreview, selectedPack, setSelectedPack,
         isShopExpanded, setIsShopExpanded,
-        purchasedPacks, handleBuyStickerPack, resetPurchases
+        isShopMore, setIsShopMore,
+        purchasedPacks, handleBuyStickerPack, resetPurchases, resetDiaryData,
+        handleExportBackup, handleImportBackup, handleRestorePurchases
     } = useSettingsLogic();
 
 
@@ -74,7 +76,7 @@ export function SettingsScreenView({ navigation }) {
                     <View style={styles.shopContainer}>
                         <View style={styles.shopGridWrapper}>
                             <View style={styles.shopGrid}>
-                                {STICKER_PACK_DATA.map((pack) => {
+                                {(isShopMore ? STICKER_PACK_DATA : STICKER_PACK_DATA.slice(0, 3)).map((pack) => {
                                     const previewStickers = CATEGORIZED_STICKERS[pack.catId]?.slice(0, 3) || [];
                                     const categoryLabel = pack.tagLabel || STICKER_CATEGORIES.find(c => c.id === pack.catId)?.label || pack.catId;
 
@@ -145,6 +147,18 @@ export function SettingsScreenView({ navigation }) {
                                     );
                                 })}
                             </View>
+
+                            {STICKER_PACK_DATA.length > 3 && (
+                                <TouchableOpacity
+                                    style={styles.viewMoreButton}
+                                    onPress={() => setIsShopMore(!isShopMore)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={styles.viewMoreText}>
+                                        {isShopMore ? '접기' : '더 보기'}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </View>
                 )}
@@ -178,8 +192,41 @@ export function SettingsScreenView({ navigation }) {
                             {isPremium ? '프리미엄 혜택 이용 중 ✨' : '프리미엄 평생 소장하기'}
                         </Text>
                     </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.restorePurchaseButton}
+                        onPress={handleRestorePurchases}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.restorePurchaseText}>기존 구매 내역 복원하기</Text>
+                    </TouchableOpacity>
                     <Text style={styles.premiumSubText}>한 번 결제하면 추가 청구 없이 영구적으로 이용 가능합니다.</Text>
                 </View>
+
+                {/* 데이터 관리 섹션 */}
+                <Text style={[styles.sectionHeader, { marginTop: 40 }]}>데이터 관리</Text>
+                <Card style={styles.settingCard}>
+                    <TouchableOpacity
+                        style={styles.settingItem}
+                        onPress={handleExportBackup}
+                        activeOpacity={0.7}
+                    >
+                        <View>
+                            <Text style={styles.settingLabel}>데이터 내보내기 (공유/저장)</Text>
+                            <Text style={styles.settingDesc}>구글 드라이브, 카카오톡, 메일 등에 백업 파일을 보냅니다.</Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.settingItem}
+                        onPress={handleImportBackup}
+                        activeOpacity={0.7}
+                    >
+                        <View>
+                            <Text style={styles.settingLabel}>데이터 불러오기 (복원)</Text>
+                            <Text style={styles.settingDesc}>백업된 JSON 파일을 불러와 데이터를 복구합니다.</Text>
+                        </View>
+                    </TouchableOpacity>
+                </Card>
 
                 {/* 개발자 도구 (테스트용) */}
                 <View style={styles.devSection}>
@@ -189,7 +236,15 @@ export function SettingsScreenView({ navigation }) {
                         onPress={resetPurchases}
                         activeOpacity={0.7}
                     >
-                        <Text style={styles.dangerButtonText}>모든 결제 및 프리미엄 내역 초기화 ♻️</Text>
+                        <Text style={styles.dangerButtonText}>결제 및 프리미엄 내역 초기화 ♻️</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.dangerButton, { marginTop: 10 }]}
+                        onPress={resetDiaryData}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.dangerButtonText}>모든 일기 기록 삭제 🗑️</Text>
                     </TouchableOpacity>
                 </View>
 

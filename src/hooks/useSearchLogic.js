@@ -46,9 +46,19 @@ export function useSearchLogic(year) {
         const matchedActivityDates = new Set(matchedActivities.map(a => a.date));
 
         // 2. 다이어리 본문 내용 혹은 '활동이 매칭된 날짜'에 해당하는 일기 필터링
-        const results = allDiaries.filter(d =>
-            d.content.toLowerCase().includes(query) || matchedActivityDates.has(d.date)
-        ).map(d => ({
+        const results = allDiaries.filter(d => {
+            // 멀티페이지 content 처리: JSON 배열이면 모든 페이지에서 검색
+            let searchableContent = d.content || '';
+            try {
+                const parsed = JSON.parse(d.content);
+                if (Array.isArray(parsed)) {
+                    searchableContent = parsed.join(' ');
+                }
+            } catch (e) {
+                // 단일 문자열 그대로 사용
+            }
+            return searchableContent.toLowerCase().includes(query) || matchedActivityDates.has(d.date);
+        }).map(d => ({
             ...d,
             type: 'mood'
         }));
@@ -58,6 +68,16 @@ export function useSearchLogic(year) {
 
     }, [searchQuery, allDiaries, allActivities]);
 
+    // 날짜별 활동 맵핑 추가 (DiaryEntryCard용)
+    const activitiesMap = useMemo(() => {
+        const map = {};
+        allActivities.forEach(act => {
+            if (!map[act.date]) map[act.date] = [];
+            map[act.date].push(act);
+        });
+        return map;
+    }, [allActivities]);
+
     const clearSearch = () => {
         setSearchQuery('');
     };
@@ -66,6 +86,7 @@ export function useSearchLogic(year) {
         searchQuery,
         setSearchQuery,
         filteredResults,
+        activitiesMap,
         loading,
         clearSearch,
         reload: loadAllData

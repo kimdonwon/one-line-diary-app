@@ -68,6 +68,22 @@ export const styles = StyleSheet.create({
         color: '#666666',
         letterSpacing: 0.3,
     },
+    diaryMetaLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    diaryActivitiesWrap: {
+        flex: 1, // 중앙 영역을 차지하도록 설정
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center', // 아이콘들을 중앙 정렬
+        flexWrap: 'wrap', // 넘어가면 줄바꿈
+        marginHorizontal: 8, // 날짜와 댓글 버튼 사이 간격 확보
+        maxWidth: 110, // 폭을 늘려 아이콘 5개까지 한 줄에 보이게 함 (아이콘 16px + 마진 4px 기준)
+    },
+    diaryActivityIcon: {
+        margin: 2, // 상하좌우 간격을 주어 줄바꿈 시에도 겹치지 않게 함
+    },
     diaryMoodWrap: {
         alignItems: 'center',
         justifyContent: 'center',
@@ -75,8 +91,10 @@ export const styles = StyleSheet.create({
 
     // ─── 댓글 버튼 ───
     diaryMetaRight: {
+        flex: 1, // 남은 공간을 모두 차지
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'flex-end', // 내용물은 오른쪽(댓글 버튼 쪽)으로 정렬
     },
     commentButton: {
         backgroundColor: '#F1F1F0',

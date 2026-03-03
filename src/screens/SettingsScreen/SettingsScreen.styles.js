@@ -137,6 +137,21 @@ export const styles = StyleSheet.create({
         color: '#999999',
         marginBottom: SPACING.sm,
     },
+    chevron: {
+        fontSize: 18,
+        color: '#999999',
+    },
+    restorePurchaseButton: {
+        paddingVertical: 10,
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    restorePurchaseText: {
+        fontSize: 13,
+        color: '#666666',
+        textDecorationLine: 'underline',
+        fontWeight: '500',
+    },
 
     // ─── 스티커 상점 (Notion Style) ───
     // ─── 스티커 상점 (Skill-based Card Grid) ───
@@ -228,6 +243,18 @@ export const styles = StyleSheet.create({
         fontSize: 9,
         fontWeight: '600',
         color: '#999999',
+    },
+    viewMoreButton: {
+        alignItems: 'center',
+        paddingVertical: 12,
+        marginTop: 4,
+        borderTopWidth: 1,
+        borderTopColor: '#F1F1F0',
+    },
+    viewMoreText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#666666',
     },
 
 

@@ -2,8 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { getMoodByKey } from '../../constants/mood';
 import { useLock } from '../../context/LockContext';
 import { getSetting, saveSetting } from '../../database/db';
-import { STICKER_PACK_DATA } from '../../constants/stickers';
+import { STICKER_PACK_DATA, STICKER_CATEGORIES } from '../../constants/stickers';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as BackupRestore from '../../utils/backupRestore';
+import { restoreFromData } from '../../database/db';
+import { Alert, DevSettings } from 'react-native';
 
 /**
  * ⚙️ 설정 화면용 비즈니스 로직 훅입니다.
@@ -180,9 +183,17 @@ export function useSettingsLogic() {
         setShowAlert(true);
     };
 
-    const confirmPremium = async () => {
+    const confirmAlert = async () => {
         const isBuyingPack = alertConfig.title === '스티커 팩 구매 💳';
         const isBuyingPremium = alertConfig.title === '프리미엄 구매 (더미) 💳';
+
+        // 커스텀 onConfirm이 있는 경우 실행
+        if (alertConfig.onConfirm) {
+            await alertConfig.onConfirm();
+            setShowAlert(false);
+            return;
+        }
+
         setShowAlert(false);
 
         if (isBuyingPack) {
@@ -202,8 +213,9 @@ export function useSettingsLogic() {
     const [showPreview, setShowPreview] = useState(false);
     const [selectedPack, setSelectedPack] = useState(null);
 
-    // 스티커 상점 접기/펴기 상태
+    // 스티커 상점 접기/펴기 상태 및 더보기 상태
     const [isShopExpanded, setIsShopExpanded] = useState(true);
+    const [isShopMore, setIsShopMore] = useState(false);
 
     // 모든 구매 내역 및 프리미엄 초기화 (테스트용)
     const resetPurchases = async () => {
@@ -231,6 +243,94 @@ export function useSettingsLogic() {
         }
     };
 
+    // 모든 일기 데이터 초기화 (테스트용)
+    const resetDiaryData = async () => {
+        try {
+            const { deleteAllDiaryData } = require('../../database/db');
+            await deleteAllDiaryData();
+            setAlertConfig({
+                title: '일기 초기화 완료! 🗑️',
+                message: '모든 일기, 활동, 댓글 기록이 삭제되었습니다.'
+            });
+            setShowAlert(true);
+        } catch (e) {
+            console.log('Failed to reset diary data:', e);
+        }
+    };
+
+    // ─── 백업 및 복구 ───
+
+    // 데이터 내보내기 (통합 공유: 구글 드라이브, 카카오톡 등)
+    const handleExportSharing = async () => {
+        try {
+            const success = await BackupRestore.exportToShareSheet();
+            if (success) {
+                setAlertConfig({
+                    title: '데이터 내보내기 완료 ✨',
+                    message: '백업 파일을 원하는 곳에 안전하게 보관해 주세요.'
+                });
+                setShowAlert(true);
+            }
+        } catch (error) {
+            Alert.alert('실패', '파일을 생성하거나 공유하는 도중 문제가 생겼습니다.');
+        }
+    };
+
+    // 데이터 불러오기 (복원)
+    const handleImportBackup = async () => {
+        try {
+            const data = await BackupRestore.importFromFile();
+            if (!data) return; // 취소된 경우
+
+            setAlertConfig({
+                title: '데이터 복원 확인 📥',
+                message: '백업 파일을 불러오시겠습니까? 기존의 모든 데이터(일기, 설정 등)가 덮어씌워집니다. 이 작업은 되돌릴 수 없습니다.',
+                onConfirm: async () => {
+                    await restoreFromData(data);
+                    Alert.alert('복원 완료 🎉', '데이터가 성공적으로 복구되었습니다. 앱을 완전히 종료 후 다시 실행해 주세요.', [
+                        { text: '확인' }
+                    ]);
+                }
+            });
+            setShowAlert(true);
+        } catch (error) {
+            Alert.alert('복원 실패', error.message || '파일을 불러오는 도중 문제가 생겼습니다.');
+        }
+    };
+
+    // 구매 내역 복원 (더미 로직)
+    const handleRestorePurchases = async () => {
+        try {
+            // 실제 구현 시에는 이 부분에서 인앱 결제 라이브러리의 restore 기능을 호출합니다.
+            // 여기서는 2초 뒤에 성공하는 더미 로직으로 구현합니다.
+            setAlertConfig({
+                title: '구매 내역 확인 중... 🔎',
+                message: 'Apple/Google 계정에서 과거 구매 내역을 찾는 중입니다.'
+            });
+            setShowAlert(true);
+
+            setTimeout(async () => {
+                // 더미 데이터 복원 (무조건 성공 가정)
+                await saveSetting('isPremium', 'true');
+                setIsPremium(true);
+
+                // 모든 유료 팩을 구매한 것으로 처리 예시 (테스트용)
+                const paidPacks = STICKER_PACK_DATA.filter(p => !p.isFree).map(p => p.catId);
+                await saveSetting('purchasedPacks', JSON.stringify(paidPacks));
+                setPurchasedPacks(paidPacks);
+
+                setAlertConfig({
+                    title: '구매 내역 복원 완료! ✨',
+                    message: '과거에 구매하신 프리미엄 혜택과 스티커 팩이 모두 복구되었습니다.'
+                });
+                setShowAlert(true);
+            }, 2000);
+
+        } catch (error) {
+            Alert.alert('복원 실패', '스토어 인증에 실패했습니다.');
+        }
+    };
+
     return {
         defaultMood,
         isLockEnabled,
@@ -241,7 +341,7 @@ export function useSettingsLogic() {
         showAlert,
         alertConfig,
         setShowAlert,
-        confirmPremium,
+        confirmPremium: confirmAlert,
         toggleLock,
         changePassword,
         handlePinComplete,
@@ -251,6 +351,12 @@ export function useSettingsLogic() {
         selectedPack, setSelectedPack,
         isShopExpanded, setIsShopExpanded,
         purchasedPacks, handleBuyStickerPack,
-        resetPurchases
+        resetPurchases, resetDiaryData,
+        // 백업 및 복원
+        handleExportBackup: handleExportSharing,
+        handleImportBackup,
+        handleRestorePurchases,
+        isShopMore,
+        setIsShopMore
     };
 }

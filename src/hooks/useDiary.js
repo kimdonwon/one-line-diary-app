@@ -18,6 +18,8 @@ import {
     getMonthActivities,
     getYearSpecificActivities,
     getMoodStatsByDateRange,
+    getMonthAllActivities,
+    getYearAllActivities,
     saveComment as dbSaveComment,
     getComments,
     getAllCommentCounts,
@@ -279,6 +281,65 @@ export function useMonthActivityStats(yearMonth) {
     }, [load]);
 
     return { activityStats, loading, reload: load };
+}
+
+export function useMonthAllActivities(yearMonth) {
+    const [activities, setActivities] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const load = useCallback(async () => {
+        if (!yearMonth) return;
+        setLoading(true);
+        try {
+            const results = await getMonthAllActivities(yearMonth);
+            setActivities(results);
+        } catch (e) {
+            console.error('Failed to load month all activities:', e);
+        } finally {
+            setLoading(false);
+        }
+    }, [yearMonth]);
+
+    useEffect(() => {
+        load();
+    }, [load]);
+
+    // 활동 저장 시 갱신
+    useEffect(() => {
+        const sub = DeviceEventEmitter.addListener('ACTIVITIES_SAVED', load);
+        return () => sub.remove();
+    }, [load]);
+
+    return { activities, loading, reload: load };
+}
+
+export function useYearAllActivities(year) {
+    const [activities, setActivities] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const load = useCallback(async () => {
+        if (!year) return;
+        setLoading(true);
+        try {
+            const results = await getYearAllActivities(year);
+            setActivities(results);
+        } catch (e) {
+            console.error('Failed to load year all activities:', e);
+        } finally {
+            setLoading(false);
+        }
+    }, [year]);
+
+    useEffect(() => {
+        load();
+    }, [load]);
+
+    useEffect(() => {
+        const sub = DeviceEventEmitter.addListener('ACTIVITIES_SAVED', load);
+        return () => sub.remove();
+    }, [load]);
+
+    return { activities, loading, reload: load };
 }
 
 export function useYearSpecificActivities(year, activity, skip = false) {

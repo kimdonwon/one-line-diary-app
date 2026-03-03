@@ -22,7 +22,8 @@
     "web": {},
     "plugins": [
       "expo-asset",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-mail-composer"
     ],
     "extra": {
       "eas": {

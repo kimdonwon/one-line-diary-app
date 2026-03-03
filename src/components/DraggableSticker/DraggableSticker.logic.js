@@ -2,11 +2,15 @@ import { useRef, useState } from 'react';
 import { Animated, PanResponder } from 'react-native';
 
 /**
- * ⚙️ 스티커의 드래그 애니메이션, 좌표 계산, 물리적 바운더리 검사를 담당하는 로직 훅입니다.
+ * ⚙️ 스티커의 드래그 애니메이션, 회전(Rotation), 좌표 계산, 물리적 바운더리 검사를 담당하는 로직 훅입니다.
  */
 export function useDraggableLogic({ sticker, bounds, onDelete, onDragEnd }) {
     // x, y 위치 제어용 애니메이션 밸류
     const pan = useRef(new Animated.ValueXY({ x: sticker.x, y: sticker.y })).current;
+
+    // 회전 각도 (라디안 → degree 변환은 View에서 처리)
+    const rotation = useRef(new Animated.Value(sticker.rotation || 0)).current;
+    const currentRotation = useRef(sticker.rotation || 0);
 
     // 현재 컨테이너 내부의 실제 위치를 추적 저장
     const currentPosition = useRef({ x: sticker.x, y: sticker.y });
@@ -14,10 +18,14 @@ export function useDraggableLogic({ sticker, bounds, onDelete, onDragEnd }) {
 
     const [mySize, setMySize] = useState({ width: 40, height: 40 });
     const [isDragging, setIsDragging] = useState(false);
+    const [isSelected, setIsSelected] = useState(false); // 선택 상태 (회전 핸들 표시용)
 
     // 더블 탭 처리를 위한 타임스탬프
     const lastTap = useRef(0);
     const DOUBLE_TAP_DELAY = 300;
+
+    // 선택 해제 타이머
+    const deselectTimer = useRef(null);
 
     const panResponder = useRef(
         PanResponder.create({
@@ -26,8 +34,15 @@ export function useDraggableLogic({ sticker, bounds, onDelete, onDragEnd }) {
 
             onPanResponderGrant: () => {
                 setIsDragging(true);
+                setIsSelected(true);
                 // 드래그 시작 시 이동량 누적 초기화
                 lastGesture.current = { dx: 0, dy: 0 };
+
+                // 기존 해제 타이머가 있으면 취소
+                if (deselectTimer.current) {
+                    clearTimeout(deselectTimer.current);
+                    deselectTimer.current = null;
+                }
             },
 
             onPanResponderMove: (e, gestureState) => {
@@ -73,18 +88,53 @@ export function useDraggableLogic({ sticker, bounds, onDelete, onDragEnd }) {
                 } else {
                     lastTap.current = now;
                     if (onDragEnd) {
-                        // 드래그 종료 위치를 원본 객체로 갱신
-                        onDragEnd(sticker.id, finalX, finalY);
+                        // 드래그 종료 위치와 회전값을 원본 객체로 갱신
+                        onDragEnd(sticker.id, finalX, finalY, currentRotation.current);
                     }
                 }
+
+                // 3초 후 선택 해제 (회전 핸들 숨기기)
+                deselectTimer.current = setTimeout(() => {
+                    setIsSelected(false);
+                }, 3000);
             }
         })
     ).current;
 
+    /**
+     * 🔄 회전 핸들 드래그 시 호출되는 콜백
+     * @param {number} angleDeg - 새로운 회전 각도 (도 단위)
+     */
+    const handleRotation = (angleDeg) => {
+        currentRotation.current = angleDeg;
+        rotation.setValue(angleDeg);
+    };
+
+    /**
+     * 🔄 회전 종료 시 호출 → 상태 저장
+     */
+    const handleRotationEnd = () => {
+        if (onDragEnd) {
+            onDragEnd(
+                sticker.id,
+                currentPosition.current.x,
+                currentPosition.current.y,
+                currentRotation.current
+            );
+        }
+    };
+
     return {
         pan,
+        rotation,
+        currentRotation,
         panResponder,
         isDragging,
-        setMySize
+        isSelected,
+        setIsSelected,
+        setMySize,
+        mySize,
+        handleRotation,
+        handleRotationEnd,
     };
 }

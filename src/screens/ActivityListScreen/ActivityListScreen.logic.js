@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { InteractionManager } from 'react-native';
 import { getActivityByKey } from '../../constants/activities';
-import { useYearSpecificActivities, useDiariesForYear } from '../../hooks/useDiary';
+import { useYearSpecificActivities, useDiariesForYear, useYearAllActivities, useAllCommentCounts } from '../../hooks/useDiary';
 
 /**
  * ⚙️ 해당 연도의 특정 활동과 연계된 일기 목록을 필터링하고 가져오는 비즈니스 로직 훅입니다.
@@ -17,11 +17,13 @@ export function useActivityListLogic(route, navigation) {
     const [ready, setReady] = useState(false);
 
     // 데이터 로드 훅 (ready 상태에 맞춰서 Fetch 조건을 제어)
-    const { activities, loading: loadingActs } = useYearSpecificActivities(year, activityKey, !ready);
+    const { activities: specificActs, loading: loadingActs } = useYearSpecificActivities(year, activityKey, !ready);
     const { diaries, loading: loadingDiaries } = useDiariesForYear(ready ? year : null);
+    const { activities: allActivities, loading: loadingAllActivities } = useYearAllActivities(ready ? year : null);
+    const { commentCounts } = useAllCommentCounts();
 
     // 통합 로딩 상태
-    const loading = !ready || loadingActs || loadingDiaries;
+    const loading = !ready || loadingActs || loadingDiaries || loadingAllActivities;
 
     // InteractionManager를 활용해 UI 스레드가 네비게이션 애니메이션을 완전히 끝낼 때까지 기다립니다.
     useEffect(() => {
@@ -36,7 +38,7 @@ export function useActivityListLogic(route, navigation) {
      * month 파라미터가 있을 경우 해당 월만 필터링합니다.
      */
     const filteredDiaries = useMemo(() => {
-        const activityDates = new Set(activities.map(a => a.date));
+        const activityDates = new Set(specificActs.map(a => a.date));
         let matched = diaries.filter(d => activityDates.has(d.date));
         if (month) {
             const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
@@ -44,7 +46,17 @@ export function useActivityListLogic(route, navigation) {
         }
         // 최근 날짜가 상단에 배치되도록 내림차순 정렬
         return matched.sort((a, b) => b.date.localeCompare(a.date));
-    }, [activities, diaries, year, month]);
+    }, [specificActs, diaries, year, month]);
+
+    // 날짜별 활동 맵핑
+    const activitiesMap = useMemo(() => {
+        const map = {};
+        allActivities.forEach(act => {
+            if (!map[act.date]) map[act.date] = [];
+            map[act.date].push(act);
+        });
+        return map;
+    }, [allActivities]);
 
     /**
      * 뒤로가기 액션
@@ -66,6 +78,8 @@ export function useActivityListLogic(route, navigation) {
         act,
         loading,
         filteredDiaries,
+        activitiesMap,
+        commentCounts,
         handleGoBack,
         handleDiaryPress
     };

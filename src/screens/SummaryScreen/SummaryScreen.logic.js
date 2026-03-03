@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { getMoodByKey, MOOD_LIST } from '../../constants/mood';
 import { ACTIVITIES, getActivityByKey } from '../../constants/activities';
@@ -7,9 +7,18 @@ import {
     useDiariesForYear,
     useYearMonthlyStats,
     useYearActivityStats,
-    useYearMonthlyActivitiesStats
+    useYearMonthlyActivitiesStats,
+    useYearAllActivities
 } from '../../hooks/useDiary';
 import { chartConstants } from './SummaryScreen.styles';
+
+const MOOD_SCORE = {
+    HAPPY: 5,
+    SOSO: 4,
+    EMBARRASSED: 3,
+    ANGRY: 2,
+    SAD: 1
+};
 
 export const MONTH_NAMES = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 
@@ -25,6 +34,7 @@ export function useSummaryLogic(route, navigation, scrollRef) {
     const { monthlyStats, reload: reloadMonthly } = useYearMonthlyStats(year);
     const { activityStats, reload: reloadActivities } = useYearActivityStats(year);
     const { monthlyActivityStats, reload: reloadMonthlyActivity } = useYearMonthlyActivitiesStats(year);
+    const { activities, reload: reloadAllActivities } = useYearAllActivities(year);
 
     useFocusEffect(
         useCallback(() => {
@@ -33,8 +43,52 @@ export function useSummaryLogic(route, navigation, scrollRef) {
             reloadMonthly();
             reloadActivities();
             reloadMonthlyActivity();
-        }, [reloadDiaries, reloadStats, reloadMonthly, reloadActivities, reloadMonthlyActivity])
+            reloadAllActivities();
+        }, [reloadDiaries, reloadStats, reloadMonthly, reloadActivities, reloadMonthlyActivity, reloadAllActivities])
     );
+
+    // ─── 🔍 1. 기분 x 활동 상관관계 계산 ───
+    const moodActivityCorrelation = useMemo(() => {
+        if (!diaries.length || !activities.length) return [];
+
+        const diaryMap = {};
+        diaries.forEach(d => { diaryMap[d.date] = MOOD_SCORE[d.mood] || 3; });
+
+        const actScores = {}; // activityKey -> totalScore, count
+        activities.forEach(act => {
+            const score = diaryMap[act.date];
+            if (score) {
+                if (!actScores[act.activity]) actScores[act.activity] = { total: 0, count: 0 };
+                actScores[act.activity].total += score;
+                actScores[act.activity].count += 1;
+            }
+        });
+
+        return Object.keys(actScores).map(key => ({
+            key,
+            avg: actScores[key].total / actScores[key].count,
+            act: getActivityByKey(key)
+        })).sort((a, b) => b.avg - a.avg);
+    }, [diaries, activities]);
+
+    // ─── 🎨 3. 스티커 통계 계산 ───
+    const stickerStats = useMemo(() => {
+        const counts = {};
+        diaries.forEach(d => {
+            try {
+                const stickers = JSON.parse(d.stickers || '[]');
+                stickers.forEach(s => {
+                    const type = s.type;
+                    if (type) counts[type] = (counts[type] || 0) + 1;
+                });
+            } catch (e) { }
+        });
+
+        return Object.entries(counts)
+            .map(([type, count]) => ({ type, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 3);
+    }, [diaries]);
 
     const maxCount = stats.reduce((max, s) => Math.max(max, s.count), 0);
     const totalEntries = diaries.length;
@@ -140,6 +194,8 @@ export function useSummaryLogic(route, navigation, scrollRef) {
         maxActivityCount,
         maxActivityLineValue,
         activityLineData,
+        moodActivityCorrelation,
+        stickerStats,
         onPageScroll,
         onMomentumScrollEnd,
         handleTabPress,

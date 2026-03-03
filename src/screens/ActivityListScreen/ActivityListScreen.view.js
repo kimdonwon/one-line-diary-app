@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, StatusBar } from 'react-native';
-import { Card, DiaryListItem, Header } from '../../components';
+import { Header } from '../../components';
+import { DiaryEntryCard } from '../../components/DiaryEntryCard';
 import { ActivityIcon } from '../../constants/ActivityIcons';
 import { getMoodByKey } from '../../constants/mood';
 
@@ -19,6 +20,8 @@ export function ActivityListScreenView({ route, navigation }) {
         act,
         loading,
         filteredDiaries,
+        activitiesMap,
+        commentCounts,
         handleGoBack,
         handleDiaryPress
     } = useActivityListLogic(route, navigation);
@@ -28,9 +31,10 @@ export function ActivityListScreenView({ route, navigation }) {
      */
     const renderItem = ({ item }) => {
         return (
-            <DiaryListItem
+            <DiaryEntryCard
                 diary={item}
-                mood={getMoodByKey(item.mood)}
+                activities={activitiesMap[item.date] || []}
+                commentCount={commentCounts[item.date] || 0}
                 onPress={() => handleDiaryPress(item.date)}
             />
         );

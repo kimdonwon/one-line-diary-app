@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, FlatList, StatusBar } from 'react-native';
 
-import { DiaryListItem, Header } from '../../components';
+import { Header } from '../../components';
+import { DiaryEntryCard } from '../../components/DiaryEntryCard';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { getMoodByKey } from '../../constants/mood';
 
@@ -20,6 +21,8 @@ export function MoodListScreenView({ route, navigation }) {
         mood,
         loading,
         filteredDiaries,
+        activitiesMap,
+        commentCounts,
         handleGoBack,
         handleDiaryPress
     } = useMoodListLogic(route, navigation);
@@ -27,9 +30,10 @@ export function MoodListScreenView({ route, navigation }) {
     // List 렌더링 부분 캡슐화
     const renderItem = ({ item }) => {
         return (
-            <DiaryListItem
+            <DiaryEntryCard
                 diary={item}
-                mood={getMoodByKey(item.mood)}
+                activities={activitiesMap[item.date] || []}
+                commentCount={commentCounts[item.date] || 0}
                 onPress={() => handleDiaryPress(item.date)}
             />
         );

@@ -331,6 +331,75 @@ export const styles = StyleSheet.create({
         color: COLORS.textSecondary,
     },
 
+    // ─── 멀티페이지 ───
+    pageContainer: {
+        overflow: 'hidden',
+        borderRadius: 12,
+    },
+    pageNavBarWrapper: {
+        alignItems: 'center',
+        marginTop: 12,
+        marginBottom: 8,
+        zIndex: 10,
+    },
+    pageNavBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        paddingVertical: 6,
+        paddingHorizontal: 16,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: 'rgba(232, 213, 204, 0.6)',
+        gap: 16,
+        ...SOFT_SHADOW.card,
+        height: 40,
+    },
+    pageIndicatorRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    pageDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#E2DED0',
+    },
+    pageDotActive: {
+        width: 20,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#37352F',
+    },
+    pageAddButton: {
+        paddingHorizontal: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    pageAddButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#8E8E8E',
+    },
+    pageDeleteButton: {
+        paddingHorizontal: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    pageDeleteButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#FFB8B8',
+    },
+    pageCountText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#666666',
+        letterSpacing: 0.5,
+    },
+
     // 활동별 노트 카드
     activityNoteCard: {
         marginTop: SPACING.md,
