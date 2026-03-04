@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW } from '../../constants/theme';
+import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW, DIARY_CARD_HEIGHT } from '../../constants/theme';
 
 export const styles = StyleSheet.create({
     container: {
@@ -26,17 +26,133 @@ export const styles = StyleSheet.create({
         marginBottom: SPACING.xl,
     },
 
-    // ─── 스티커 서랍 ───
-    stickerDrawer: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12, // 노션 스타일의 적당한 라운딩
+    // ─── 📱 툴바 (Toggle & Floating Buttons) ───
+    floatingToolbar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: SPACING.sm,
+        gap: 10,
+    },
+    // 🎞️ 아이콘 버튼 컨테이너 (배경 카드 제거)
+    pillToggleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    pillSegment: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 8,
+        borderRadius: 8,
+    },
+    pillSegmentActive: {
+        backgroundColor: 'rgba(0, 0, 0, 0.05)', // 활성 상태일 때만 아주 미세한 하이라이트
+    },
+    pillSegmentText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: COLORS.textSecondary,
+    },
+    pillSegmentTextActive: {
+        color: '#37352F', // 노션 본문 차콜 컬러 (확실한 대비)
+        fontWeight: '700', // 좀 더 강하게 강조
+    },
+    // 원래의 동그란 툴 버튼 (가챠 등)
+    floatingToolBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.85)',
+        alignItems: 'center',
+        justifyContent: 'center',
         borderWidth: 1,
-        borderColor: '#E9E9E7', // 노션 선 색상
-        marginBottom: SPACING.md,
-        paddingHorizontal: SPACING.md, // 입역창 패딩(16px)과 일치시킴
+        borderColor: '#E9E9E7',
+        ...SOFT_SHADOW.button,
+    },
+    floatingToolBtnActive: {
+        backgroundColor: '#F1F1F0',
+        borderColor: '#D3D3D1',
+    },
+    floatingToolEmoji: {
+        fontSize: 18,
+    },
+
+    // ─── 🗂 바텀시트 (Bottom Sheet) 공통 ───
+    stickerBottomSheet: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E9E9E7',
+        paddingHorizontal: SPACING.md,
         paddingVertical: 10,
+        marginBottom: SPACING.sm,
         ...SOFT_SHADOW.card,
     },
+
+    // ─── 📷 사진 프레임 선택 바텀시트 영역 (MZ 폴꾸 테마) ───
+    photoFrameContainer: {
+        flexDirection: 'row',
+        justifyContent: 'flex-start',
+        gap: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 4,
+    },
+    frameOptionBtn: {
+        alignItems: 'center',
+        paddingVertical: 4,
+    },
+    framePreview: {
+        width: 40,
+        height: 48,
+        borderRadius: 4,
+        padding: 4,
+        backgroundColor: '#FFFFFF',
+        justifyContent: 'flex-start',
+        borderWidth: 1,
+        borderColor: 'rgba(232, 213, 204, 0.5)',
+        ...SOFT_SHADOW.button,
+    },
+    // 프레임 내부 사진 영역 (실물 느낌)
+    frameInnerPhoto: {
+        width: '100%',
+        aspectRatio: 1,
+        borderRadius: 1,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+    },
+    framePreviewWhite: {
+        backgroundColor: '#FFFFFF',
+    },
+    framePreviewBlack: {
+        backgroundColor: '#1E1E1E',
+        borderColor: '#000000',
+    },
+    framePreviewPink: {
+        backgroundColor: '#FFDCE5',
+        borderColor: '#FFC1CF',
+    },
+    framePreviewBlue: {
+        backgroundColor: '#D6EFFF',
+        borderColor: '#B9E1FF',
+    },
+    framePreviewMint: {
+        backgroundColor: '#D9FFE9',
+        borderColor: '#B8FFD6',
+    },
+    frameOptionText: {
+        display: 'none', // 텍스트 제거 대응
+    },
+    lockOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 4,
+    },
+
+    // (레거시 호환 — 사용하지 않지만 참조 에러 방지)
+    drawerAndPhotoRow: { display: 'none' },
+    stickerDrawer: { display: 'none' },
+    stickerDrawerClosed: {},
     stickerDrawerHeader: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -45,6 +161,11 @@ export const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#F1F1F0', // 상단 구분선
         marginBottom: 8,
+    },
+    stickerDrawerHeaderClosed: {
+        marginBottom: 0,
+        borderBottomWidth: 0,
+        paddingBottom: 0,
     },
     stickerDrawerTitleGroup: {
         flexDirection: 'row',
@@ -65,6 +186,118 @@ export const styles = StyleSheet.create({
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+
+    drawerTab: {
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 6,
+        marginRight: 8,
+    },
+    drawerTabActive: {
+        backgroundColor: '#F1F1F0',
+    },
+    drawerTabText: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: COLORS.textSecondary,
+    },
+    drawerTabTextActive: {
+        color: COLORS.text,
+        fontWeight: '700',
+    },
+    bgDrawer: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E9E9E7',
+        paddingHorizontal: SPACING.md,
+        paddingVertical: 10,
+        marginBottom: SPACING.md,
+        ...SOFT_SHADOW.card,
+    },
+    bgDrawerHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingBottom: 3,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F1F0',
+        marginBottom: 8,
+    },
+    bgDrawerTitleGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 3,
+    },
+    bgDrawerTitle: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: COLORS.text,
+    },
+    bgDrawerTitleInactive: {
+        color: COLORS.textSecondary,
+    },
+    bgDrawerContent: {
+        paddingHorizontal: 12, // stickerDrawer의 패딩(4)과 합쳐서 16px 맞춤
+    },
+    bgCategoryTabBar: {
+        flexDirection: 'row',
+        marginBottom: 8,
+    },
+    bgCategoryTab: {
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 4,
+        backgroundColor: 'transparent',
+        marginRight: 4,
+    },
+    bgCategoryTabActive: {
+        backgroundColor: '#F1F1F0',
+    },
+    bgCategoryTabText: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: '#37352F',
+    },
+    bgCategoryTabTextActive: {
+        fontWeight: '600',
+    },
+    bgScrollArea: {
+        // 가로 스크롤 영역
+    },
+    bgItemRow: {
+        flexDirection: 'row',
+        paddingVertical: 6,
+        gap: 10,
+    },
+    bgItem: {
+        width: 56,
+        height: 70,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#E9E9E7',
+        overflow: 'hidden',
+    },
+    bgItemSelected: {
+        borderWidth: 2,
+        borderColor: '#37352F',
+    },
+    bgItemColor: {
+        width: '100%',
+        height: 40,
+    },
+    bgItemLabel: {
+        fontSize: 9,
+        fontWeight: '600',
+        color: '#37352F',
+        marginTop: 4,
+    },
+    bgItemEmoji: {
+        fontSize: 18,
+        marginBottom: 2,
     },
     // ─── 서랍장 관리 모달 (Strict Notion Style) ───
     modalOverlay: {
@@ -209,10 +442,26 @@ export const styles = StyleSheet.create({
         marginLeft: 8,
     },
 
+    // 스티커 바텀시트 헤더 (카테고리 탭 + 설정 버튼)
+    stickerBottomSheetHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+
     // 카테고리 탭 바
     categoryTabBar: {
         flexDirection: 'row',
-        marginBottom: 6,
+        flex: 1, // 버튼 옆자리 차지
+        paddingRight: 8,
+    },
+    stickerManageBtnInside: {
+        width: 28,
+        height: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'transparent', // 배경 제거
     },
     categoryTab: {
         paddingVertical: 4,
@@ -258,6 +507,7 @@ export const styles = StyleSheet.create({
     },
     stickerDrawerContent: {
         overflow: 'hidden',
+        paddingHorizontal: 12, // stickerDrawer의 패딩(4)과 합쳐서 16px 맞춤
     },
 
     // 활동 그리드
@@ -300,7 +550,7 @@ export const styles = StyleSheet.create({
     // 입력 창 (스티커 장식 레이어 포함)
     inputCard: {
         backgroundColor: COLORS.card,
-        height: 340, // 입력박스 크기 고정 (글이 길어져도 늘어나지 않음)
+        height: DIARY_CARD_HEIGHT, // 기존 340에서 30% 늘림. (글이 길어져도 늘어나지 않음)
         borderRadius: 12, // 노션 스타일의 라운딩
         padding: 0,
         overflow: 'hidden',
@@ -336,68 +586,81 @@ export const styles = StyleSheet.create({
         overflow: 'hidden',
         borderRadius: 12,
     },
-    pageNavBarWrapper: {
-        alignItems: 'center',
-        marginTop: 12,
-        marginBottom: 8,
-        zIndex: 10,
-    },
-    pageNavBar: {
+    // 📷 사진 추가 버튼 (서랍장 하단 단독 버튼)
+    addPhotoButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        paddingVertical: 6,
-        paddingHorizontal: 16,
-        borderRadius: 999,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(232, 213, 204, 0.6)',
-        gap: 16,
+        borderColor: '#E9E9E7',
+        paddingVertical: 12,
         ...SOFT_SHADOW.card,
-        height: 40,
     },
-    pageIndicatorRow: {
+    addPhotoButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#37352F',
+        marginLeft: 8,
+    },
+    // ─── 📊 카드 내부 인디케이터 (피드 스타일) ───
+    cardIndicatorWrap: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        position: 'relative',
+        zIndex: 20,
+    },
+    cardIndicatorDots: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
         gap: 6,
     },
     pageDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#E2DED0',
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#D9D9D6',
     },
     pageDotActive: {
-        width: 20,
-        height: 8,
-        borderRadius: 4,
+        width: 16,
+        height: 6,
+        borderRadius: 3,
         backgroundColor: '#37352F',
     },
-    pageAddButton: {
-        paddingHorizontal: 4,
-        alignItems: 'center',
-        justifyContent: 'center',
+    cardDeleteBtn: {
+        position: 'absolute',
+        right: 16,
+        padding: 4,
     },
-    pageAddButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#8E8E8E',
-    },
-    pageDeleteButton: {
-        paddingHorizontal: 4,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    pageDeleteButtonText: {
+    cardDeleteText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#FFB8B8',
+        color: '#D1D1D1',
     },
-    pageCountText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#666666',
-        letterSpacing: 0.5,
+
+    // ─── 🧲 엣지 풀 '+' 카드 ───
+    addPageCard: {
+        height: DIARY_CARD_HEIGHT,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FAFAFA',
+        borderStyle: 'dashed',
+        borderColor: '#D3D3D1',
+    },
+    addPageIcon: {
+        fontSize: 36,
+        fontWeight: '300',
+        color: '#C4C4C4',
+        marginBottom: 4,
+    },
+    addPageText: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#ABABAB',
     },
 
     // 활동별 노트 카드

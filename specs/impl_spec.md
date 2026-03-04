@@ -60,12 +60,13 @@
 
 - **목적**: `expo-sqlite`를 활용한 로컬 데이터 영구 저장 및 동시성 에러 관리.
 - **테이블 스키마**:
-  - `diary`: `id` (PK), `date` (UNIQUE), `content`, `mood`, `stickers` (JSON 텍스트)
+  - `diary`: `id` (PK), `date` (UNIQUE), `content`, `mood`, `stickers` (JSON 텍스트), `photos` (JSON 텍스트)
   - `activities`: `id` (PK), `date`, `activity`, `title` (기본값 ''), `note` (기본값 '')
   - `app_settings`: `key` (PK), `value` — 설정값 저장 (isLockEnabled, password, isPremium)
 - **특이 사항 & 동시성 제어 (Mutex Queue)**:
   - 병렬 DB 접근 시 널포인터 예외 방지를 위해 `dbQueue` (Promise 체인)를 통해 순차 실행
   - `diary` 테이블의 `stickers` 컬럼은 객체 배열(`[{id, type, isGraphic, x, y, rotation}]`)을 `JSON.stringify` 포맷으로 직렬화/역직렬화하여 관리합니다. (`rotation`은 도(degree) 단위 회전값, 미지정 시 `0`)
+  - `diary` 테이블의 `photos` 컬럼은 페이지별 사진 배열(`[[{id, uri, x, y, rotation}]]`)을 `JSON.stringify` 포맷으로 직렬화/역직렬화하여 관리합니다.
   - Fast Refresh 시 `ensureDB`로 모듈 변수 초기화 문제 우회
 
 ### 3. 데이터베이스 안정성 및 예외 처리 (Concurrency & NPE)
@@ -108,7 +109,7 @@
      - `PenMenu`를 통해 '되돌리기', '전체 지우기', '펜 모드 종료' 가능
   5. 터치 드래그 → SVG path 실시간 렌더링
 - **일기 카드 구조**:
-  - WriteScreen의 inputCard와 동일한 minHeight(280px) 및 스타일
+  - WriteScreen의 inputCard와 동일한 반응형 높이(DIARY_CARD_HEIGHT) 및 스타일
   - 스티커 오버레이 (`StaticSticker` 컴포넌트 활용, 회전값 반영)
   - 하단 메타: 날짜 (`M월 D일`) + 활동 아이콘 + 기분 캐릭터 (`MoodCharacter`)
 
@@ -147,11 +148,107 @@
   - 단일 페이지 일기는 기존과 동일하게 렌더링 (성능 보존)
 - **검색 대응 (`useSearchLogic`)**:
   - `d.content`가 JSON 배열인 경우 모든 페이지를 합쳐서 검색 대상으로 활용 (`parsed.join(' ')`)
-- **페이지 네비게이션 UI (Floating Glass Pill)**:
-  - 입력 카드 하단에 하나의 '알약(Pill)' 조형물 형태로 묶여 공중에 띄워진 UI
-  - 배경은 반투명 글래스(`rgba(255, 255, 255, 0.9)`)와 소프트 쉐도우 적용
-  - 구성: `[ ✕ | • • • | + ]` (아이콘/텍스트 기호 기반 미니멀리즘)
-  - **삭제 확인**: `✕` 버튼 클릭 시 `SoftAlertModal`을 통해 "페이지 삭제" 확인 절차를 거침 (실수 방지)
+- **페이지 추가 (🧲 엣지 풀 트리거)**:
+  - FlatList의 data 끝에 `'__ADD_PAGE__'` 더미 아이템을 추가하여, 마지막 카드 너머로 스와이프하면 자동으로 새 페이지 생성
+  - '+' 카드: dashed 테두리의 희미한 카드에 '+' 아이콘과 '새 페이지' 텍스트 표시. 터치로도 추가 가능
+  - 최대 5페이지 제한, 초과 시 `SoftAlertModal` 경고
+- **페이지 인디케이터 (📊 피드 스타일 도트)**:
+  - 기존 하단 Floating Pill 네비게이션 바를 제거하고, 각 입력 카드 하단 내부에 피드 화면과 동일한 인디케이터 배치
+  - 페이지가 2개 이상일 때만 표시 (1페이지일 때는 숨김)
+  - 디자인: 활성 페이지는 가로 캡슐형 바(16x6), 비활성은 작은 원형(6x6)
+  - 우측 끝에 작은 '✕' 삭제 버튼 통합
+  - **삭제 확인**: `✕` 클릭 시 기존 `SoftAlertModal`을 통해 "페이지 삭제" 확인 절차를 거침 (실수 방지)
+
+### 5.2. 📷 사진 첨부 기능 (Photo Attachment — Polaroid Style)
+
+- **목적**: 일기에 갤러리 사진을 폴라로이드 감성 프레임으로 첨부하여 다꾸의 완성도를 높임
+- **사진 선택 (ImagePicker)**:
+  - `expo-image-picker` 사용
+  - `allowsEditing: true`, `aspect: [1, 1]`로 **1:1 정방형 크롭** 강제
+  - `quality: 0.5`로 **50% 압축**하여 앱 용량 절약
+  - 갤러리 접근 권한(`requestMediaLibraryPermissionsAsync`) 요청 → 미허용 시 알림 모달
+- **사진 제한**: `MAX_PHOTOS_PER_PAGE` 로 관리 처리 (기본 1장, 프리미엄 가입자/체험자는 **페이지당 최대 5장** 첨부 가능)
+- **레이어 구조 (3층)**:
+  - `[층1] TextInput` → `[층2] 사진 레이어 (zIndex: 5)` → `[층3] 스티커 레이어 (zIndex: 10)`
+  - 사진은 항상 스티커 아래에 위치하여 스티커로 사진 위를 꾸밀 수 있음
+- **드래그 & 회전**:
+  - `DraggablePhoto` 컴포넌트: `DraggableSticker`와 동일한 패턴(로직/뷰/스타일 분리)
+  - `PanResponder` 기반 드래그 + 회전 핸들(↻) 지원
+  - 더블 탭으로 삭제
+  - 선택 시 점선 테두리 표시, 3초 후 자동 선택 해제
+- **디자인 (Polaroid Frame)**:
+  - 하얀 두꺼운 테두리(8px 상·좌·우, 20px 하단) + 미세한 종이 그림자
+  - 사진 영역: 110×110px (1:1), 프레임 전체: 126×144px
+  - 하단 여백이 넓어 실제 폴라로이드 사진지처럼 보임
+- **데이터 저장**:
+  - `pagePhotos` 2차원 배열 (`[[photos1], [photos2]]`)
+  - 각 사진 객체: `{ id, uri, x, y, rotation }`
+  - DB `diary.photos` 컬럼에 JSON 직렬화하여 저장
+- **모듈 구조 (Modular UI Developer 준수)**:
+  - `src/components/DraggablePhoto/DraggablePhoto.logic.js`: 드래그/회전 상태 관리 훅
+  - `src/components/DraggablePhoto/DraggablePhoto.view.js`: 폴라로이드 프레임 렌더링 + RotationHandle
+  - `src/components/DraggablePhoto/DraggablePhoto.styles.js`: 프레임/그림자/핸들 스타일
+  - `src/components/DraggablePhoto/index.js`: 단일 진입점
+- **UI 진입점**: 플로팅 툴바의 📸 아이콘 버튼을 탭하면 즉시 갤러리 오픈
+- **사진 추가 버튼 스타일**: 동그란 반투명 아이콘 버튼 (40×40, borderRadius 20, 소프트 쉐도우)
+
+### 5-2. 배경지 서랍장 (Paper Drawer)
+
+- **목적**: 일기 입력 박스의 배경지를 사용자가 직접 선택하여 꾸밀 수 있는 기능
+- **데이터 구조**:
+  - `pageBackgrounds`: 페이지별 배경지 ID 배열 (e.g. `['default', 'pastel_blue', 'pattern_grid']`)
+  - DB `diary.backgrounds` 컬럼에 JSON 직렬화하여 저장
+- **배경지 종류** (총 13종):
+  - **파스텔 팩 (7종)**: 기본(흰색), 세레니티(하늘), 벚꽃(핑크), 민트, 라벤더, 레몬, 피치
+  - **패턴 팩 (3종)**: 모눈종이(Grid), 줄노트(Lined), 도트(Dots)
+  - **스페셜 팩 (3종)**: 노을(그라데이션), 밤(다크), 크라프트(종이)
+- **UI 구현**:
+  - 스티커 서랍장과 동일한 Notion 스타일의 접이식 서랍 UI
+  - 가로 스크롤 가능한 배경지 썸네일 리스트
+  - 각 썸네일: 배경색 미리보기 + 이모지 + 라벨 표시
+  - 선택된 배경지는 두꺼운 테두리(`borderWidth: 2`)로 표시
+- **적용 범위**:
+  - 일기 작성 화면(WriteScreen)의 입력 카드 배경
+  - DiaryEntryCard(일기 목록/피드)에서도 저장된 배경색 반영
+  - 페이지별 독립 적용 (멀티페이지 시 각 페이지마다 다른 배경 가능)
+- **상수 파일**: `src/constants/backgrounds.js`
+- **현재 상태**: 배경지 탭은 **숨김 처리**됨. 기본값 흰색 고정.
+
+### 5-3. 📱 플로팅 툴바 (Floating Tools — 인스타 스토리 스타일)
+
+- **목적**: 기존 텍스트 탭(스티커/배경지/사진) 대신 인스타 스토리형 아이콘 기반 UI로 교체. MZ 감성의 미니멀하고 직관적인 꾸미기 경험 제공.
+- **구조**:
+  - 입력 카드(pageContainer) 및 페이지 네비게이션 아래에 가로로 배치되는 아이콘 바
+  - **🎞️ 노션 스타일 탭 스위치**: 노션 느낌의 깔끔한 둥근 사각형(borderRadius 8) 탭 컨테이너 (`[ ✨ 스티커 | 📸 필름 ]` 버튼)
+  - 디자인 일관성: 글자가 포함된 버튼으로 의미를 명확하면서 부드러운 전환감 부여
+- **버튼 구성** (좌→우):
+  - ✨ **스티커**: 탭 스위치의 왼쪽. 탭 시 활성 상태로 전환되고 아래에 바텀시트가 스르륵 올라옴.
+  - 📸 **필름**: 탭 스위치의 오른쪽. 탭 시 사진 프레임(화이트/블랙)을 선택할 수 있는 작은 바텀시트가 열림.
+  - 🪄 **다꾸 가챠**: 우측에 위치한 원형 독립 버튼. 탭 시 기분에 맞는 스티커 랜덤 자동 배치.
+- **디자인 (Notion Style Designer 준수)**:
+  - 탭 스위치 컨테이너: `#FFFFFF` 배경, 노션 특유의 작은 라운딩(`borderRadius 8`), `1px` #E9E9E7 보더 및 소프트 쉐도우 적용
+  - 활성 세그먼트: `#F1F1F0` 배경으로 눌림/선택 상태를 자연스럽게 표현, 차콜색 텍스트로 강조
+  - 원형 독립 버튼: 40×40px, 반투명 흰색, 1px 보더
+- **스티커 & 사진 바텀시트**:
+  - 스티커 버튼(✨) 토글 시: 카테고리 탭(최대 6개)과 스티커 그리드가 포함된 노션 스타일 카드 표시
+  - 필름 버튼(📸) 토글 시: 화이트, 블랙(기본), 핑크, 블루, 민트(프리미엄 파스텔 전용) 폴라로이드 프레임을 선택할 수 있는 노션 스타일 카드 표시. 비활성 등급 시 픽토그램에 자물쇠(`lockOverlay`) 및 안내 모달 팝업 연결. 선택 후 갤러리로 연결.
+
+### 5-4. 🪄 다꾸 가챠 (Magic Decorate)
+
+- **목적**: "폰 꾸미긴 귀찮은데 예뻤으면 좋겠어"라는 MZ 심리 저격. 원터치로 감성 다꾸 완성.
+- **기분별 스티커 매핑** (`MOOD_STICKER_MAP`):
+  - `happy`: ✨, 🌈, 💖, 🌻, 🎀, 🍀, 💫
+  - `sad`: 🫧, 🌧️, 💧, 🥹, 🌸, ☁️, 🪷
+  - `surprised`: ⚡, 🎉, 🤯, 💥, 🌟, 🎊, ✦
+  - `embarrassed`: 🫣, 💗, 🌺, 🎀, 🍓, 🧁, 💝
+  - `soso`: ☕, 🍃, 🌤️, 📖, 🎵, 🧋, 🍰
+- **배치 알고리즘**:
+  - 풀(Pool)에서 중복 없이 2~3개 랜덤 선택
+  - X: 10 ~ (카드너비-50) 범위 랜덤
+  - Y: 20 ~ (카드높이-60) 범위 랜덤
+  - Rotation: -15° ~ +15° 랜덤 (삐뚤빼뚤 수동 감성)
+- **제한 정책**: 기존 스티커 제한과 동일 (페이지당 기본 3+광고보너스(최대 15), 프리미엄 15개 하드캡)
+- **완료 알림**: SoftAlertModal로 "다꾸 완료! 🪄✨" 피드백
 
 ### 6. 요약 및 통계 분석 (Summary & Analysis)
 
@@ -198,21 +295,29 @@
 
 ## 6. 데이터 백업 및 복구 시스템 (Backup & Restore)
 
-### 6.1. 백업 (Export)
+### 6.1. 백업 (Export) — ZIP 아카이브 방식
 
-- **목적**: 서버 없이 사용자의 소중한 일기 데이터를 안전하게 외부로 내보내기.
+- **목적**: 서버 없이 사용자의 소중한 일기 데이터(텍스트 + 사진)를 안전하게 외부로 내보내기.
+- **파일 형식**: `.zip` 아카이브
+  - `data.json`: AES-256(ECB) 암호화된 DB 전체 데이터
+  - `images/`: 일기에 첨부된 모든 사진 파일 (base64 → 바이너리)
 - **상세 설명**:
   - `db.js`의 `getAllData()`가 모든 테이블의 로우를 긁어모아 하나의 JSON 객체로 만듭니다.
-  - `expo-file-system`을 이용해 로컬 임시 폴더에 `.json` 파일을 생성합니다.
-  - `expo-mail-composer`를 사용해 해당 파일을 메일 앱의 첨부파일로 실어 보냅니다. 메일 앱이 없는 경우 `expo-sharing`을 통해 클라우드나 메신저로 공유합니다.
+  - diary 테이블의 `photos` 컬럼에서 모든 사진 URI를 추출하여, 실제 파일을 base64로 읽어 ZIP에 포함합니다.
+  - 사진 URI는 ZIP 내부 상대경로(`images/photo_0.jpg`)로 치환되어 저장됩니다.
+  - JSON 데이터는 AES-256으로 암호화한 뒤 `data.json`에 저장됩니다.
+  - `JSZip` 라이브러리로 ZIP 파일을 생성하고, `expo-sharing`을 통해 공유합니다.
+- **사용 라이브러리**: `jszip`, `expo-file-system`, `expo-sharing`, `crypto-js`
 
-### 6.2. 복구 (Import)
+### 6.2. 복구 (Import) — ZIP + 레거시 JSON 호환
 
 - **목적**: 기기 변경이나 앱 재설치 시 백업된 파일로 데이터를 이전 상태로 되돌리기.
 - **상세 설명**:
   - `expo-document-picker`를 통해 사용자가 백업 파일을 직접 선택하게 합니다.
-  - `restoreFromData(data)` 함수 내에서 SQLite 트랜잭션(`BEGIN/COMMIT/ROLLBACK`)을 사용하여 기존 데이터를 모두 삭제하고 백업본을 일괄 삽입합니다.
-  - 데이터 무결성을 위해 테이블 구조와 버전이 일치하는지 최소한의 검증을 거칩니다.
+  - **ZIP 파일**: JSZip으로 열어 `data.json` 복호화 + `images/` 폴더의 사진을 앱 전용 디렉토리(`diary_photos/`)에 복원합니다. 상대경로를 로컬 절대경로로 자동 변환합니다.
+  - **레거시 JSON 파일**: 기존 `.json` 백업 파일도 그대로 지원하여 하위 호환성을 유지합니다.
+  - `restoreFromData(data)`에서 `photos`, `backgrounds` 컬럼을 포함하여 복원합니다.
+  - SQLite 트랜잭션(`BEGIN/COMMIT/ROLLBACK`)으로 데이터 무결성을 보장합니다.
 
 ### 6.3. 구매 내역 복원 (Purchase Restore)
 

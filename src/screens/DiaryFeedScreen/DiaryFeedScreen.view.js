@@ -24,6 +24,7 @@ import { getMoodByKey } from '../../constants/mood';
 
 import { useDiaryFeedLogic } from './DiaryFeedScreen.logic';
 import { styles } from './DiaryFeedScreen.styles';
+import { useGlobalWeeklyMood } from '../../context/MoodContext';
 
 
 
@@ -35,7 +36,8 @@ const CommentItem = React.memo(({ item, onDelete }) => {
     const deleteOp = useRef(new Animated.Value(0)).current;
 
     const cDate = new Date(item.created_at);
-    const fDate = `${cDate.getMonth() + 1}월 ${cDate.getDate()}일`;
+    // 시간 정보까지 포함하여 더 구체적으로 표시
+    const fDate = `${cDate.getMonth() + 1}월 ${cDate.getDate()}일 ${String(cDate.getHours()).padStart(2, '0')}:${String(cDate.getMinutes()).padStart(2, '0')}`;
 
     const handleLongPress = () => {
         setShowDelete(true);
@@ -45,36 +47,51 @@ const CommentItem = React.memo(({ item, onDelete }) => {
             useNativeDriver: true,
         }).start();
 
-        // 3초 뒤에 삭제 버튼 숨기기
         setTimeout(() => {
             Animated.timing(deleteOp, {
                 toValue: 0,
                 duration: 200,
                 useNativeDriver: true,
             }).start(() => setShowDelete(false));
-        }, 3000);
+        }, 4000);
     };
 
     return (
-        <TouchableOpacity
-            activeOpacity={0.9}
-            onLongPress={handleLongPress}
-            delayLongPress={300}
-            style={styles.commentItem}
-        >
-            <View>
-                <Text style={styles.commentDateText}>{fDate}</Text>
-                <Text style={styles.commentText}>{item.content}</Text>
+        <View style={styles.commentItemRow}>
+            {/* 작성 시점의 캐릭터를 고정해서 표시 */}
+            <View style={styles.commentAvatarWrap}>
+                <View style={styles.commentAvatarInner}>
+                    <MoodCharacter character={item.character || 'bear'} size={24} />
+                </View>
             </View>
 
-            {showDelete && (
-                <Animated.View style={[styles.deleteCommentBtn, { opacity: deleteOp }]}>
-                    <TouchableOpacity onPress={() => onDelete(item.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <XIcon size={16} color="#FF6B6B" />
-                    </TouchableOpacity>
-                </Animated.View>
-            )}
-        </TouchableOpacity>
+            <View style={styles.commentBubbleWrap}>
+                <View style={styles.commentHeaderRow}>
+                    <Text style={styles.commentDateText}>{fDate}</Text>
+                </View>
+
+                <TouchableOpacity
+                    activeOpacity={0.8}
+                    onLongPress={handleLongPress}
+                    delayLongPress={300}
+                    style={styles.commentBubble}
+                >
+                    <Text style={styles.commentText}>{item.content}</Text>
+
+                    {showDelete && (
+                        <Animated.View style={[styles.deleteCommentBtn, { opacity: deleteOp }]}>
+                            <TouchableOpacity
+                                onPress={() => onDelete(item.id)}
+                                style={styles.deleteIconBox}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                                <XIcon size={12} color="#FFFFFF" />
+                            </TouchableOpacity>
+                        </Animated.View>
+                    )}
+                </TouchableOpacity>
+            </View>
+        </View>
     );
 });
 
@@ -258,6 +275,7 @@ export function DiaryFeedScreenView({ navigation }) {
                 backdropOpacity={0.4}
             >
                 <View style={styles.popupModal}>
+                    <View style={styles.modalHandle} />
                     <Text style={styles.sheetHeader}>추신</Text>
 
                     {/* 키보드가 올라오면 댓글 리스트를 숨기고 입력 박스만 노출 */}
@@ -273,8 +291,10 @@ export function DiaryFeedScreenView({ navigation }) {
                             />
                         ) : (
                             <View style={styles.emptyCommentWrap}>
-                                <ComboShakeMoodCharacter character="octopus" size={56} />
-                                <Text style={styles.emptyCommentText}>과거의 나에게 추신을 남겨보세요.</Text>
+                                <View style={styles.emptyCommentIconCircle}>
+                                    <ComboShakeMoodCharacter character="octopus" size={60} />
+                                </View>
+                                <Text style={styles.emptyCommentSubText}>그날의 나에게 해주고 싶은 말을 적어보세요.</Text>
                             </View>
                         )
                     )}
@@ -283,15 +303,24 @@ export function DiaryFeedScreenView({ navigation }) {
                     <View style={styles.commentInputWrap}>
                         <TextInput
                             style={styles.commentInput}
-                            placeholder="내용을 입력하세요..."
-                            placeholderTextColor="#999999"
+                            placeholder="따뜻한 한마디를 보태주세요..."
+                            placeholderTextColor="#A1A19A"
                             value={commentText}
                             onChangeText={setCommentText}
                             onSubmitEditing={submitComment}
                             returnKeyType="send"
+                            multiline={false}
                         />
-                        <TouchableOpacity style={styles.commentSubmitBtn} onPress={submitComment} activeOpacity={0.8}>
-                            <Text style={styles.commentSubmitText}>등록</Text>
+                        <TouchableOpacity
+                            style={[
+                                styles.commentSubmitBtn,
+                                !commentText.trim() && { backgroundColor: '#E9E9E7' }
+                            ]}
+                            onPress={submitComment}
+                            activeOpacity={0.8}
+                            disabled={!commentText.trim()}
+                        >
+                            <Text style={styles.commentSubmitText}>보내기</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

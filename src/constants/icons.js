@@ -226,3 +226,60 @@ export function MessageCircleIcon({ size = 20, color = "#666666" }) {
         </Svg>
     );
 }
+
+// ─── 카메라 아이콘 (Doodle Flash: Line Art with Flash Rays) ───
+export function CameraIcon({ size = 24, color = "#37352F", style }) {
+    const bodyColor = "#8BBFEF"; // 스카이 블루
+    const lensColor = "#D6EFFF"; // 더 밝은 블루 (입체감)
+
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={style}>
+            {/* Flash Rays (광선) */}
+            <Path d="M12 1.5v2M7.5 3.5l1.2 1.2M3.5 7l2 .5M16.5 3.5l-1.2 1.2M20.5 7l-2 .5" />
+
+            {/* Top Bump (셔터/뷰파인더) */}
+            <Path d="M9 9V7.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V9" fill={bodyColor} />
+
+            {/* Body (본체) */}
+            <Rect x="3" y="9" width="18" height="12" rx="2.5" fill={bodyColor} />
+
+            {/* Lens (렌즈) */}
+            <Circle cx="12" cy="15" r="3.5" fill={lensColor} />
+            <Circle cx="12" cy="15" r="1.2" fill={color} stroke="none" />
+
+            {/* Small Detail */}
+            <Circle cx="18" cy="12" r="0.8" fill={color} stroke="none" />
+        </Svg>
+    );
+}
+
+// ─── 스티커 아이콘 (Doodle Flash: Line Art Sparkling Sticker) ───
+export function StickerIcon({ size = 24, active = false, style }) {
+    const color = active ? "#37352F" : "#83837F";
+    const bodyColor = "#FFD485"; // 파스텔 옐로우
+    const peeledColor = "#FFF4E0"; // 더 밝은 옐로우 (입체감)
+
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={style}>
+            {/* Sparkles (상단 반짝임) */}
+            <Path d="M12 2v2M8 4l1 1M16 4l-1 1" />
+
+            {/* Sticker Body */}
+            <Path
+                d="M6 7h12a2 2 0 0 1 2 2v7l-4 4H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"
+                fill={bodyColor}
+            />
+            {/* 접힌 모서리 부분 */}
+            <Path
+                d="M20 16l-4 4v-2a2 2 0 0 1 2-2h2z"
+                fill={peeledColor}
+            />
+
+            {/* Petit Face (귀여운 미소) */}
+            <Circle cx="9" cy="12" r="0.8" fill={color} stroke="none" />
+            <Circle cx="13" cy="12" r="0.8" fill={color} stroke="none" />
+            <Path d="M10 15c.5.5 1.5.5 2 0" />
+        </Svg>
+    );
+}
+

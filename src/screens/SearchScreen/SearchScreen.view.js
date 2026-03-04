@@ -88,19 +88,15 @@ export function SearchScreenView({ navigation }) {
                 <View style={styles.searchResultsContainer}>
                     {searchQuery ? (
                         filteredResults.length > 0 ? (
-                            <View style={styles.chartCard}>
-                                <Text style={styles.sectionTitle}>찾아보니까 {filteredResults.length}개 있어요! ✧</Text>
-                                <View style={styles.spacer} />
-                                {filteredResults.map((item, index) => (
-                                    <DiaryEntryCard
-                                        key={item.id ? item.id : `search-${index}`}
-                                        diary={item}
-                                        activities={activitiesMap[item.date] || []}
-                                        commentCount={commentCounts[item.date] || 0}
-                                        onPress={() => handleDiaryPress(item)}
-                                    />
-                                ))}
-                            </View>
+                            filteredResults.map((item, index) => (
+                                <DiaryEntryCard
+                                    key={item.id ? item.id : `search-${index}`}
+                                    diary={item}
+                                    activities={activitiesMap[item.date] || []}
+                                    commentCount={commentCounts[item.date] || 0}
+                                    onPress={() => handleDiaryPress(item)}
+                                />
+                            ))
                         ) : (
                             <View style={styles.emptyCard}>
                                 <MoodCharacter character="cloud" size={80} />

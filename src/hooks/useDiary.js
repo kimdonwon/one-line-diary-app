@@ -248,8 +248,8 @@ export function useYearMonthlyActivitiesStats(year) {
     return { monthlyActivityStats, loading, reload: load };
 }
 
-export async function saveDiary(date, content, mood, stickers = '[]') {
-    await dbSaveDiary(date, content, mood, stickers);
+export async function saveDiary(date, content, mood, stickers = '[]', photos = '[]', backgrounds = '[]') {
+    await dbSaveDiary(date, content, mood, stickers, photos, backgrounds);
     DeviceEventEmitter.emit('DIARY_UPDATED');
 }
 
@@ -459,9 +459,9 @@ export function useAllCommentCounts() {
 
     return { commentCounts, loading, reload: load };
 }
-export async function saveComment(diary_date, content) {
+export async function saveComment(diary_date, content, character = 'bear') {
     const created_at = new Date().toISOString();
-    await dbSaveComment(diary_date, content, created_at);
+    await dbSaveComment(diary_date, content, created_at, character);
     DeviceEventEmitter.emit('COMMENT_ADDED');
 }
 

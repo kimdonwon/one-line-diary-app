@@ -12,52 +12,45 @@ export async function initDB() {
 
     initPromise = (async () => {
         try {
-            db = await SQLite.openDatabaseAsync('diary.db');
+            const instance = await SQLite.openDatabaseAsync('diary.db');
+            if (!instance) throw new Error('Failed to open database instance');
 
-            // 테이블 생성 및 마이그레이션 (순차적 실행)
-            await db.execAsync(`
-                CREATE TABLE IF NOT EXISTS diary (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    date TEXT UNIQUE NOT NULL,
-                    content TEXT NOT NULL,
-                    mood TEXT NOT NULL,
-                    stickers TEXT DEFAULT '[]'
-                );
-                CREATE TABLE IF NOT EXISTS activities (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    date TEXT NOT NULL,
-                    activity TEXT NOT NULL,
-                    title TEXT DEFAULT '',
-                    note TEXT DEFAULT '',
-                    UNIQUE(date, activity)
-                );
-                CREATE TABLE IF NOT EXISTS comments (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    diary_date TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    created_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS app_settings (
-                    key TEXT PRIMARY KEY,
-                    value TEXT
-                );
-            `);
+            // 1. 기본 테이블 생성
+            await instance.execAsync(`
+                CREATE TABLE IF NOT EXISTS diary (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT UNIQUE NOT NULL, content TEXT NOT NULL, mood TEXT NOT NULL, stickers TEXT DEFAULT '[]');
+                CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, activity TEXT NOT NULL, title TEXT DEFAULT '', note TEXT DEFAULT '', UNIQUE(date, activity));
+                CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, diary_date TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL, character TEXT DEFAULT 'bear');
+                CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT);
+            `.replace(/\s+/g, ' ').trim());
 
-            // 컬럼 추가 마이그레이션 (try-catch로 중복 추가 방지)
-            try { await db.execAsync(`ALTER TABLE activities ADD COLUMN title TEXT DEFAULT ''`); } catch (e) { }
-            try { await db.execAsync(`ALTER TABLE activities ADD COLUMN note TEXT DEFAULT ''`); } catch (e) { }
-            try { await db.execAsync(`ALTER TABLE diary ADD COLUMN stickers TEXT DEFAULT '[]'`); } catch (e) { }
+            // 2. 컬럼 추가 마이그레이션
+            const migrations = [
+                "ALTER TABLE activities ADD COLUMN title TEXT DEFAULT ''",
+                "ALTER TABLE activities ADD COLUMN note TEXT DEFAULT ''",
+                "ALTER TABLE diary ADD COLUMN stickers TEXT DEFAULT '[]'",
+                "ALTER TABLE diary ADD COLUMN photos TEXT DEFAULT '[]'",
+                "ALTER TABLE diary ADD COLUMN backgrounds TEXT DEFAULT '[]'",
+                "ALTER TABLE comments ADD COLUMN character TEXT DEFAULT 'bear'"
+            ];
 
-            // 기본 설정 초기화
-            await db.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['isLockEnabled', 'false']);
-            await db.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['password', '']);
-            await db.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['isPremium', 'false']);
+            for (const sql of migrations) {
+                try { await instance.execAsync(sql); } catch (e) { /* 컬럼 이미 존재함 */ }
+            }
 
+            // 3. 기본 설정 초기화
+            await instance.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['isLockEnabled', 'false']);
+            await instance.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['password', '']);
+            await instance.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['isPremium', 'false']);
+            await instance.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['premiumTrialStartDate', new Date().toISOString()]);
+
+            db = instance;
             dbReady = true;
             console.log('[DB]: Initialization complete.');
+            return db;
         } catch (error) {
             console.error('[DB Init Error]:', error);
-            initPromise = null; // 에러 시 재시도 가능하도록 초기화
+            initPromise = null;
+            dbReady = false;
             throw error;
         }
     })();
@@ -69,8 +62,8 @@ export async function initDB() {
  * DB 인스턴스 보장 (내부용)
  */
 function ensureDB() {
-    if (!db || !dbReady) {
-        throw new Error('Database not ready. Call initDB() and wait for it.');
+    if (!db) {
+        throw new Error('Database instance is null. Call initDB() first.');
     }
     return db;
 }
@@ -86,8 +79,9 @@ function enqueueDBTask(taskFn) {
     return new Promise((resolve, reject) => {
         dbQueue = dbQueue.then(async () => {
             try {
-                // 초기화가 진행 중이라면 완료될 때까지 대기
-                if (initPromise) await initPromise;
+                // 초기화가 실행되지 않았다면 실행 및 대기
+                if (!initPromise) initDB();
+                await initPromise;
 
                 const d = ensureDB();
                 const result = await taskFn(d);
@@ -123,11 +117,11 @@ export async function getSetting(key) {
 
 // ─── 일기 관련 ───
 
-export async function saveDiary(date, content, mood, stickers = '[]') {
+export async function saveDiary(date, content, mood, stickers = '[]', photos = '[]', backgrounds = '[]') {
     return enqueueDBTask(async (d) => {
         await d.runAsync(
-            'INSERT OR REPLACE INTO diary (date, content, mood, stickers) VALUES (?, ?, ?, ?)',
-            [date, content, mood, stickers]
+            'INSERT OR REPLACE INTO diary (date, content, mood, stickers, photos, backgrounds) VALUES (?, ?, ?, ?, ?, ?)',
+            [date, content, mood, stickers, photos, backgrounds]
         );
     });
 }
@@ -287,11 +281,11 @@ export async function getYearSpecificActivities(year, activity) {
 
 // ─── 댓글 (Comments) ───
 
-export async function saveComment(diary_date, content, created_at) {
+export async function saveComment(diary_date, content, created_at, character = 'bear') {
     return enqueueDBTask(async (d) => {
         await d.runAsync(
-            'INSERT INTO comments (diary_date, content, created_at) VALUES (?, ?, ?)',
-            [diary_date, content, created_at]
+            'INSERT INTO comments (diary_date, content, created_at, character) VALUES (?, ?, ?, ?)',
+            [diary_date, content, created_at, character]
         );
     });
 }
@@ -370,8 +364,8 @@ export async function restoreFromData(data) {
 
             for (const item of diary) {
                 await d.runAsync(
-                    'INSERT INTO diary (id, date, content, mood, stickers) VALUES (?, ?, ?, ?, ?)',
-                    [item.id, item.date, item.content, item.mood, item.stickers]
+                    'INSERT INTO diary (id, date, content, mood, stickers, photos, backgrounds) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [item.id, item.date, item.content, item.mood, item.stickers || '[]', item.photos || '[]', item.backgrounds || '[]']
                 );
             }
 
@@ -384,8 +378,8 @@ export async function restoreFromData(data) {
 
             for (const item of comments) {
                 await d.runAsync(
-                    'INSERT INTO comments (id, diary_date, content, created_at) VALUES (?, ?, ?, ?)',
-                    [item.id, item.diary_date, item.content, item.created_at]
+                    'INSERT INTO comments (id, diary_date, content, created_at, character) VALUES (?, ?, ?, ?, ?)',
+                    [item.id, item.diary_date, item.content, item.created_at, item.character || 'bear']
                 );
             }
 

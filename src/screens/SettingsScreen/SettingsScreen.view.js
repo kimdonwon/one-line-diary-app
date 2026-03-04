@@ -18,7 +18,8 @@ export function SettingsScreenView({ navigation }) {
         isShopExpanded, setIsShopExpanded,
         isShopMore, setIsShopMore,
         purchasedPacks, handleBuyStickerPack, resetPurchases, resetDiaryData,
-        handleExportBackup, handleImportBackup, handleRestorePurchases
+        handleExportBackup, handleImportBackup, handleRestorePurchases,
+        isTrial, hasPremiumBenefits, forceFreeVersion
     } = useSettingsLogic();
 
 
@@ -86,8 +87,14 @@ export function SettingsScreenView({ navigation }) {
                                     if (pack.isDefault) {
                                         statusText = pack.isFree ? '보유 중' : '₩1,100';
                                         statusStyle = pack.isFree ? styles.shopCardOwned : styles.shopCardPrice;
-                                        // 단, 구매 여부 체크 로직 통합 필요 시 else와 합침
-                                        if (!pack.isFree && purchasedPacks.includes(pack.catId)) {
+
+                                        // 파스텔 팩 & 프리미엄 혜택 체크
+                                        if (pack.catId === 'pastel' && hasPremiumBenefits) {
+                                            statusText = '무료 증정';
+                                            statusStyle = styles.shopCardPrice; // 별도 색상 혹은 금액 스타일 유지
+                                        }
+
+                                        if (purchasedPacks.includes(pack.catId)) {
                                             statusText = '보유 중';
                                             statusStyle = styles.shopCardOwned;
                                         }
@@ -172,11 +179,21 @@ export function SettingsScreenView({ navigation }) {
                             <Text style={styles.premiumBadgeText}>PRO</Text>
                         </View>
                     </View>
+
+                    {isTrial && !isPremium && (
+                        <View style={styles.trialBadge}>
+                            <Text style={styles.trialBadgeText}>2주 프리미엄 무료 체험 중 🎁</Text>
+                        </View>
+                    )}
+
                     <Text style={styles.premiumPrice}>₩5,000 <Text style={styles.premiumPriceUnit}>(한번 결제로 평생 소장)</Text></Text>
 
                     <View style={styles.premiumBenefits}>
-                        <Text style={styles.premiumBenefitItem}>✓ 스티커 최대 15개 부착 가능 </Text>
-                        <Text style={styles.premiumBenefitItem}>✓ 스티커 서랍장 카테고리 6개 </Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 페이지당 스티커 최대 15개 부착 </Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 페이지당 사진 최대 5장 첨부 </Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 스티커 서랍장 카테고리 6개 (전원) </Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 파스텔 사진 프레임 사용 가능 </Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 몽글몽글 파스텔 스티커팩 증정 </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 광고 없는 쾌적한 다이어리 작성</Text>
                     </View>
 
@@ -231,8 +248,17 @@ export function SettingsScreenView({ navigation }) {
                 {/* 개발자 도구 (테스트용) */}
                 <View style={styles.devSection}>
                     <Text style={styles.sectionHeader}>개발자 도구 (테스트)</Text>
+
                     <TouchableOpacity
-                        style={styles.dangerButton}
+                        style={[styles.dangerButton, { backgroundColor: '#F0F0F0', borderColor: '#DDD', borderWidth: 1 }]}
+                        onPress={forceFreeVersion}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={[styles.dangerButtonText, { color: '#666' }]}>무료버전 이용하기 (체험판 종료) ⬇️</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.dangerButton, { marginTop: 10 }]}
                         onPress={resetPurchases}
                         activeOpacity={0.7}
                     >
@@ -293,7 +319,7 @@ export function SettingsScreenView({ navigation }) {
 
                         {selectedPack && (() => {
                             if (selectedPack.isDefault) {
-                                if (selectedPack.isFree || isPremium) {
+                                if (selectedPack.isFree || isPremium || (selectedPack.catId === 'pastel' && hasPremiumBenefits)) {
                                     return (
                                         <View style={styles.previewOwnedBadge}>
                                             <Text style={styles.previewOwnedText}>사용 가능한 팩입니다 ✨</Text>
@@ -308,7 +334,9 @@ export function SettingsScreenView({ navigation }) {
                                                 handlePremiumPress();
                                             }}
                                         >
-                                            <Text style={styles.previewUnlockText}>프리미엄으로 전체 잠금 해제</Text>
+                                            <Text style={styles.previewUnlockText}>
+                                                {selectedPack.catId === 'pastel' ? '프리미엄 구매 시 무료 증정 🎁' : '프리미엄으로 전체 잠금 해제'}
+                                            </Text>
                                         </TouchableOpacity>
                                     );
                                 }

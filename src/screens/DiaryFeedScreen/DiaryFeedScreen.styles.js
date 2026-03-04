@@ -4,7 +4,7 @@
  */
 
 import { StyleSheet } from 'react-native';
-import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW } from '../../constants/theme';
+import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW, DIARY_CARD_HEIGHT } from '../../constants/theme';
 
 export const styles = StyleSheet.create({
     container: {
@@ -34,13 +34,14 @@ export const styles = StyleSheet.create({
     },
     diaryCardInner: {
         padding: SPACING.md,
-        minHeight: 340, // WriteScreen 의 inputCard와 정확히 일치하는 높이 (280 + 60)
+        minHeight: DIARY_CARD_HEIGHT, // WriteScreen 의 inputCard와 정확히 일치하는 높이 (280 + 60)
     },
     diaryContent: {
         fontSize: 14,
         fontWeight: '500',
         color: COLORS.text,
         lineHeight: 20,
+        marginRight: 4, // TextInput 우측 여백과 똑같이 줄바꿈 시점을 강제 일치시키기 위함
     },
     stickerOverlay: {
         position: 'absolute',
@@ -126,88 +127,141 @@ export const styles = StyleSheet.create({
         ...SOFT_SHADOW.card,
     },
     sheetHeader: {
-        fontSize: 18,
-        fontWeight: '700',
+        fontSize: 16,
+        fontWeight: '800',
         color: '#37352F',
-        marginBottom: 20,
+        marginBottom: 24,
         textAlign: 'center',
+        letterSpacing: -0.5,
+    },
+    modalHandle: {
+        width: 40,
+        height: 4,
+        backgroundColor: '#E9E9E7',
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 16,
+        marginTop: -8,
     },
     commentsList: {
         flexGrow: 0, // Allows list to shrink if few items
     },
-    commentItem: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: '#E9E9E7',
-        ...SOFT_SHADOW.card, // 노션 특유의 부드럽고 얕은 그림자
+    commentItemRow: {
+        flexDirection: 'row',
+        marginBottom: 20,
     },
-    deleteCommentBtn: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        padding: 8,
-        backgroundColor: '#FCFCFC',
+    commentAvatarWrap: {
+        marginRight: 10,
+        marginTop: 2,
+    },
+    commentAvatarInner: {
+        width: 32,
+        height: 32,
         borderRadius: 16,
+        backgroundColor: '#F7F7F5',
+        alignItems: 'center',
+        justifyContent: 'center',
         borderWidth: 1,
         borderColor: '#E9E9E7',
-        ...SOFT_SHADOW.card,
+    },
+    commentBubbleWrap: {
+        flex: 1,
+    },
+    commentHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+        paddingLeft: 4,
+    },
+    commentBubble: {
+        backgroundColor: '#F7F7F5',
+        borderRadius: 16,
+        borderTopLeftRadius: 2,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        alignSelf: 'flex-start',
+        maxWidth: '95%',
+        position: 'relative',
     },
     commentDateText: {
-        fontSize: 12,
-        color: '#666666',
-        marginBottom: 6,
+        fontSize: 11,
+        color: '#A1A19A',
         fontWeight: '600',
-        letterSpacing: 0.3,
     },
     commentText: {
         fontSize: 14,
         color: '#37352F',
-        lineHeight: 22,
+        lineHeight: 20,
+        fontWeight: '500',
+    },
+    deleteCommentBtn: {
+        position: 'absolute',
+        top: -10,
+        right: -10,
+        zIndex: 10,
+    },
+    deleteIconBox: {
+        backgroundColor: '#37352F',
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...SOFT_SHADOW.button,
     },
     emptyCommentWrap: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 40,
+        paddingVertical: 50,
+    },
+    emptyCommentIconCircle: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#F7F7F5',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#E9E9E7',
     },
     emptyCommentText: {
-        fontSize: 14,
-        color: '#999999',
-        fontWeight: '500',
-        marginTop: 12,
+        fontSize: 16,
+        color: '#37352F',
+        fontWeight: '700',
+        marginBottom: 6,
+    },
+    emptyCommentSubText: {
+        fontSize: 13,
+        color: '#A1A19A',
+        textAlign: 'center',
     },
     commentInputWrap: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 16,
+        marginTop: 20,
         paddingTop: 16,
         borderTopWidth: 1,
         borderTopColor: '#F1F1F0',
-        backgroundColor: '#FFFFFF',
     },
     commentInput: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
-        borderWidth: 1,
-        borderColor: '#E9E9E7',
-        borderRadius: 12,
+        backgroundColor: '#F7F7F5',
+        borderRadius: 14,
         paddingHorizontal: 16,
-        paddingVertical: 14,
+        paddingVertical: 12,
         fontSize: 14,
         color: '#37352F',
-        ...SOFT_SHADOW.card,
+        fontWeight: '500',
     },
     commentSubmitBtn: {
-        marginLeft: 12,
-        backgroundColor: '#37352F', // 노션 블랙
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
+        marginLeft: 10,
+        backgroundColor: '#37352F',
+        borderRadius: 14,
+        paddingHorizontal: 18,
+        paddingVertical: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        ...SOFT_SHADOW.card,
     },
     commentSubmitText: {
         color: '#FFFFFF',

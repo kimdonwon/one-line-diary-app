@@ -7,6 +7,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as BackupRestore from '../../utils/backupRestore';
 import { restoreFromData } from '../../database/db';
 import { Alert, DevSettings } from 'react-native';
+import { usePremium } from '../../hooks/usePremium';
 
 /**
  * ⚙️ 설정 화면용 비즈니스 로직 훅입니다.
@@ -15,8 +16,8 @@ export function useSettingsLogic() {
     const { isLockEnabled, password, updateLockSettings } = useLock();
     const defaultMood = getMoodByKey('HAPPY');
 
-    // 프리미엄 상태
-    const [isPremium, setIsPremium] = useState(false);
+    // 프리미엄 상태 (체험판 포함)
+    const { isPremium, isTrial, hasPremiumBenefits } = usePremium();
     const [showAlert, setShowAlert] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
 
@@ -33,12 +34,7 @@ export function useSettingsLogic() {
     }, []);
 
     const loadPremiumStatus = async () => {
-        try {
-            const val = await getSetting('isPremium');
-            setIsPremium(val === 'true');
-        } catch (e) {
-            console.log('Failed to load premium status:', e);
-        }
+        // 프리미엄 상태는 usePremium 훅에서 관리하므로 삭제
     };
 
     const loadPurchasedPacks = async () => {
@@ -55,8 +51,12 @@ export function useSettingsLogic() {
         // 이미 보유 중인지 확인
         if (purchasedPacks.includes(pack.catId)) return;
 
+        // 파스텔 팩은 프리미엄(또는 체험판) 혜택으로 무료
+        const isPastelPack = pack.catId === 'pastel';
+        const isEffectivelyFree = pack.isFree || (isPastelPack && hasPremiumBenefits);
+
         // 무료가 아닌 경우 결제 로직 (현재는 더미)
-        if (!pack.isFree) {
+        if (!isEffectivelyFree) {
             setAlertConfig({
                 title: '스티커 팩 구매 💳',
                 message: `[${pack.title}] 팩을 ${pack.price || '1,100'}원에 구매하시겠습니까? (더미 결제)`
@@ -161,8 +161,8 @@ export function useSettingsLogic() {
     // 프리미엄 토글 (개발용)
     const togglePremium = async () => {
         const newVal = !isPremium;
-        setIsPremium(newVal);
         await saveSetting('isPremium', String(newVal));
+        Alert.alert('알림', '프리미엄 상태가 변경되었습니다. 앱을 재실행해 주세요.');
     };
 
     // 프리미엄 결제 버튼 클릭 (더미)
@@ -240,6 +240,25 @@ export function useSettingsLogic() {
             setShowAlert(true);
         } catch (e) {
             console.log('Failed to reset purchases:', e);
+        }
+    };
+
+    // 무료버전 강제 전환 (테스트용)
+    const forceFreeVersion = async () => {
+        try {
+            // 프리미엄 해제
+            await saveSetting('isPremium', 'false');
+            // 체험 기간 종료 (30일 전으로 설정)
+            const pastDate = new Date();
+            pastDate.setDate(pastDate.getDate() - 30);
+            await saveSetting('premiumTrialStartDate', pastDate.toISOString());
+
+            Alert.alert(
+                '무료 버전 전환 완료 ⬇️',
+                '무료 버전으로 전환되었습니다. 변경사항을 반영하려면 앱을 재실행해 주세요.'
+            );
+        } catch (e) {
+            console.log('Failed to force free version:', e);
         }
     };
 
@@ -357,6 +376,9 @@ export function useSettingsLogic() {
         handleImportBackup,
         handleRestorePurchases,
         isShopMore,
-        setIsShopMore
+        setIsShopMore,
+        isTrial,
+        hasPremiumBenefits,
+        forceFreeVersion
     };
 }

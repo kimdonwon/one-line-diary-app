@@ -1,62 +1,51 @@
 import React, { useRef } from 'react';
-import { View, Text, Animated, PanResponder, Keyboard } from 'react-native';
-import { getStickerComponent } from '../../constants/stickers';
+import { View, Text, Image, Animated, PanResponder, Keyboard } from 'react-native';
 
-import { useDraggableLogic } from './DraggableSticker.logic';
-import { styles } from './DraggableSticker.styles';
+import { useDraggablePhotoLogic } from './DraggablePhoto.logic';
+import { styles } from './DraggablePhoto.styles';
 
+/**
+ * 🔄 회전 핸들 컴포넌트 (DraggableSticker와 동일 패턴)
+ */
 function RotationHandle({ containerRef, currentRotation, onRotate, onRotateEnd }) {
     const startInteraction = useRef({
-        cx: 0,
-        cy: 0,
-        startAngle: 0,
-        initialRotation: 0,
-        ready: false
+        cx: 0, cy: 0, startAngle: 0, initialRotation: 0, ready: false
     });
 
     const handlePanResponder = useRef(
         PanResponder.create({
-            // 우선적으로 터치를 가로채기 위한 설정
             onStartShouldSetPanResponder: () => true,
             onStartShouldSetPanResponderCapture: () => true,
             onMoveShouldSetPanResponder: () => true,
             onMoveShouldSetPanResponderCapture: () => true,
-            onPanResponderTerminationRequest: () => false, // 뺏기지 않음
+            onPanResponderTerminationRequest: () => false,
 
             onPanResponderGrant: (e, gestureState) => {
-                Keyboard.dismiss(); // 하단 입력창 메뉴 방지 루틴
-                const { x0, y0 } = gestureState; // 터치 시작 절대적 화면 좌표
-                const initRot = currentRotation.current; // 회전 시작 전 기존 각도
-
+                Keyboard.dismiss();
+                const { x0, y0 } = gestureState;
+                const initRot = currentRotation.current;
                 startInteraction.current.ready = false;
 
                 if (containerRef.current) {
-                    // 스티커의 현재 위치/크기를 실시간으로 화면상 좌표 기준으로 측정
                     containerRef.current.measureInWindow((x, y, w, h) => {
                         const cx = x + w / 2;
                         const cy = y + h / 2;
                         const dx = x0 - cx;
                         const dy = y0 - cy;
                         const startAngle = Math.atan2(dy, dx) * (180 / Math.PI);
-
                         startInteraction.current = { cx, cy, startAngle, initialRotation: initRot, ready: true };
                     });
                 }
             },
             onPanResponderMove: (e, gestureState) => {
                 if (!startInteraction.current.ready) return;
-
                 const { cx, cy, startAngle, initialRotation } = startInteraction.current;
                 const dx = gestureState.moveX - cx;
                 const dy = gestureState.moveY - cy;
-
                 const currentAngle = Math.atan2(dy, dx) * (180 / Math.PI);
                 let delta = currentAngle - startAngle;
-
-                // -180 ~ 180도 경계에서의 튀는 현상(Wrap-around) 보정
                 if (delta > 180) delta -= 360;
                 if (delta < -180) delta += 360;
-
                 onRotate(initialRotation + delta);
             },
             onPanResponderRelease: () => {
@@ -67,21 +56,17 @@ function RotationHandle({ containerRef, currentRotation, onRotate, onRotateEnd }
     ).current;
 
     return (
-        <View
-            style={styles.rotationHandle}
-            {...handlePanResponder.panHandlers}
-        >
+        <View style={styles.rotationHandle} {...handlePanResponder.panHandlers}>
             <Text style={styles.rotationHandleIcon}>↻</Text>
         </View>
     );
 }
 
 /**
- * 🎨 스티커 렌더링에만 초점을 맞춘 화면 분리 모듈입니다.
- * 핀치 회전 + 회전 핸들 지원
+ * 📷 폴라로이드 감성의 드래그 가능한 사진 컴포넌트
+ * 스티커보다 아래(텍스트 위) 레이어에 배치됩니다.
  */
-export function DraggableStickerView({ sticker, bounds, onDelete, onDragEnd }) {
-    // 내부 애니메이션 드래그 제스처 훅을 연결
+export function DraggablePhotoView({ photo, bounds, onDelete, onDragEnd }) {
     const {
         pan,
         rotation,
@@ -90,26 +75,12 @@ export function DraggableStickerView({ sticker, bounds, onDelete, onDragEnd }) {
         isDragging,
         isSelected,
         setMySize,
-        mySize,
         handleRotation,
         handleRotationEnd,
-    } = useDraggableLogic({
-        sticker, bounds, onDelete, onDragEnd
-    });
+    } = useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd });
 
     const containerRef = useRef(null);
 
-    const renderContent = () => {
-        if (sticker.isGraphic) {
-            const GraphicComponent = getStickerComponent(sticker.type);
-            if (GraphicComponent) {
-                return <GraphicComponent size={29} />;
-            }
-        }
-        return <Text style={styles.textSticker} selectable={false}>{sticker.type}</Text>;
-    };
-
-    // Animated interpolation: 숫자 → 'Xdeg' 문자열
     const rotateStr = rotation.interpolate({
         inputRange: [-360, 360],
         outputRange: ['-360deg', '360deg'],
@@ -136,11 +107,23 @@ export function DraggableStickerView({ sticker, bounds, onDelete, onDragEnd }) {
             ]}
             {...panResponder.panHandlers}
         >
-            <View pointerEvents="none">
-                {renderContent()}
+            {/* 폴라로이드 프레임 */}
+            <View style={[
+                styles.polaroidFrame,
+                photo.frameType === 'black' && styles.polaroidFrameBlack,
+                photo.frameType === 'pink' && styles.polaroidFramePink,
+                photo.frameType === 'blue' && styles.polaroidFrameBlue,
+                photo.frameType === 'mint' && styles.polaroidFrameMint,
+            ]}>
+                <Image
+                    source={{ uri: photo.uri }}
+                    style={styles.polaroidImage}
+                    resizeMode="cover"
+                />
+                <View style={styles.polaroidBottom} />
             </View>
 
-            {/* 🔄 회전 핸들 (선택 시에만 표시) */}
+            {/* 🔄 회전 핸들 (선택 시만 표시) */}
             {isSelected && (
                 <RotationHandle
                     containerRef={containerRef}

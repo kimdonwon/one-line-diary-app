@@ -30,6 +30,13 @@ import {
     FaceAfroDark, FaceGirlBlueHair, FaceBearHat, FaceBaby, FaceCoolBoy,
     FaceHappyGirl, FaceHeadphones
 } from './FaceStickers';
+import {
+    ItSticker, ItCamera, ItLaptop, ItSmartphone,
+    ItJoystick, ItKeyboard, ItMouse, ItGameboy,
+    ItHeadphones, ItSmartwatch, ItFloppy, ItTablet,
+    ItMicrophone, ItSpeaker, ItBattery, ItCassette,
+    ItVr, ItMonitor
+} from './ItStickers';
 
 // ─── 카테고리 탭 정의 ───────────────────────────────────────
 export const STICKER_CATEGORIES = [
@@ -39,6 +46,7 @@ export const STICKER_CATEGORIES = [
     { id: 'food', label: '푸드' },
     { id: 'mzline', label: '라인' },
     { id: 'people', label: '피플' },
+    { id: 'It', label: '아이티' },
 ];
 
 export const STICKER_PACK_DATA = [
@@ -48,6 +56,7 @@ export const STICKER_PACK_DATA = [
     { id: 'pack4', title: '냠냠 먹방 팩', desc: '커피, 마라탕, 탕후루까지!', icon: '🍡', isFree: true, isDefault: false, catId: 'food', tagLabel: '푸드' },
     { id: 'pack5', title: '삐뚤빼뚤 라인 팩', desc: '대충 그린 꾸안꾸 갬성', icon: '〰️', isFree: true, isDefault: false, catId: 'mzline', tagLabel: '라인' },
     { id: 'pack7', title: '오밀조밀 동네 친구들', desc: '귀엽고 다양한 얼굴 모음!', icon: '👦', isFree: false, isDefault: false, catId: 'people', tagLabel: '피플', price: '1,500' },
+    { id: 'pack8', title: '아이티 스티커팩', desc: '스티커, 카메라, IT소품 가득!', icon: '💻', isFree: false, isDefault: false, catId: 'It', tagLabel: '아이티', price: '1,500' },
 ];
 
 // ─── 카테고리별 스티커 모음 ────────────────────────────────
@@ -160,6 +169,28 @@ export const CATEGORIZED_STICKERS = {
         { key: 'pp_cool', label: '쿨보이', Component: FaceCoolBoy },
         { key: 'pp_happy', label: '양갈래', Component: FaceHappyGirl },
         { key: 'pp_hp', label: '헤드폰', Component: FaceHeadphones },
+    ],
+
+    /** 💻 아이티 — 카메라, 스티커, 노트북, 폰, IT소품 등 */
+    It: [
+        { key: 'r_sticker', label: '스티커', Component: ItSticker },
+        { key: 'r_camera', label: '카메라', Component: ItCamera },
+        { key: 'r_laptop', label: '노트북', Component: ItLaptop },
+        { key: 'r_phone', label: '스마트폰', Component: ItSmartphone },
+        { key: 'r_joy', label: '조이스틱', Component: ItJoystick },
+        { key: 'r_key', label: '키보드', Component: ItKeyboard },
+        { key: 'r_mouse', label: '마우스', Component: ItMouse },
+        { key: 'r_game', label: '게임보이', Component: ItGameboy },
+        { key: 'r_head', label: '헤드폰', Component: ItHeadphones },
+        { key: 'r_watch', label: '스마트워치', Component: ItSmartwatch },
+        { key: 'r_floppy', label: '플로피', Component: ItFloppy },
+        { key: 'r_tablet', label: '태블릿', Component: ItTablet },
+        { key: 'r_mic', label: '마이크', Component: ItMicrophone },
+        { key: 'r_speak', label: '스피커', Component: ItSpeaker },
+        { key: 'r_batt', label: '배터리', Component: ItBattery },
+        { key: 'r_cas', label: '카세트', Component: ItCassette },
+        { key: 'r_vr', label: 'VR기기', Component: ItVr },
+        { key: 'r_mon', label: '모니터', Component: ItMonitor },
     ],
 };
 

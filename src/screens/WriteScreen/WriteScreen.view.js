@@ -14,11 +14,15 @@ import { STICKER_CATEGORIES, CATEGORIZED_STICKERS } from '../../constants/sticke
 import { ActivityIcon } from '../../constants/ActivityIcons';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { DraggableSticker } from '../../components/DraggableSticker';
+import { DraggablePhoto } from '../../components/DraggablePhoto';
+import { BACKGROUNDS, BG_CATEGORIES, getBackgroundById, getBackgroundsByCategory } from '../../constants/backgrounds';
 import {
     HomeTabIcon,
     DiaryTabIcon,
     SummaryTabIcon,
-    SettingsTabIcon
+    SettingsTabIcon,
+    CameraIcon,
+    StickerIcon
 } from '../../constants/icons';
 
 import { useWriteLogic } from './WriteScreen.logic';
@@ -128,6 +132,7 @@ export function WriteScreenView({ route, navigation }) {
         // 멀티페이지
         pages,
         pageStickers,
+        pagePhotos,
         currentPageIndex,
         MAX_PAGES,
         addPage,
@@ -150,6 +155,19 @@ export function WriteScreenView({ route, navigation }) {
         handleSave,
         slideToBottom,
 
+        // 📷 Photo
+        showPhotos,
+        setShowPhotos,
+        handleAddPhoto,
+        handleDeletePhoto,
+        handlePhotoDragEnd,
+
+        // 🎨 Background
+        pageBackgrounds,
+        showBackgrounds,
+        setShowBackgrounds,
+        handleChangeBackground,
+
         enabledCatIds,
         showManager,
         setShowManager,
@@ -165,15 +183,43 @@ export function WriteScreenView({ route, navigation }) {
         // Ad
         adBonusStickers,
         handleAdReward,
+
+        // 🪄 Magic Decorate
+        handleMagicDecorate,
     } = useWriteLogic(route, navigation, scrollRef);
 
     const insets = useSafeAreaInsets();
+    const hasNudgedRef = useRef(false); // 최초 1회 실행 여부
+
+    // 💡 화면 진입 시 페이지를 추가할 수 있음을 알려주는 '넛지' 효과 (최초 1회)
+    useEffect(() => {
+        if (pageCardWidth > 0 && !hasNudgedRef.current) {
+            const timer = setTimeout(() => {
+                if (pageFlatListRef.current) {
+                    // 살짝 왼쪽으로 밀어 (24px) 새 페이지 카드가 보이게 함
+                    pageFlatListRef.current.scrollToOffset({
+                        offset: 24,
+                        animated: true
+                    });
+
+                    setTimeout(() => {
+                        pageFlatListRef.current?.scrollToOffset({
+                            offset: 0,
+                            animated: true
+                        });
+                        hasNudgedRef.current = true;
+                    }, 400);
+                }
+            }, 600);
+            return () => clearTimeout(timer);
+        }
+    }, [pageCardWidth]);
 
     // catOrder 순서대로 활성화된 카테고리만 표시
     const orderedCategories = catOrder
         .map(id => STICKER_CATEGORIES.find(c => c.id === id))
         .filter(Boolean);
-    const limit = isPremium ? 6 : 3;
+    const limit = 6; // 스티커 서랍장 카테고리 제한 해제 (무료/유료 상관없이 6개)
     const visibleCategories = orderedCategories
         .filter(cat => enabledCatIds.includes(cat.id))
         .slice(0, limit);
@@ -220,31 +266,292 @@ export function WriteScreenView({ route, navigation }) {
                         ))}
                     </View>
 
-                    {/* ─── 스티커 서랍 ─── */}
-                    <View style={styles.stickerDrawer}>
-                        <View style={styles.stickerDrawerHeader}>
+                    {/* ─── 멀티페이지 입력 영역 (가로 스와이프 + 엣지 풀 추가) ─── */}
+                    <View
+                        style={styles.pageContainer}
+                        onLayout={(e) => {
+                            const w = e.nativeEvent.layout.width;
+                            if (w > 0) setPageCardWidth(w);
+                        }}
+                    >
+                        {pageCardWidth > 0 && (
+                            <FlatList
+                                ref={pageFlatListRef}
+                                data={[...pages, '__ADD_PAGE__']}
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                keyExtractor={(_, idx) => `page-${idx}`}
+                                onMomentumScrollEnd={(e) => {
+                                    const idx = Math.round(e.nativeEvent.contentOffset.x / pageCardWidth);
+                                    if (idx >= pages.length) {
+                                        // 🧲 엣지 풀 트리거: 마지막 '+' 카드에 도달하면 페이지 자동 추가
+                                        addPage();
+                                        setTimeout(() => {
+                                            pageFlatListRef.current?.scrollToIndex({ index: pages.length, animated: true });
+                                        }, 100);
+                                    } else {
+                                        goToPage(idx);
+                                    }
+                                }}
+                                getItemLayout={(_, index) => ({
+                                    length: pageCardWidth,
+                                    offset: pageCardWidth * index,
+                                    index,
+                                })}
+                                renderItem={({ item: pageContent, index: pageIdx }) => {
+                                    // ─── 🧲 마지막 '+' 카드 (엣지 풀 트리거) ───
+                                    if (pageContent === '__ADD_PAGE__') {
+                                        return (
+                                            <TouchableOpacity
+                                                activeOpacity={0.6}
+                                                onPress={() => {
+                                                    addPage();
+                                                    setTimeout(() => {
+                                                        pageFlatListRef.current?.scrollToIndex({ index: pages.length, animated: true });
+                                                    }, 100);
+                                                }}
+                                                style={[styles.inputCard, styles.addPageCard, { width: pageCardWidth }]}
+                                            >
+                                                <Text style={styles.addPageIcon}>+</Text>
+                                                <Text style={styles.addPageText}>새 페이지</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    }
+
+                                    const bgData = getBackgroundById(pageBackgrounds[pageIdx] || 'default');
+                                    return (
+                                        <Card style={[styles.inputCard, { width: pageCardWidth, backgroundColor: bgData.backgroundColor }]}>
+                                            {/* [층1] 텍스트 입력 */}
+                                            <View style={styles.inputInnerPad}>
+                                                <TextInput
+                                                    style={styles.textInput}
+                                                    placeholder="오늘 하루를 짧게 적어보세요..."
+                                                    placeholderTextColor={COLORS.textSecondary}
+                                                    multiline
+                                                    maxLength={260}
+                                                    value={pageContent || ''}
+                                                    onChangeText={(text) => {
+                                                        handleContentChange(text, pageIdx);
+                                                    }}
+                                                    textAlignVertical="top"
+                                                    onFocus={() => goToPage(pageIdx)}
+                                                />
+                                                <View style={styles.inputFooter}>
+                                                    <Text style={styles.charCount}>
+                                                        {(pageContent || '').length}/260
+                                                    </Text>
+                                                </View>
+                                            </View>
+
+                                            {/* ─── 📊 카드 내부 인디케이터 (피드 스타일) ─── */}
+                                            {pages.length > 1 && (
+                                                <View style={styles.cardIndicatorWrap}>
+                                                    <View style={styles.cardIndicatorDots}>
+                                                        {pages.map((_, dotIdx) => (
+                                                            <View
+                                                                key={`dot-${dotIdx}`}
+                                                                style={dotIdx === pageIdx ? styles.pageDotActive : styles.pageDot}
+                                                            />
+                                                        ))}
+                                                    </View>
+                                                    <TouchableOpacity
+                                                        onPress={() => {
+                                                            handlePageDeleteTrigger(pageIdx, (nextIdx) => {
+                                                                setTimeout(() => {
+                                                                    pageFlatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
+                                                                }, 100);
+                                                            });
+                                                        }}
+                                                        activeOpacity={0.6}
+                                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                        style={styles.cardDeleteBtn}
+                                                    >
+                                                        <Text style={styles.cardDeleteText}>✕</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            )}
+
+                                            {/* [층2] 📷 폴라로이드 사진 레이어 */}
+                                            <View
+                                                style={[StyleSheet.absoluteFill, { zIndex: 5, elevation: 5 }]}
+                                                pointerEvents="box-none"
+                                            >
+                                                {(pagePhotos[pageIdx] || []).map(photo => (
+                                                    <DraggablePhoto
+                                                        key={photo.id}
+                                                        photo={photo}
+                                                        bounds={inputBoxBounds}
+                                                        onDelete={handleDeletePhoto}
+                                                        onDragEnd={handlePhotoDragEnd}
+                                                    />
+                                                ))}
+                                            </View>
+
+                                            {/* [층3] 🌟 다꾸 스티커 영역 (최상위) */}
+                                            <View
+                                                style={[StyleSheet.absoluteFill, { zIndex: 10, elevation: 10 }]}
+                                                pointerEvents="box-none"
+                                                onLayout={(e) => {
+                                                    if (pageIdx === currentPageIndex) {
+                                                        const { width, height, x, y } = e.nativeEvent.layout;
+                                                        setInputBoxBounds({ width, height, x, y });
+                                                    }
+                                                }}
+                                            >
+                                                {(pageStickers[pageIdx] || []).map(sticker => (
+                                                    <DraggableSticker
+                                                        key={sticker.id}
+                                                        sticker={sticker}
+                                                        bounds={inputBoxBounds}
+                                                        onDelete={handleDeleteSticker}
+                                                        onDragEnd={handleDragEnd}
+                                                    />
+                                                ))}
+                                            </View>
+                                        </Card>
+                                    );
+                                }}
+                            />
+                        )}
+
+                    </View>
+
+                    {/* ─── 📱 툴바 (Toggle & Floating Tools) ─── */}
+                    <View style={styles.floatingToolbar}>
+                        {/* 🎞️ 필름 토글 (아이폰 제어센터 스위치) */}
+                        <View style={styles.pillToggleContainer}>
                             <TouchableOpacity
-                                style={styles.stickerDrawerTitleGroup}
-                                onPress={() => setShowStickers(!showStickers)}
-                                activeOpacity={0.7}
+                                style={[styles.pillSegment, showStickers && styles.pillSegmentActive]}
+                                onPress={() => {
+                                    setShowStickers(!showStickers);
+                                    setShowPhotos(false);
+                                    setShowBackgrounds(false);
+                                }}
+                                activeOpacity={0.8}
                             >
-                                <Text style={[
-                                    styles.stickerDrawerTitle,
-                                    !showStickers && styles.stickerDrawerTitleInactive
-                                ]}>스티커 서랍장</Text>
+                                <StickerIcon size={32} active={showStickers} />
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={styles.stickerManageButton}
-                                onPress={() => setShowManager(true)}
-                                activeOpacity={0.7}
+                                style={[styles.pillSegment, showPhotos && styles.pillSegmentActive]}
+                                onPress={() => {
+                                    setShowPhotos(!showPhotos);
+                                    setShowStickers(false);
+                                    setShowBackgrounds(false);
+                                }}
+                                activeOpacity={0.8}
                             >
-                                <SettingsTabIcon size={16} color="#666666" />
+                                <CameraIcon size={28} color={showPhotos ? "#37352F" : "#83837F"} />
                             </TouchableOpacity>
                         </View>
 
-                        {showStickers && (
-                            <View style={styles.stickerDrawerContent}>
-                                {/* 카테고리 탭 바 */}
+                        {/* 🪄 다꾸 가챠 */}
+                        <TouchableOpacity
+                            style={styles.floatingToolBtn}
+                            onPress={handleMagicDecorate}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.floatingToolEmoji}>🪄</Text>
+                        </TouchableOpacity>
+
+                    </View>
+
+                    {/* ─── 🗂 📷 사진 프레임 바텀시트 (Bottom Sheet) ─── */}
+                    {showPhotos && (
+                        <View style={styles.stickerBottomSheet}>
+                            {/* 바텀시트 상단 헤더 (스티커 서랍장과 동일한 디자인 적용) */}
+                            <View style={styles.stickerBottomSheetHeader}>
+                                <View style={styles.categoryTabBar}>
+                                    <View style={[styles.categoryTab, styles.categoryTabActive]}>
+                                        <Text style={[styles.categoryTabText, styles.categoryTabTextActive]}>폴라로이드 색상</Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.photoFrameContainer}
+                            >
+                                <TouchableOpacity
+                                    style={styles.frameOptionBtn}
+                                    onPress={() => handleAddPhoto('white')}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={[styles.framePreview, styles.framePreviewWhite]}>
+                                        <View style={styles.frameInnerPhoto} />
+                                    </View>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.frameOptionBtn}
+                                    onPress={() => handleAddPhoto('black')}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={[styles.framePreview, styles.framePreviewBlack]}>
+                                        <View style={[styles.frameInnerPhoto, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+                                    </View>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.frameOptionBtn}
+                                    onPress={() => {
+                                        if (isPremium) {
+                                            handleAddPhoto('pink');
+                                        } else {
+                                            Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
+                                        }
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={[styles.framePreview, styles.framePreviewPink]}>
+                                        <View style={styles.frameInnerPhoto} />
+                                        {!isPremium && <View style={styles.lockOverlay}><Text style={{ fontSize: 10 }}>🔒</Text></View>}
+                                    </View>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.frameOptionBtn}
+                                    onPress={() => {
+                                        if (isPremium) {
+                                            handleAddPhoto('blue');
+                                        } else {
+                                            Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
+                                        }
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={[styles.framePreview, styles.framePreviewBlue]}>
+                                        <View style={styles.frameInnerPhoto} />
+                                        {!isPremium && <View style={styles.lockOverlay}><Text style={{ fontSize: 10 }}>🔒</Text></View>}
+                                    </View>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.frameOptionBtn}
+                                    onPress={() => {
+                                        if (isPremium) {
+                                            handleAddPhoto('mint');
+                                        } else {
+                                            Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
+                                        }
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={[styles.framePreview, styles.framePreviewMint]}>
+                                        <View style={styles.frameInnerPhoto} />
+                                        {!isPremium && <View style={styles.lockOverlay}><Text style={{ fontSize: 10 }}>🔒</Text></View>}
+                                    </View>
+                                </TouchableOpacity>
+                            </ScrollView>
+                        </View>
+                    )}
+
+                    {/* ─── 🗂 ✨ 스티커 바텀시트 (Bottom Sheet) ─── */}
+                    {showStickers && (
+                        <View style={styles.stickerBottomSheet}>
+                            {/* 바텀시트 상단 헤더 (카테고리 탭 + 설정 버튼) */}
+                            <View style={styles.stickerBottomSheetHeader}>
                                 <ScrollView
                                     horizontal
                                     showsHorizontalScrollIndicator={false}
@@ -271,166 +578,44 @@ export function WriteScreenView({ route, navigation }) {
                                     ))}
                                 </ScrollView>
 
-                                {/* 스티커 목록 */}
-                                <ScrollView
-                                    style={styles.stickerScrollArea}
-                                    showsVerticalScrollIndicator={true}
-                                    keyboardShouldPersistTaps="always"
-                                    contentContainerStyle={styles.stickerRow}
-                                >
-                                    {isEmojiCategory
-                                        ? currentStickers.map((emoji, idx) => (
-                                            <AnimatedStickerItem
-                                                key={`emoji-${idx}`}
-                                                onPress={() => handleStickerPress(emoji, false)}
-                                            >
-                                                <Text style={styles.stickerItemEmoji}>{emoji}</Text>
-                                            </AnimatedStickerItem>
-                                        ))
-                                        : currentStickers.map((item) => (
-                                            <AnimatedStickerItem
-                                                key={item.key}
-                                                onPress={() => handleStickerPress(item.key, true)}
-                                            >
-                                                <item.Component size={28} />
-                                            </AnimatedStickerItem>
-                                        ))
-                                    }
-                                </ScrollView>
-                            </View>
-                        )}
-                    </View>
-
-                    {/* ─── 멀티페이지 입력 영역 (가로 스와이프) ─── */}
-                    <View
-                        style={styles.pageContainer}
-                        onLayout={(e) => {
-                            const w = e.nativeEvent.layout.width;
-                            if (w > 0) setPageCardWidth(w);
-                        }}
-                    >
-                        {pageCardWidth > 0 && (
-                            <FlatList
-                                ref={pageFlatListRef}
-                                data={pages}
-                                horizontal
-                                pagingEnabled
-                                showsHorizontalScrollIndicator={false}
-                                keyExtractor={(_, idx) => `page-${idx}`}
-                                onMomentumScrollEnd={(e) => {
-                                    const idx = Math.round(e.nativeEvent.contentOffset.x / pageCardWidth);
-                                    goToPage(idx);
-                                }}
-                                getItemLayout={(_, index) => ({
-                                    length: pageCardWidth,
-                                    offset: pageCardWidth * index,
-                                    index,
-                                })}
-                                renderItem={({ item: pageContent, index: pageIdx }) => (
-                                    <Card style={[styles.inputCard, { width: pageCardWidth }]}>
-                                        {/* 🌟 다꾸 스티커 영역 (오버레이) */}
-                                        <View
-                                            style={[StyleSheet.absoluteFill, { zIndex: 10 }]}
-                                            pointerEvents="box-none"
-                                            onLayout={(e) => {
-                                                if (pageIdx === currentPageIndex) {
-                                                    const { width, height, x, y } = e.nativeEvent.layout;
-                                                    setInputBoxBounds({ width, height, x, y });
-                                                }
-                                            }}
-                                        >
-                                            {(pageStickers[pageIdx] || []).map(sticker => (
-                                                <DraggableSticker
-                                                    key={sticker.id}
-                                                    sticker={sticker}
-                                                    bounds={inputBoxBounds}
-                                                    onDelete={handleDeleteSticker}
-                                                    onDragEnd={handleDragEnd}
-                                                />
-                                            ))}
-                                        </View>
-
-                                        <View style={styles.inputInnerPad}>
-                                            <TextInput
-                                                style={styles.textInput}
-                                                placeholder="오늘 하루를 짧게 적어보세요..."
-                                                placeholderTextColor={COLORS.textSecondary}
-                                                multiline
-                                                maxLength={260}
-                                                value={pageContent || ''}
-                                                onChangeText={(text) => {
-                                                    handleContentChange(text, pageIdx);
-                                                }}
-                                                textAlignVertical="top"
-                                                onFocus={() => goToPage(pageIdx)}
-                                            />
-                                            <View style={styles.inputFooter}>
-                                                <Text style={styles.charCount}>
-                                                    {(pageContent || '').length}/260
-                                                </Text>
-                                            </View>
-                                        </View>
-                                    </Card>
-                                )}
-                            />
-                        )}
-                    </View>
-
-                    {/* ─── 페이지 네비게이션 바 (플로팅 필) ─── */}
-                    <View style={styles.pageNavBarWrapper}>
-                        <View style={styles.pageNavBar}>
-                            {/* 삭제 버튼 (페이지가 2개 이상일 때만) */}
-                            {pages.length > 1 ? (
+                                {/* ⚙️ 스티커 관리 버튼 */}
                                 <TouchableOpacity
-                                    style={styles.pageDeleteButton}
-                                    onPress={() => {
-                                        handlePageDeleteTrigger(currentPageIndex, (nextIdx) => {
-                                            setTimeout(() => {
-                                                pageFlatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
-                                            }, 100);
-                                        });
-                                    }}
+                                    style={styles.stickerManageBtnInside}
+                                    onPress={() => setShowManager(true)}
                                     activeOpacity={0.7}
-                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 >
-                                    <Text style={styles.pageDeleteButtonText}>✕</Text>
+                                    <SettingsTabIcon size={16} color="#999" />
                                 </TouchableOpacity>
-                            ) : <View style={{ width: 14 }} />}
-
-                            {/* 페이지 인디케이터 (Dots) */}
-                            <View style={styles.pageIndicatorRow}>
-                                {pages.map((_, idx) => (
-                                    <TouchableOpacity
-                                        key={`dot-${idx}`}
-                                        onPress={() => {
-                                            goToPage(idx);
-                                            pageFlatListRef.current?.scrollToIndex({ index: idx, animated: true });
-                                        }}
-                                        activeOpacity={0.7}
-                                        hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
-                                    >
-                                        <View style={idx === currentPageIndex ? styles.pageDotActive : styles.pageDot} />
-                                    </TouchableOpacity>
-                                ))}
                             </View>
 
-                            {/* 페이지 추가 버튼 */}
-                            <TouchableOpacity
-                                style={styles.pageAddButton}
-                                onPress={() => {
-                                    addPage();
-                                    // 새 페이지 추가 후 바로 스크롤 이동
-                                    setTimeout(() => {
-                                        pageFlatListRef.current?.scrollToEnd({ animated: true });
-                                    }, 100);
-                                }}
-                                activeOpacity={0.7}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            {/* 스티커 목록 */}
+                            <ScrollView
+                                style={styles.stickerScrollArea}
+                                showsVerticalScrollIndicator={true}
+                                keyboardShouldPersistTaps="always"
+                                contentContainerStyle={styles.stickerRow}
                             >
-                                <Text style={styles.pageAddButtonText}>+</Text>
-                            </TouchableOpacity>
+                                {isEmojiCategory
+                                    ? currentStickers.map((emoji, idx) => (
+                                        <AnimatedStickerItem
+                                            key={`emoji-${idx}`}
+                                            onPress={() => handleStickerPress(emoji, false)}
+                                        >
+                                            <Text style={styles.stickerItemEmoji}>{emoji}</Text>
+                                        </AnimatedStickerItem>
+                                    ))
+                                    : currentStickers.map((item) => (
+                                        <AnimatedStickerItem
+                                            key={item.key}
+                                            onPress={() => handleStickerPress(item.key, true)}
+                                        >
+                                            <item.Component size={28} />
+                                        </AnimatedStickerItem>
+                                    ))
+                                }
+                            </ScrollView>
                         </View>
-                    </View>
+                    )}
 
                     {/* ─── 활동 기록 ─── */}
                     <Text style={styles.sectionTitle}>오늘 뭐 했어?</Text>
@@ -657,9 +842,16 @@ export function WriteScreenView({ route, navigation }) {
             <SoftAlertModal
                 isVisible={isStickerLimitModalVisible}
                 title="스티커 제한 안내 🧸"
-                message={(isPremium || (3 + adBonusStickers) >= 15)
-                    ? `일기 전체에 스티커는 최대 15개까지만 붙일 수 있어요! (현재 ${pageStickers.reduce((acc, cur) => acc + (cur?.length || 0), 0)}개 부착) ✨`
-                    : `무료 버전에서는 일기 전체에 스티커를 ${3 + adBonusStickers}개까지만 붙일 수 있어요! (현재 ${pageStickers.reduce((acc, cur) => acc + (cur?.length || 0), 0)}개 부착)`}
+                message={(() => {
+                    const currentPageStickers = pageStickers[currentPageIndex]?.length || 0;
+                    const baseLimit = 3 + adBonusStickers;
+                    const effectiveLimit = Math.max(baseLimit, currentPageStickers);
+
+                    if (isPremium || effectiveLimit >= 15) {
+                        return `이 페이지에 스티커는 최대 15개까지만 붙일 수 있어요! (현재 ${currentPageStickers}개 부착) ✨`;
+                    }
+                    return `무료 버전에서는 이 페이지에 스티커를 ${effectiveLimit}개까지만 붙일 수 있어요! (현재 ${currentPageStickers}개 부착)`;
+                })()}
                 onConfirm={() => setStickerLimitModalVisible(false)}
                 secondaryText={(!isPremium && (3 + adBonusStickers) < 15) ? "광고 보고 2개 더 붙이기 📺" : null}
                 onSecondaryConfirm={handleAdReward}
@@ -674,6 +866,6 @@ export function WriteScreenView({ route, navigation }) {
                 secondaryText={alertConfig.secondaryText}
                 onSecondaryConfirm={alertConfig.onSecondaryConfirm}
             />
-        </View>
+        </View >
     );
 }

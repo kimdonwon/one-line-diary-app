@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Animated, PanResponder } from 'react-native';
+import { Animated, PanResponder, Keyboard } from 'react-native';
 
 /**
  * ⚙️ 스티커의 드래그 애니메이션, 회전(Rotation), 좌표 계산, 물리적 바운더리 검사를 담당하는 로직 훅입니다.
@@ -33,6 +33,7 @@ export function useDraggableLogic({ sticker, bounds, onDelete, onDragEnd }) {
             onMoveShouldSetPanResponder: () => true,
 
             onPanResponderGrant: () => {
+                Keyboard.dismiss(); // 하단 입력창 메뉴 방지 루틴
                 setIsDragging(true);
                 setIsSelected(true);
                 // 드래그 시작 시 이동량 누적 초기화
@@ -97,7 +98,8 @@ export function useDraggableLogic({ sticker, bounds, onDelete, onDragEnd }) {
                 deselectTimer.current = setTimeout(() => {
                     setIsSelected(false);
                 }, 3000);
-            }
+            },
+            onShouldBlockNativeResponder: () => true,
         })
     ).current;
 

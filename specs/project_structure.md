@@ -35,7 +35,8 @@ src/
 │   ├── FaceStickers.js                    # 얼굴/표정 테마 스티커 목록
 │   ├── FoodStickers.js                    # 음식 테마 스티커 목록
 │   ├── MZLineStickers.js                  # MZ 라인 테마 스티커 목록
-│   └── PastelStickers.js                  # 파스텔 테마 스티커 목록
+│   ├── PastelStickers.js                  # 파스텔 테마 스티커 목록
+│   └── ItStickers.js                      # 아이티 테마 스티커 목록
 │
 ├── context/                               # 전역 상태를 파편화 없이 관리하는 React Context
 │   ├── LockContext.js                     # 앱 잠금(PIN) 상태 전역 관리

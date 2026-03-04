@@ -7,18 +7,21 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Dimensions } from 'react-native';
 
-import { COLORS, SPACING, SOFT_SHADOW } from '../constants/theme';
-import { StaticSticker, ComboShakeMoodCharacter } from '../components';
+import { COLORS, SPACING, SOFT_SHADOW, DIARY_CARD_HEIGHT } from '../constants/theme';
+import { StaticSticker, StaticPhoto, ComboShakeMoodCharacter } from '../components';
 import { MessageCircleIcon } from '../constants/icons';
 import { ActivityIcon } from '../constants/ActivityIcons';
 import { getMoodByKey } from '../constants/mood';
+import { getBackgroundById } from '../constants/backgrounds';
 
 /**
  * content/stickers를 멀티페이지 형태로 파싱하는 유틸
  */
-function parseMultiPageData(rawContent, rawStickers) {
+function parseMultiPageData(rawContent, rawStickers, rawPhotos, rawBackgrounds) {
     let pages = [''];
     let stickersPerPage = [[]];
+    let photosPerPage = [[]];
+    let backgroundsPerPage = ['default'];
 
     // ── content 파싱 ──
     try {
@@ -46,19 +49,60 @@ function parseMultiPageData(rawContent, rawStickers) {
         stickersPerPage = [[]];
     }
 
-    // 페이지 수에 맞춰 빈 스티커 배열 패딩
+    // ── photos 파싱 ──
+    try {
+        if (rawPhotos) {
+            const raw = JSON.parse(rawPhotos);
+            if (Array.isArray(raw)) {
+                photosPerPage = raw;
+            }
+        }
+    } catch (e) {
+        photosPerPage = [[]];
+    }
+
+    // 페이지 수에 맞춰 빈 배열 패딩
     while (stickersPerPage.length < pages.length) {
         stickersPerPage.push([]);
     }
+    while (photosPerPage.length < pages.length) {
+        photosPerPage.push([]);
+    }
 
-    return { pages, stickersPerPage, isMultiPage: pages.length > 1 };
+    // ── backgrounds 파싱 ──
+    try {
+        if (rawBackgrounds) {
+            const rawBgs = JSON.parse(rawBackgrounds);
+            if (Array.isArray(rawBgs)) {
+                backgroundsPerPage = rawBgs;
+            }
+        }
+    } catch (e) {
+        backgroundsPerPage = ['default'];
+    }
+    while (backgroundsPerPage.length < pages.length) {
+        backgroundsPerPage.push('default');
+    }
+
+    return { pages, stickersPerPage, photosPerPage, backgroundsPerPage, isMultiPage: pages.length > 1 };
 }
 
 /**
  * 단일 페이지 렌더링 컴포넌트
  */
-const SinglePageContent = React.memo(({ content, stickers, cardWidth }) => (
-    <View style={[cardStyles.diaryCardInner, cardWidth ? { width: cardWidth } : null]}>
+const SinglePageContent = React.memo(({ content, stickers = [], photos = [], cardWidth, bgColor }) => (
+    <View style={[cardStyles.diaryCardInner, cardWidth ? { width: cardWidth } : null, bgColor ? { backgroundColor: bgColor } : null]}>
+        {/* 사진 오버레이 (스티커보다 아래) */}
+        <View style={cardStyles.photoOverlay} pointerEvents="none">
+            {photos.map((photo, idx) => (
+                <StaticPhoto
+                    key={`photo-${idx}`}
+                    photo={photo}
+                    bounds={{ width: cardWidth || 300 }}
+                />
+            ))}
+        </View>
+
         {/* 스티커 오버레이 */}
         <View style={cardStyles.stickerOverlay} pointerEvents="none">
             {stickers.map((sticker, idx) => (
@@ -77,7 +121,7 @@ const SinglePageContent = React.memo(({ content, stickers, cardWidth }) => (
 
 export const DiaryEntryCard = React.memo(({ diary, activities = [], commentCount = 0, onOpenComment, onPress }) => {
     const mood = getMoodByKey(diary.mood);
-    const { pages, stickersPerPage, isMultiPage } = parseMultiPageData(diary.content, diary.stickers);
+    const { pages, stickersPerPage, photosPerPage, backgroundsPerPage, isMultiPage } = parseMultiPageData(diary.content, diary.stickers, diary.photos, diary.backgrounds);
 
     const [activePageIndex, setActivePageIndex] = useState(0);
     const [cardWidth, setCardWidth] = useState(0);
@@ -101,13 +145,20 @@ export const DiaryEntryCard = React.memo(({ diary, activities = [], commentCount
     const day = d.getDate();
     const dateStr = `${month}월 ${day}일`;
 
-    const renderPageItem = useCallback(({ item, index }) => (
-        <SinglePageContent
-            content={item}
-            stickers={stickersPerPage[index] || []}
-            cardWidth={cardWidth}
-        />
-    ), [stickersPerPage, cardWidth]);
+    const renderPageItem = useCallback(({ item, index }) => {
+        const bgData = getBackgroundById(backgroundsPerPage[index] || 'default');
+        return (
+            <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
+                <SinglePageContent
+                    content={item}
+                    stickers={stickersPerPage[index] || []}
+                    photos={photosPerPage[index] || []}
+                    cardWidth={cardWidth}
+                    bgColor={bgData.backgroundColor}
+                />
+            </TouchableOpacity>
+        );
+    }, [stickersPerPage, photosPerPage, backgroundsPerPage, cardWidth, onPress]);
 
     const pageKeyExtractor = useCallback((_, index) => `page-${index}`, []);
 
@@ -149,7 +200,9 @@ export const DiaryEntryCard = React.memo(({ diary, activities = [], commentCount
                     <SinglePageContent
                         content={pages[0]}
                         stickers={stickersPerPage[0] || []}
+                        photos={photosPerPage[0] || []}
                         cardWidth={cardWidth || undefined}
+                        bgColor={getBackgroundById(backgroundsPerPage[0] || 'default').backgroundColor}
                     />
                 </TouchableOpacity>
             )}
@@ -207,13 +260,22 @@ export const cardStyles = StyleSheet.create({
     },
     diaryCardInner: {
         padding: SPACING.md,
-        minHeight: 340,
+        minHeight: DIARY_CARD_HEIGHT,
     },
     diaryContent: {
         fontSize: 14,
         fontWeight: '500',
         color: COLORS.text,
         lineHeight: 20,
+        marginRight: 4, // TextInput 우측 여백과 똑같이 줄바꿈 시점을 강제 일치시키기 위함
+    },
+    photoOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 2,
     },
     stickerOverlay: {
         position: 'absolute',

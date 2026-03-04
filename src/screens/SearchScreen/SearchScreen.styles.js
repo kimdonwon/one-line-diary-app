@@ -27,15 +27,13 @@ export const styles = StyleSheet.create({
         flex: 1,
     },
     searchResultsContainer: {
-        paddingHorizontal: SPACING.md,
+        paddingHorizontal: SPACING.lg, // DiaryFeedScreen과 동일하게 맞춤
     },
     chartCard: {
         marginBottom: SPACING.lg,
-        padding: SPACING.lg,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12, // 노션 스타일 라운딩
-        borderWidth: 1,
-        borderColor: '#E9E9E7',
+        padding: 0, // 내부 패딩 제거하여 DiaryEntryCard가 공간을 꽉 채우게 함
+        backgroundColor: 'transparent',
+        borderWidth: 0, // DiaryEntryCard 자체에 테두리가 있으므로 중복 제거
     },
     sectionTitle: {
         ...FONTS.subtitle,

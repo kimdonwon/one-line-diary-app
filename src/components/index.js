@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { TouchableOpacity, Text, View, StyleSheet, Animated, Easing, Pressable, TextInput } from "react-native";
+import { TouchableOpacity, Text, View, StyleSheet, Animated, Easing, Pressable, TextInput, Image } from "react-native";
 import Reanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, withDelay, useAnimatedProps } from 'react-native-reanimated';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW } from '../constants/theme';
@@ -21,8 +21,8 @@ export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmTe
       animationOutTiming={200}
       backdropTransitionInTiming={300}
       backdropTransitionOutTiming={200}
-      onBackdropPress={onSecondaryConfirm || onConfirm}
-      onBackButtonPress={onSecondaryConfirm || onConfirm}
+      onBackdropPress={onConfirm}
+      onBackButtonPress={onConfirm}
       style={{ margin: SPACING.xl, justifyContent: "center" }}
     >
       <View style={[styles.alertModalContainer, SOFT_SHADOW.card]}>
@@ -82,6 +82,62 @@ export function StaticSticker({ sticker, bounds }) {
     </View>
   );
 }
+
+// ─── Static Photo (View Only - Polaroid) ───
+export function StaticPhoto({ photo }) {
+  if (!photo) return null;
+
+  const isBlackFrame = photo.frameType === 'black';
+  const frameColors = {
+    pink: '#FFD1DC',
+    blue: '#D1E8FF',
+    mint: '#D1FFD7',
+    white: '#FFFFFF',
+    black: '#1A1A1A',
+  };
+  const bgColor = frameColors[photo.frameType] || frameColors.white;
+
+  return (
+    <View style={{
+      position: 'absolute',
+      left: photo.x,
+      top: photo.y,
+      padding: 2,
+      zIndex: 2, // 스티커보다 아래
+      transform: [{ rotate: `${photo.rotation || 0}deg` }],
+    }}>
+      <View style={{
+        width: 126,
+        height: 144,
+        backgroundColor: bgColor,
+        borderRadius: 4,
+        paddingTop: 8,
+        paddingHorizontal: 8,
+        paddingBottom: 20,
+        shadowColor: isBlackFrame ? '#000000' : '#8B7E74',
+        shadowOffset: { width: 1, height: 3 },
+        shadowOpacity: isBlackFrame ? 0.35 : 0.25,
+        shadowRadius: 6,
+        elevation: 4,
+        borderWidth: 0.5,
+        borderColor: isBlackFrame ? 'rgba(255, 255, 255, 0.1)' : 'rgba(200, 190, 180, 0.4)',
+      }}>
+        <Image
+          source={{ uri: photo.uri }}
+          style={{
+            width: 110,
+            height: 110,
+            borderRadius: 2,
+            backgroundColor: isBlackFrame ? '#000000' : '#F0ECE8',
+          }}
+          resizeMode="cover"
+        />
+        <View style={{ height: 16 }} />
+      </View>
+    </View>
+  );
+}
+
 
 // ─── Soft Pastel Round Button ───
 export function StyledButton({

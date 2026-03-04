@@ -9,6 +9,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Keyboard } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDiariesForMonth, useAllCommentCounts, useCommentsForDiary, saveComment, deleteCommentById, useMonthAllActivities } from '../../hooks/useDiary';
+import { useGlobalWeeklyMood } from '../../context/MoodContext';
 
 // ─── 현재 날짜 기준 초기값 ───
 const now = new Date();
@@ -16,6 +17,7 @@ const INITIAL_YEAR = now.getFullYear();
 const INITIAL_MONTH = now.getMonth() + 1; // 1~12
 
 export function useDiaryFeedLogic(navigation) {
+    const weeklyMood = useGlobalWeeklyMood();
     // ─── 연/월 선택 상태 ───
     const [selectedYear, setSelectedYear] = useState(INITIAL_YEAR);
     const [selectedMonth, setSelectedMonth] = useState(INITIAL_MONTH);
@@ -114,11 +116,11 @@ export function useDiaryFeedLogic(navigation) {
     const submitComment = useCallback(async () => {
         if (!selectedDiary || !commentText.trim()) return;
 
-        await saveComment(selectedDiary.date, commentText.trim());
+        await saveComment(selectedDiary.date, commentText.trim(), weeklyMood?.character || 'bear');
         setCommentText('');
         Keyboard.dismiss();
         reloadComments();
-    }, [selectedDiary, commentText, reloadComments]);
+    }, [selectedDiary, commentText, reloadComments, weeklyMood]);
 
     const handleDeleteComment = useCallback(async (commentId) => {
         await deleteCommentById(commentId);
