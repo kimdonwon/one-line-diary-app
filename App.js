@@ -4,6 +4,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useFonts } from 'expo-font';
+import { GowunDodum_400Regular } from '@expo-google-fonts/gowun-dodum';
+import { NanumMyeongjo_400Regular } from '@expo-google-fonts/nanum-myeongjo';
+import { SingleDay_400Regular } from '@expo-google-fonts/single-day';
+import { NanumPenScript_400Regular } from '@expo-google-fonts/nanum-pen-script';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -202,6 +207,13 @@ export default function App() {
     const [dbReady, setDbReady] = useState(false);
     const [dbError, setDbError] = useState(null);
 
+    let [fontsLoaded] = useFonts({
+        GowunDodum_400Regular,
+        NanumMyeongjo_400Regular,
+        SingleDay_400Regular,
+        NanumPenScript_400Regular,
+    });
+
     useEffect(() => {
         async function setup() {
             try {
@@ -224,7 +236,7 @@ export default function App() {
         );
     }
 
-    if (!dbReady) {
+    if (!dbReady || !fontsLoaded) {
         return <LoadingScreen />;
     }
 

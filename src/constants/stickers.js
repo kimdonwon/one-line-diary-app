@@ -46,7 +46,7 @@ export const STICKER_CATEGORIES = [
     { id: 'food', label: '푸드' },
     { id: 'mzline', label: '라인' },
     { id: 'people', label: '피플' },
-    { id: 'It', label: '아이티' },
+    { id: 'random', label: '랜덤' },
 ];
 
 export const STICKER_PACK_DATA = [
@@ -56,7 +56,7 @@ export const STICKER_PACK_DATA = [
     { id: 'pack4', title: '냠냠 먹방 팩', desc: '커피, 마라탕, 탕후루까지!', icon: '🍡', isFree: true, isDefault: false, catId: 'food', tagLabel: '푸드' },
     { id: 'pack5', title: '삐뚤빼뚤 라인 팩', desc: '대충 그린 꾸안꾸 갬성', icon: '〰️', isFree: true, isDefault: false, catId: 'mzline', tagLabel: '라인' },
     { id: 'pack7', title: '오밀조밀 동네 친구들', desc: '귀엽고 다양한 얼굴 모음!', icon: '👦', isFree: false, isDefault: false, catId: 'people', tagLabel: '피플', price: '1,500' },
-    { id: 'pack8', title: '아이티 스티커팩', desc: '스티커, 카메라, IT소품 가득!', icon: '💻', isFree: false, isDefault: false, catId: 'It', tagLabel: '아이티', price: '1,500' },
+    { id: 'pack8', title: '랜덤 스티커팩', desc: '스티커, 카메라, IT소품 가득!', icon: '🎁', isFree: false, isDefault: false, catId: 'random', tagLabel: '랜덤', price: '1,500' },
 ];
 
 // ─── 카테고리별 스티커 모음 ────────────────────────────────
@@ -171,8 +171,8 @@ export const CATEGORIZED_STICKERS = {
         { key: 'pp_hp', label: '헤드폰', Component: FaceHeadphones },
     ],
 
-    /** 💻 아이티 — 카메라, 스티커, 노트북, 폰, IT소품 등 */
-    It: [
+    /** 🎁 랜덤 — 카메라, 스티커, 노트북, 폰, IT소품 등 (Doodle Flash Style) */
+    random: [
         { key: 'r_sticker', label: '스티커', Component: ItSticker },
         { key: 'r_camera', label: '카메라', Component: ItCamera },
         { key: 'r_laptop', label: '노트북', Component: ItLaptop },

@@ -66,18 +66,30 @@ function RotationHandle({ containerRef, currentRotation, onRotate, onRotateEnd }
  * 📷 폴라로이드 감성의 드래그 가능한 사진 컴포넌트
  * 스티커보다 아래(텍스트 위) 레이어에 배치됩니다.
  */
-export function DraggablePhotoView({ photo, bounds, onDelete, onDragEnd }) {
+export default function DraggablePhoto({
+    photo,
+    bounds,
+    onDelete,
+    onDragEnd,
+    isGhost = false, // 👻 고스트 모드: 터치 상호작용은 하지만 껍데기만 렌더링 (텍스트 뒤 사진 조작용)
+    externalPan = null,
+    externalRotation = null,
+    style = null,
+}) {
+    const isSelectedFromProps = photo.isSelected; // Renamed to avoid conflict with logic's isSelected
+    const isBlackFrame = photo.frameType === 'black'; // This variable is not used in the provided code, but kept as per instruction.
+
     const {
         pan,
         rotation,
         currentRotation,
         panResponder,
         isDragging,
-        isSelected,
+        isSelected, // This is from useDraggablePhotoLogic, which might be different from isSelectedFromProps
         setMySize,
         handleRotation,
         handleRotationEnd,
-    } = useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd });
+    } = useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, externalPan, externalRotation });
 
     const containerRef = useRef(null);
 
@@ -104,20 +116,34 @@ export function DraggablePhotoView({ photo, bounds, onDelete, onDragEnd }) {
                 },
                 isDragging && styles.dragging,
                 isSelected && styles.selected,
+                style, // 외부 주입 스타일
             ]}
             {...panResponder.panHandlers}
         >
-            {/* 폴라로이드 프레임 */}
-            <View style={[
-                styles.polaroidFrame,
-                photo.frameType === 'black' && styles.polaroidFrameBlack,
-                photo.frameType === 'pink' && styles.polaroidFramePink,
-                photo.frameType === 'blue' && styles.polaroidFrameBlue,
-                photo.frameType === 'mint' && styles.polaroidFrameMint,
-            ]}>
+            {/* 프레임 렌더링 (isGhost일 때는 시각적으로 숨김) */}
+            <View
+                style={[
+                    styles.polaroidFrame,
+                    photo.frameType === 'black' && styles.polaroidFrameBlack,
+                    photo.frameType === 'pink' && styles.polaroidFramePink,
+                    photo.frameType === 'blue' && styles.polaroidFrameBlue,
+                    photo.frameType === 'mint' && styles.polaroidFrameMint,
+                    photo.frameType === 'transparent_white' && styles.polaroidFrameTransparentWhite,
+                    photo.frameType === 'transparent_gray' && styles.polaroidFrameTransparentGray,
+                    isGhost && { opacity: 0 }, // 👻 터치용 고스트는 프레임 숨김
+                ]}
+                onLayout={(e) => {
+                    const { width, height } = e.nativeEvent.layout;
+                    // setMySize(width, height); // logic에서 제공하는 경우 사용
+                }}
+            >
                 <Image
                     source={{ uri: photo.uri }}
-                    style={styles.polaroidImage}
+                    style={[
+                        styles.polaroidImage,
+                        (photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray') && styles.transparentImage,
+                        (photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray') && isSelected && styles.transparentImageSelected,
+                    ]}
                     resizeMode="cover"
                 />
                 <View style={styles.polaroidBottom} />

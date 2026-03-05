@@ -248,8 +248,8 @@ export function useYearMonthlyActivitiesStats(year) {
     return { monthlyActivityStats, loading, reload: load };
 }
 
-export async function saveDiary(date, content, mood, stickers = '[]', photos = '[]', backgrounds = '[]') {
-    await dbSaveDiary(date, content, mood, stickers, photos, backgrounds);
+export async function saveDiary(date, content, mood, stickers = '[]', photos = '[]', backgrounds = '[]', texts = '[]') {
+    await dbSaveDiary(date, content, mood, stickers, photos, backgrounds, texts);
     DeviceEventEmitter.emit('DIARY_UPDATED');
 }
 

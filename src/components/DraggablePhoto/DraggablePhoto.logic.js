@@ -5,9 +5,9 @@ import { Animated, PanResponder, Keyboard } from 'react-native';
  * ⚙️ 드래그 가능한 폴라로이드 사진의 위치·회전·삭제 로직 훅입니다.
  * DraggableSticker.logic.js와 동일한 패턴으로 제작되었습니다.
  */
-export function useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd }) {
-    const pan = useRef(new Animated.ValueXY({ x: photo.x, y: photo.y })).current;
-    const rotation = useRef(new Animated.Value(photo.rotation || 0)).current;
+export function useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, externalPan, externalRotation }) {
+    const pan = externalPan || useRef(new Animated.ValueXY({ x: photo.x, y: photo.y })).current;
+    const rotation = externalRotation || useRef(new Animated.Value(photo.rotation || 0)).current;
     const currentRotation = useRef(photo.rotation || 0);
 
     const currentPosition = useRef({ x: photo.x, y: photo.y });

@@ -39,6 +39,8 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const [pageStickers, setPageStickers] = useState([[]]);
     const [pagePhotos, setPagePhotos] = useState([[]]); // 📷 페이지별 사진 배열
     const [showPhotos, setShowPhotos] = useState(false); // 📷 사진(프레임 선택) 서랍 열림 상태
+    const [pageTexts, setPageTexts] = useState([[]]); // ✏️ 페이지별 텍스트(커스텀) 스티커 배열
+    const [showTexts, setShowTexts] = useState(false); // ✏️ 텍스트 서랍 열림 상태
     const [pageBackgrounds, setPageBackgrounds] = useState(['default']); // 🎨 페이지별 배경지 ID
     const [showBackgrounds, setShowBackgrounds] = useState(false); // 배경지 서랍 열림 상태
     const [currentPageIndex, setCurrentPageIndex] = useState(0);
@@ -132,6 +134,23 @@ export function useWriteLogic(route, navigation, scrollRef) {
                 parsedPhotos.push([]);
             }
             setPagePhotos(parsedPhotos);
+
+            // ✏️ 커스텀 텍스트 데이터 복원
+            let parsedTexts = [[]];
+            try {
+                if (diary.texts) {
+                    const rawTexts = JSON.parse(diary.texts);
+                    if (Array.isArray(rawTexts)) {
+                        parsedTexts = rawTexts;
+                    }
+                }
+            } catch (e) {
+                console.log('Failed to parse texts', e);
+            }
+            while (parsedTexts.length < parsedPages.length) {
+                parsedTexts.push([]);
+            }
+            setPageTexts(parsedTexts);
 
             // 🎨 배경지 데이터 복원
             let parsedBgs = ['default'];
@@ -248,6 +267,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setPages(prev => [...prev, '']);
         setPageStickers(prev => [...prev, []]);
         setPagePhotos(prev => [...prev, []]);
+        setPageTexts(prev => [...prev, []]);
         setPageBackgrounds(prev => [...prev, 'default']);
         setCurrentPageIndex(pages.length); // 새 페이지로 이동
     };
@@ -261,11 +281,13 @@ export function useWriteLogic(route, navigation, scrollRef) {
         const newPages = pages.filter((_, i) => i !== index);
         const newPageStickers = pageStickers.filter((_, i) => i !== index);
         const newPagePhotos = pagePhotos.filter((_, i) => i !== index);
+        const newPageTexts = pageTexts.filter((_, i) => i !== index);
         const newPageBgs = pageBackgrounds.filter((_, i) => i !== index);
 
         setPages(newPages);
         setPageStickers(newPageStickers);
         setPagePhotos(newPagePhotos);
+        setPageTexts(newPageTexts);
         setPageBackgrounds(newPageBgs);
 
         // 삭제 후 이동할 인덱스: 현재 인덱스가 마지막이었으면 이전으로, 아니면 현재 인덱스 유지
@@ -421,15 +443,17 @@ export function useWriteLogic(route, navigation, scrollRef) {
             }
             const stickersToSave = pageStickers.slice(0, trimmedPages.length);
             const photosToSave = pagePhotos.slice(0, trimmedPages.length);
+            const textsToSave = pageTexts.slice(0, trimmedPages.length);
 
             // 단일 페이지면 레거시 호환을 위해 문자열/1차원 배열로 저장
             const contentToSave = trimmedPages.length === 1 ? trimmedPages[0] : JSON.stringify(trimmedPages);
             const stickersStrToSave = trimmedPages.length === 1 ? JSON.stringify(stickersToSave[0] || []) : JSON.stringify(stickersToSave);
             const photosStrToSave = JSON.stringify(photosToSave);
+            const textsStrToSave = JSON.stringify(textsToSave);
             const bgsToSave = pageBackgrounds.slice(0, trimmedPages.length);
             const bgsStrToSave = JSON.stringify(bgsToSave);
 
-            await saveDiary(date, contentToSave, selectedMood, stickersStrToSave, photosStrToSave, bgsStrToSave);
+            await saveDiary(date, contentToSave, selectedMood, stickersStrToSave, photosStrToSave, bgsStrToSave, textsStrToSave);
             await saveActivities(date, activityStates);
             navigation.goBack(); // 저장 후 목록으로 이동
         } catch (e) {
@@ -519,6 +543,51 @@ export function useWriteLogic(route, navigation, scrollRef) {
             const next = [...prev];
             next[currentPageIndex] = (next[currentPageIndex] || []).map(p =>
                 p.id === id ? { ...p, x: newX, y: newY, rotation: newRotation !== undefined ? newRotation : (p.rotation || 0) } : p
+            );
+            return next;
+        });
+    };
+
+    // ─── ✏️ 커스텀 텍스트 드래그 기능 추가 ───
+
+    const handleAddText = (textValue, fontId, color, bgColor) => {
+        if (!textValue || textValue.trim().length === 0) return;
+
+        const spawnX = inputBoxBounds.width > 0 ? inputBoxBounds.width / 2 - 50 : 60;
+        const spawnY = inputBoxBounds.height > 0 ? inputBoxBounds.height / 2 - 20 : 60;
+
+        const newText = {
+            id: Date.now().toString() + Math.random().toString(36).substring(7),
+            text: textValue,
+            fontId,
+            color,
+            bgColor,
+            x: spawnX,
+            y: spawnY,
+            rotation: 0,
+        };
+
+        setPageTexts(prev => {
+            const next = [...prev];
+            next[currentPageIndex] = [...(next[currentPageIndex] || []), newText];
+            return next;
+        });
+        setShowTexts(false); // 추가 후 패널 닫기
+    };
+
+    const handleDeleteText = (id) => {
+        setPageTexts(prev => {
+            const next = [...prev];
+            next[currentPageIndex] = (next[currentPageIndex] || []).filter(t => t.id !== id);
+            return next;
+        });
+    };
+
+    const handleTextDragEnd = (id, newX, newY, newRotation) => {
+        setPageTexts(prev => {
+            const next = [...prev];
+            next[currentPageIndex] = (next[currentPageIndex] || []).map(t =>
+                t.id === id ? { ...t, x: newX, y: newY, rotation: newRotation !== undefined ? newRotation : (t.rotation || 0) } : t
             );
             return next;
         });
@@ -637,6 +706,14 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setShowStickers,
         setInputBoxBounds,
         setStickerLimitModalVisible,
+
+        // ✏️ Text state
+        pageTexts,
+        showTexts,
+        setShowTexts,
+        handleAddText,
+        handleDeleteText,
+        handleTextDragEnd,
 
         // Handlers
         handleContentChange,

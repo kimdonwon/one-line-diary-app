@@ -138,6 +138,37 @@ export const styles = StyleSheet.create({
         backgroundColor: '#D9FFE9',
         borderColor: '#B8FFD6',
     },
+    // ── 반투명 프레임 프리뷰 ──
+    framePreviewTransparentWhite: {
+        backgroundColor: 'rgba(255, 255, 255, 0.85)',
+        borderColor: 'rgba(220, 220, 218, 0.6)',
+        borderStyle: 'dashed',
+    },
+    framePreviewTransparentGray: {
+        backgroundColor: 'rgba(200, 200, 198, 0.7)',
+        borderColor: 'rgba(180, 180, 178, 0.6)',
+        borderStyle: 'dashed',
+    },
+    transparentBadge: {
+        position: 'absolute',
+        bottom: 2,
+        right: 2,
+        backgroundColor: 'rgba(55, 53, 47, 0.45)',
+        paddingHorizontal: 3,
+        paddingVertical: 1,
+        borderRadius: 2,
+    },
+    transparentBadgeText: {
+        fontSize: 6,
+        fontWeight: '700',
+        color: '#FFFFFF',
+    },
+    frameOptionLabel: {
+        fontSize: 10,
+        fontWeight: '500',
+        color: '#83837F',
+        marginTop: 4,
+    },
     frameOptionText: {
         display: 'none', // 텍스트 제거 대응
     },
@@ -611,7 +642,7 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 12,
         position: 'relative',
-        zIndex: 20,
+        zIndex: 8, // 사진(5)보다 위, 스티커(10)보다는 아래
     },
     cardIndicatorDots: {
         flexDirection: 'row',
@@ -750,5 +781,82 @@ export const styles = StyleSheet.create({
     },
     bottomSpacer: {
         height: 120,
+    },
+
+    // ─── ✏️ 텍스트 추가 서랍 스타일 ───
+    textDrawerWrap: {
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 24,
+        alignItems: 'stretch',
+    },
+    textInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    textCustomInput: {
+        flex: 1,
+        backgroundColor: '#F7F3F1',
+        height: 44,
+        borderRadius: 8,
+        paddingHorizontal: 16,
+        fontSize: 15,
+        color: '#37352F',
+        marginRight: 8,
+    },
+    textAddBtn: {
+        backgroundColor: '#37352F',
+        height: 44,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    textAddBtnText: {
+        color: '#FFF',
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
+    textSectionTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#83837F',
+        marginBottom: 8,
+        marginTop: 8,
+    },
+    presetRow: {
+        flexDirection: 'row',
+        marginBottom: 8,
+    },
+    presetBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#F7F3F1',
+        marginRight: 8,
+        borderWidth: 1,
+        borderColor: 'transparent',
+    },
+    presetBtnActive: {
+        borderColor: '#37352F',
+        backgroundColor: '#FFF',
+    },
+    presetBtnText: {
+        color: '#37352F',
+    },
+    colorBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        marginRight: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E9E9E7',
+    },
+    colorBtnActive: {
+        borderColor: '#37352F',
+        borderWidth: 2,
     },
 });

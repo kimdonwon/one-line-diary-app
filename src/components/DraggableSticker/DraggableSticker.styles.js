@@ -9,6 +9,8 @@ export const styles = StyleSheet.create({
         position: 'absolute',
         zIndex: 10,
         padding: 4,
+        borderWidth: 1,
+        borderColor: 'transparent', // 고정 크기 유지를 위해 항상 테두리 영역 확보
     },
     dragging: {
         opacity: 0.8,
@@ -16,7 +18,6 @@ export const styles = StyleSheet.create({
         ...SOFT_SHADOW.button,
     },
     selected: {
-        borderWidth: 1,
         borderColor: 'rgba(232, 213, 204, 0.6)',
         borderRadius: 4,
         borderStyle: 'dashed',

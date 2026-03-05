@@ -1,1 +1,1 @@
-export { DraggablePhotoView as DraggablePhoto } from './DraggablePhoto.view';
+export { default as DraggablePhoto } from './DraggablePhoto.view';

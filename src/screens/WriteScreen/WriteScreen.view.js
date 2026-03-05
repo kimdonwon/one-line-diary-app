@@ -15,6 +15,7 @@ import { ActivityIcon } from '../../constants/ActivityIcons';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { DraggableSticker } from '../../components/DraggableSticker';
 import { DraggablePhoto } from '../../components/DraggablePhoto';
+import { DraggableText } from '../../components/DraggableText';
 import { BACKGROUNDS, BG_CATEGORIES, getBackgroundById, getBackgroundsByCategory } from '../../constants/backgrounds';
 import {
     HomeTabIcon,
@@ -22,11 +23,22 @@ import {
     SummaryTabIcon,
     SettingsTabIcon,
     CameraIcon,
-    StickerIcon
+    StickerIcon,
+    TextIcon
 } from '../../constants/icons';
 
 import { useWriteLogic } from './WriteScreen.logic';
 import { styles } from './WriteScreen.styles';
+
+const FONT_PRESETS = [
+    { id: 'basic', label: '단정 고딕' },
+    { id: 'diary', label: '감성 명조' },
+    { id: 'hand', label: '삐뚤빼뚤' },
+    { id: 'y2k', label: '도트체' },
+];
+const TEXT_COLORS = ['#37352F', '#E03E3E', '#0B6E99', '#D9730D', '#0F7B6C', '#F4A261', '#E9CECD', '#A3C4BC', '#B4A1D2'];
+const HIGHLIGHTER_COLORS = ['transparent', 'rgba(255, 226, 221, 0.8)', 'rgba(253, 236, 200, 0.8)', 'rgba(211, 229, 239, 0.8)', 'rgba(219, 237, 219, 0.8)'];
+
 
 function CheckIcon({ size = 24, color = '#FFFFFF' }) {
     return (
@@ -116,6 +128,7 @@ export function WriteScreenView({ route, navigation }) {
     const pageFlatListRef = useRef(null);
     const [activeCategoryId, setActiveCategoryId] = useState(STICKER_CATEGORIES[0].id);
     const [pageCardWidth, setPageCardWidth] = useState(0);
+    const [photoFrameTab, setPhotoFrameTab] = useState('polaroid'); // 'polaroid' | 'transparent'
 
     const {
         formattedDate,
@@ -144,6 +157,14 @@ export function WriteScreenView({ route, navigation }) {
         setShowStickers,
         setInputBoxBounds,
         setStickerLimitModalVisible,
+
+        // ✏️ Text
+        pageTexts,
+        showTexts,
+        setShowTexts,
+        handleAddText,
+        handleDeleteText,
+        handleTextDragEnd,
 
         handleContentChange,
         handleStickerPress,
@@ -186,7 +207,39 @@ export function WriteScreenView({ route, navigation }) {
 
         // 🪄 Magic Decorate
         handleMagicDecorate,
+        handleMoodPress,
+        handleSubmit,
     } = useWriteLogic(route, navigation, scrollRef);
+
+    // ✏️ 텍스트 패널 로컬 상태
+    const [tempTextValue, setTempTextValue] = useState('');
+    const [selectedFont, setSelectedFont] = useState('basic');
+    const [selectedTextColor, setSelectedTextColor] = useState('#37352F');
+    const [selectedBgColor, setSelectedBgColor] = useState('transparent');
+
+    // 📷 사진용 공유 애니메이션 관리 (반투명 사진 실시간 동기화용)
+    const photoAnimations = useRef({});
+
+    // 사진 목록이 바뀔 때 없는 ID 정리 (메모리 누수 방지)
+    useEffect(() => {
+        const allPhotoIds = new Set(pagePhotos.flat().map(p => p.id));
+        Object.keys(photoAnimations.current).forEach(id => {
+            if (!allPhotoIds.has(id)) {
+                delete photoAnimations.current[id];
+            }
+        });
+    }, [pagePhotos]);
+
+    // 특정 사진의 애니메이션 객체를 가져오거나 생성
+    const getPhotoAnimation = useCallback((photo) => {
+        if (!photoAnimations.current[photo.id]) {
+            photoAnimations.current[photo.id] = {
+                pan: new Animated.ValueXY({ x: photo.x, y: photo.y }),
+                rotation: new Animated.Value(photo.rotation || 0)
+            };
+        }
+        return photoAnimations.current[photo.id];
+    }, []);
 
     const insets = useSafeAreaInsets();
     const hasNudgedRef = useRef(false); // 최초 1회 실행 여부
@@ -322,8 +375,29 @@ export function WriteScreenView({ route, navigation }) {
                                     const bgData = getBackgroundById(pageBackgrounds[pageIdx] || 'default');
                                     return (
                                         <Card style={[styles.inputCard, { width: pageCardWidth, backgroundColor: bgData.backgroundColor }]}>
+                                            {/* [층0.5] 반투명 프레임 사진 시각 레이어 (텍스트 뒤, 터치 불가) */}
+                                            <View
+                                                style={[StyleSheet.absoluteFill, { zIndex: 1, elevation: 0 }]}
+                                                pointerEvents="none"
+                                            >
+                                                {(pagePhotos[pageIdx] || []).filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray').map(photo => {
+                                                    const anim = getPhotoAnimation(photo);
+                                                    return (
+                                                        <DraggablePhoto
+                                                            key={`vis-${photo.id}`}
+                                                            photo={photo}
+                                                            bounds={inputBoxBounds}
+                                                            externalPan={anim.pan}
+                                                            externalRotation={anim.rotation}
+                                                            onDelete={handleDeletePhoto}
+                                                            onDragEnd={handlePhotoDragEnd}
+                                                        />
+                                                    );
+                                                })}
+                                            </View>
+
                                             {/* [층1] 텍스트 입력 */}
-                                            <View style={styles.inputInnerPad}>
+                                            <View style={[styles.inputInnerPad, { zIndex: 2, elevation: 2 }]}>
                                                 <TextInput
                                                     style={styles.textInput}
                                                     placeholder="오늘 하루를 짧게 적어보세요..."
@@ -344,9 +418,31 @@ export function WriteScreenView({ route, navigation }) {
                                                 </View>
                                             </View>
 
+                                            {/* [층1.5] 👻 반투명 프레임 사진 터치 레이어 (텍스트 위, 보이지 않음) */}
+                                            <View
+                                                style={[StyleSheet.absoluteFill, { zIndex: 4 }]}
+                                                pointerEvents="box-none"
+                                            >
+                                                {(pagePhotos[pageIdx] || []).filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray').map(photo => {
+                                                    const anim = getPhotoAnimation(photo);
+                                                    return (
+                                                        <DraggablePhoto
+                                                            key={`ghost-${photo.id}`}
+                                                            isGhost={true}
+                                                            photo={photo}
+                                                            bounds={inputBoxBounds}
+                                                            externalPan={anim.pan}
+                                                            externalRotation={anim.rotation}
+                                                            onDelete={handleDeletePhoto}
+                                                            onDragEnd={handlePhotoDragEnd}
+                                                        />
+                                                    );
+                                                })}
+                                            </View>
+
                                             {/* ─── 📊 카드 내부 인디케이터 (피드 스타일) ─── */}
                                             {pages.length > 1 && (
-                                                <View style={styles.cardIndicatorWrap}>
+                                                <View style={styles.cardIndicatorWrap} pointerEvents="box-none">
                                                     <View style={styles.cardIndicatorDots}>
                                                         {pages.map((_, dotIdx) => (
                                                             <View
@@ -372,18 +468,40 @@ export function WriteScreenView({ route, navigation }) {
                                                 </View>
                                             )}
 
-                                            {/* [층2] 📷 폴라로이드 사진 레이어 */}
+                                            {/* [층2] 📷 폴라로이드 사진 레이어 (반투명 프레임 제외) */}
                                             <View
                                                 style={[StyleSheet.absoluteFill, { zIndex: 5, elevation: 5 }]}
                                                 pointerEvents="box-none"
                                             >
-                                                {(pagePhotos[pageIdx] || []).map(photo => (
+                                                {(pagePhotos[pageIdx] || []).filter(p => p.frameType !== 'transparent_white' && p.frameType !== 'transparent_gray').map(photo => (
                                                     <DraggablePhoto
                                                         key={photo.id}
                                                         photo={photo}
                                                         bounds={inputBoxBounds}
                                                         onDelete={handleDeletePhoto}
                                                         onDragEnd={handlePhotoDragEnd}
+                                                    />
+                                                ))}
+                                            </View>
+
+                                            {/* [층2.5] ✏️ 텍스트 스티커 영역 */}
+                                            <View
+                                                style={[StyleSheet.absoluteFill, { zIndex: 8, elevation: 8 }]}
+                                                pointerEvents="box-none"
+                                            >
+                                                {(pageTexts[pageIdx] || []).map(textNode => (
+                                                    <DraggableText
+                                                        key={`txt-${textNode.id}`}
+                                                        id={textNode.id}
+                                                        text={textNode.text}
+                                                        fontId={textNode.fontId}
+                                                        color={textNode.color}
+                                                        bgColor={textNode.bgColor}
+                                                        initialX={textNode.x}
+                                                        initialY={textNode.y}
+                                                        initialRotation={textNode.rotation}
+                                                        onDelete={handleDeleteText}
+                                                        onDragEnd={handleTextDragEnd}
                                                     />
                                                 ))}
                                             </View>
@@ -427,6 +545,7 @@ export function WriteScreenView({ route, navigation }) {
                                     setShowStickers(!showStickers);
                                     setShowPhotos(false);
                                     setShowBackgrounds(false);
+                                    setShowTexts(false);
                                 }}
                                 activeOpacity={0.8}
                             >
@@ -438,10 +557,23 @@ export function WriteScreenView({ route, navigation }) {
                                     setShowPhotos(!showPhotos);
                                     setShowStickers(false);
                                     setShowBackgrounds(false);
+                                    setShowTexts(false);
                                 }}
                                 activeOpacity={0.8}
                             >
                                 <CameraIcon size={28} color={showPhotos ? "#37352F" : "#83837F"} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.pillSegment, showTexts && styles.pillSegmentActive]}
+                                onPress={() => {
+                                    setShowTexts(!showTexts);
+                                    setShowStickers(false);
+                                    setShowPhotos(false);
+                                    setShowBackgrounds(false);
+                                }}
+                                activeOpacity={0.8}
+                            >
+                                <TextIcon size={28} active={showTexts} color={showTexts ? "#37352F" : "#83837F"} />
                             </TouchableOpacity>
                         </View>
 
@@ -456,94 +588,226 @@ export function WriteScreenView({ route, navigation }) {
 
                     </View>
 
+                    {/* ─── 🗂 ✏️ 텍스트 추가 바텀시트 ─── */}
+                    {showTexts && (
+                        <View style={styles.stickerBottomSheet}>
+                            <View style={styles.textDrawerWrap}>
+                                <View style={styles.textInputRow}>
+                                    <TextInput
+                                        style={styles.textCustomInput}
+                                        placeholder="어떤 문구를 넣을까요?"
+                                        placeholderTextColor="#83837F"
+                                        value={tempTextValue}
+                                        onChangeText={setTempTextValue}
+                                        maxLength={30}
+                                    />
+                                    <TouchableOpacity
+                                        style={styles.textAddBtn}
+                                        onPress={() => {
+                                            if (!tempTextValue) return;
+                                            handleAddText(tempTextValue, selectedFont, selectedTextColor, selectedBgColor);
+                                            setTempTextValue('');
+                                        }}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Text style={styles.textAddBtnText}>추가</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetRow}>
+                                    <Text style={[styles.textSectionTitle, { marginRight: 10 }]}>폰트</Text>
+                                    {FONT_PRESETS.map(font => {
+                                        // 현재 폰트 스타일 미리보기용 스타일 계산
+                                        const previewStyle = {};
+                                        if (font.id === 'basic') {
+                                            previewStyle.fontFamily = 'GowunDodum_400Regular';
+                                        } else if (font.id === 'diary') {
+                                            previewStyle.fontFamily = 'NanumMyeongjo_400Regular';
+                                            previewStyle.fontSize = 15;
+                                        } else if (font.id === 'hand') {
+                                            previewStyle.fontFamily = 'SingleDay_400Regular';
+                                            previewStyle.fontSize = 18;
+                                        } else if (font.id === 'y2k') {
+                                            previewStyle.fontFamily = 'NanumPenScript_400Regular';
+                                            previewStyle.fontSize = 18;
+                                        }
+
+                                        return (
+                                            <TouchableOpacity
+                                                key={font.id}
+                                                style={[styles.presetBtn, selectedFont === font.id && styles.presetBtnActive]}
+                                                onPress={() => setSelectedFont(font.id)}
+                                                activeOpacity={0.8}
+                                            >
+                                                <Text style={[styles.presetBtnText, previewStyle]}>{font.label}</Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </ScrollView>
+
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetRow} contentContainerStyle={{ alignItems: 'center' }}>
+                                    <Text style={[styles.textSectionTitle, { marginRight: 10, marginBottom: 0, marginTop: 0 }]}>색상</Text>
+                                    {TEXT_COLORS.map(color => (
+                                        <TouchableOpacity
+                                            key={`txt-${color}`}
+                                            style={[styles.colorBtn, { backgroundColor: color }, selectedTextColor === color && styles.colorBtnActive]}
+                                            onPress={() => setSelectedTextColor(color)}
+                                        />
+                                    ))}
+                                    <View style={{ width: 1, backgroundColor: '#E9E9E7', height: 20, marginHorizontal: 8 }} />
+                                    {HIGHLIGHTER_COLORS.map((color, idx) => (
+                                        <TouchableOpacity
+                                            key={`bg-${idx}`}
+                                            style={[styles.colorBtn, { backgroundColor: color === 'transparent' ? '#FFF' : color }, selectedBgColor === color && styles.colorBtnActive]}
+                                            onPress={() => setSelectedBgColor(color)}
+                                        >
+                                            {color === 'transparent' && <Text style={{ color: '#E9E9E7', fontSize: 10 }}>✕</Text>}
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        </View>
+                    )}
+
                     {/* ─── 🗂 📷 사진 프레임 바텀시트 (Bottom Sheet) ─── */}
                     {showPhotos && (
                         <View style={styles.stickerBottomSheet}>
-                            {/* 바텀시트 상단 헤더 (스티커 서랍장과 동일한 디자인 적용) */}
+                            {/* 바텀시트 상단 헤더 (탭 전환: 폴라로이드 색상 / 반투명 프레임) */}
                             <View style={styles.stickerBottomSheetHeader}>
                                 <View style={styles.categoryTabBar}>
-                                    <View style={[styles.categoryTab, styles.categoryTabActive]}>
-                                        <Text style={[styles.categoryTabText, styles.categoryTabTextActive]}>폴라로이드 색상</Text>
-                                    </View>
+                                    <TouchableOpacity
+                                        style={[styles.categoryTab, photoFrameTab === 'polaroid' && styles.categoryTabActive]}
+                                        onPress={() => setPhotoFrameTab('polaroid')}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[styles.categoryTabText, photoFrameTab === 'polaroid' && styles.categoryTabTextActive]}>폴라로이드 색상</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.categoryTab, photoFrameTab === 'transparent' && styles.categoryTabActive]}
+                                        onPress={() => setPhotoFrameTab('transparent')}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[styles.categoryTabText, photoFrameTab === 'transparent' && styles.categoryTabTextActive]}>반투명 프레임</Text>
+                                    </TouchableOpacity>
                                 </View>
                             </View>
 
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={styles.photoFrameContainer}
-                            >
-                                <TouchableOpacity
-                                    style={styles.frameOptionBtn}
-                                    onPress={() => handleAddPhoto('white')}
-                                    activeOpacity={0.7}
+                            {/* ── 폴라로이드 색상 탭 ── */}
+                            {photoFrameTab === 'polaroid' && (
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={styles.photoFrameContainer}
                                 >
-                                    <View style={[styles.framePreview, styles.framePreviewWhite]}>
-                                        <View style={styles.frameInnerPhoto} />
-                                    </View>
-                                </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.frameOptionBtn}
+                                        onPress={() => handleAddPhoto('white')}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={[styles.framePreview, styles.framePreviewWhite]}>
+                                            <View style={styles.frameInnerPhoto} />
+                                        </View>
+                                    </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    style={styles.frameOptionBtn}
-                                    onPress={() => handleAddPhoto('black')}
-                                    activeOpacity={0.7}
-                                >
-                                    <View style={[styles.framePreview, styles.framePreviewBlack]}>
-                                        <View style={[styles.frameInnerPhoto, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-                                    </View>
-                                </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.frameOptionBtn}
+                                        onPress={() => handleAddPhoto('black')}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={[styles.framePreview, styles.framePreviewBlack]}>
+                                            <View style={[styles.frameInnerPhoto, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+                                        </View>
+                                    </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    style={styles.frameOptionBtn}
-                                    onPress={() => {
-                                        if (isPremium) {
-                                            handleAddPhoto('pink');
-                                        } else {
-                                            Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
-                                        }
-                                    }}
-                                    activeOpacity={0.7}
-                                >
-                                    <View style={[styles.framePreview, styles.framePreviewPink]}>
-                                        <View style={styles.frameInnerPhoto} />
-                                        {!isPremium && <View style={styles.lockOverlay}><Text style={{ fontSize: 10 }}>🔒</Text></View>}
-                                    </View>
-                                </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.frameOptionBtn}
+                                        onPress={() => {
+                                            if (isPremium) {
+                                                handleAddPhoto('pink');
+                                            } else {
+                                                Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
+                                            }
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={[styles.framePreview, styles.framePreviewPink]}>
+                                            <View style={styles.frameInnerPhoto} />
+                                            {!isPremium && <View style={styles.lockOverlay}><Text style={{ fontSize: 10 }}>🔒</Text></View>}
+                                        </View>
+                                    </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    style={styles.frameOptionBtn}
-                                    onPress={() => {
-                                        if (isPremium) {
-                                            handleAddPhoto('blue');
-                                        } else {
-                                            Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
-                                        }
-                                    }}
-                                    activeOpacity={0.7}
-                                >
-                                    <View style={[styles.framePreview, styles.framePreviewBlue]}>
-                                        <View style={styles.frameInnerPhoto} />
-                                        {!isPremium && <View style={styles.lockOverlay}><Text style={{ fontSize: 10 }}>🔒</Text></View>}
-                                    </View>
-                                </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.frameOptionBtn}
+                                        onPress={() => {
+                                            if (isPremium) {
+                                                handleAddPhoto('blue');
+                                            } else {
+                                                Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
+                                            }
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={[styles.framePreview, styles.framePreviewBlue]}>
+                                            <View style={styles.frameInnerPhoto} />
+                                            {!isPremium && <View style={styles.lockOverlay}><Text style={{ fontSize: 10 }}>🔒</Text></View>}
+                                        </View>
+                                    </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    style={styles.frameOptionBtn}
-                                    onPress={() => {
-                                        if (isPremium) {
-                                            handleAddPhoto('mint');
-                                        } else {
-                                            Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
-                                        }
-                                    }}
-                                    activeOpacity={0.7}
+                                    <TouchableOpacity
+                                        style={styles.frameOptionBtn}
+                                        onPress={() => {
+                                            if (isPremium) {
+                                                handleAddPhoto('mint');
+                                            } else {
+                                                Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
+                                            }
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={[styles.framePreview, styles.framePreviewMint]}>
+                                            <View style={styles.frameInnerPhoto} />
+                                            {!isPremium && <View style={styles.lockOverlay}><Text style={{ fontSize: 10 }}>🔒</Text></View>}
+                                        </View>
+                                    </TouchableOpacity>
+                                </ScrollView>
+                            )}
+
+                            {/* ── 반투명 프레임 탭 ── */}
+                            {photoFrameTab === 'transparent' && (
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={styles.photoFrameContainer}
                                 >
-                                    <View style={[styles.framePreview, styles.framePreviewMint]}>
-                                        <View style={styles.frameInnerPhoto} />
-                                        {!isPremium && <View style={styles.lockOverlay}><Text style={{ fontSize: 10 }}>🔒</Text></View>}
-                                    </View>
-                                </TouchableOpacity>
-                            </ScrollView>
+                                    <TouchableOpacity
+                                        style={styles.frameOptionBtn}
+                                        onPress={() => handleAddPhoto('transparent_white')}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={[styles.framePreview, styles.framePreviewTransparentWhite]}>
+                                            <View style={styles.frameInnerPhoto} />
+                                            <View style={styles.transparentBadge}>
+                                                <Text style={styles.transparentBadgeText}>반투명</Text>
+                                            </View>
+                                        </View>
+                                        <Text style={styles.frameOptionLabel}>흰색</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.frameOptionBtn}
+                                        onPress={() => handleAddPhoto('transparent_gray')}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={[styles.framePreview, styles.framePreviewTransparentGray]}>
+                                            <View style={styles.frameInnerPhoto} />
+                                            <View style={styles.transparentBadge}>
+                                                <Text style={styles.transparentBadgeText}>반투명</Text>
+                                            </View>
+                                        </View>
+                                        <Text style={styles.frameOptionLabel}>회색</Text>
+                                    </TouchableOpacity>
+                                </ScrollView>
+                            )}
                         </View>
                     )}
 

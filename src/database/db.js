@@ -30,6 +30,7 @@ export async function initDB() {
                 "ALTER TABLE diary ADD COLUMN stickers TEXT DEFAULT '[]'",
                 "ALTER TABLE diary ADD COLUMN photos TEXT DEFAULT '[]'",
                 "ALTER TABLE diary ADD COLUMN backgrounds TEXT DEFAULT '[]'",
+                "ALTER TABLE diary ADD COLUMN texts TEXT DEFAULT '[]'",
                 "ALTER TABLE comments ADD COLUMN character TEXT DEFAULT 'bear'"
             ];
 
@@ -117,11 +118,11 @@ export async function getSetting(key) {
 
 // ─── 일기 관련 ───
 
-export async function saveDiary(date, content, mood, stickers = '[]', photos = '[]', backgrounds = '[]') {
+export async function saveDiary(date, content, mood, stickers = '[]', photos = '[]', backgrounds = '[]', texts = '[]') {
     return enqueueDBTask(async (d) => {
         await d.runAsync(
-            'INSERT OR REPLACE INTO diary (date, content, mood, stickers, photos, backgrounds) VALUES (?, ?, ?, ?, ?, ?)',
-            [date, content, mood, stickers, photos, backgrounds]
+            'INSERT OR REPLACE INTO diary (date, content, mood, stickers, photos, backgrounds, texts) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [date, content, mood, stickers, photos, backgrounds, texts]
         );
     });
 }
@@ -364,8 +365,8 @@ export async function restoreFromData(data) {
 
             for (const item of diary) {
                 await d.runAsync(
-                    'INSERT INTO diary (id, date, content, mood, stickers, photos, backgrounds) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    [item.id, item.date, item.content, item.mood, item.stickers || '[]', item.photos || '[]', item.backgrounds || '[]']
+                    'INSERT INTO diary (id, date, content, mood, stickers, photos, backgrounds, texts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    [item.id, item.date, item.content, item.mood, item.stickers || '[]', item.photos || '[]', item.backgrounds || '[]', item.texts || '[]']
                 );
             }
 

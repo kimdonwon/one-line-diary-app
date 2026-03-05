@@ -9,6 +9,9 @@ export const styles = StyleSheet.create({
         position: 'absolute',
         zIndex: 5, // 스티커(10)보다 아래, 텍스트보다 위
         padding: 2,
+        borderWidth: 1.5,
+        borderColor: 'transparent',
+        borderRadius: 6, // 미리 설정
     },
     dragging: {
         zIndex: 6,
@@ -16,9 +19,7 @@ export const styles = StyleSheet.create({
         ...SOFT_SHADOW.button,
     },
     selected: {
-        borderWidth: 1.5,
         borderColor: 'rgba(232, 213, 204, 0.6)',
-        borderRadius: 6,
         borderStyle: 'dashed',
     },
 
@@ -60,11 +61,30 @@ export const styles = StyleSheet.create({
         backgroundColor: '#D1FFD7',
         borderColor: 'rgba(152, 251, 152, 0.4)',
     },
+    // ── 반투명 프레임 추가 (일반 폴라로이드와 동일한 크기 및 모양) ──
+    polaroidFrameTransparentWhite: {
+        backgroundColor: 'rgba(255, 255, 255, 0.88)',
+        borderColor: 'rgba(220, 220, 218, 0.5)',
+        shadowOpacity: 0.15,
+        elevation: 0, // 텍스트 뒤에 위치하도록 elevation 제거
+    },
+    polaroidFrameTransparentGray: {
+        backgroundColor: 'rgba(200, 200, 198, 0.82)',
+        borderColor: 'rgba(180, 180, 178, 0.5)',
+        shadowOpacity: 0.15,
+        elevation: 0, // 텍스트 뒤에 위치하도록 elevation 제거
+    },
     polaroidImage: {
         width: 110,
         height: 110,
         borderRadius: 2,
         backgroundColor: '#F0ECE8', // 이미지 로딩 중 배경색
+    },
+    transparentImage: {
+        opacity: 0.35, // 글씨가 잘 보이도록 기본 투명도를 낮춤
+    },
+    transparentImageSelected: {
+        opacity: 0.7, // 선택 시에는 위치 확인을 위해 조금 더 선명하게
     },
     polaroidBottom: {
         height: 16, // 하단 여백 영역 (글씨를 쓸 수 있는 빈 칸 느낌)

@@ -90,34 +90,52 @@ function parseMultiPageData(rawContent, rawStickers, rawPhotos, rawBackgrounds) 
 /**
  * 단일 페이지 렌더링 컴포넌트
  */
-const SinglePageContent = React.memo(({ content, stickers = [], photos = [], cardWidth, bgColor }) => (
-    <View style={[cardStyles.diaryCardInner, cardWidth ? { width: cardWidth } : null, bgColor ? { backgroundColor: bgColor } : null]}>
-        {/* 사진 오버레이 (스티커보다 아래) */}
-        <View style={cardStyles.photoOverlay} pointerEvents="none">
-            {photos.map((photo, idx) => (
-                <StaticPhoto
-                    key={`photo-${idx}`}
-                    photo={photo}
-                    bounds={{ width: cardWidth || 300 }}
-                />
-            ))}
-        </View>
+const SinglePageContent = React.memo(({ content, stickers = [], photos = [], cardWidth, bgColor }) => {
+    const transparentPhotos = photos.filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray');
+    const polaroidPhotos = photos.filter(p => p.frameType !== 'transparent_white' && p.frameType !== 'transparent_gray');
 
-        {/* 스티커 오버레이 */}
-        <View style={cardStyles.stickerOverlay} pointerEvents="none">
-            {stickers.map((sticker, idx) => (
-                <StaticSticker
-                    key={`sticker-${idx}`}
-                    sticker={sticker}
-                    bounds={{ width: cardWidth || 300 }}
-                />
-            ))}
-        </View>
+    return (
+        <View style={[cardStyles.diaryCardInner, cardWidth ? { width: cardWidth } : null, bgColor ? { backgroundColor: bgColor } : null]}>
+            {/* 반투명 프레임 사진 (텍스트 뒤) */}
+            {transparentPhotos.length > 0 && (
+                <View style={cardStyles.transparentPhotoOverlay} pointerEvents="none">
+                    {transparentPhotos.map((photo, idx) => (
+                        <StaticPhoto
+                            key={`tphoto-${idx}`}
+                            photo={photo}
+                            bounds={{ width: cardWidth || 300 }}
+                        />
+                    ))}
+                </View>
+            )}
 
-        {/* 텍스트 */}
-        <Text style={cardStyles.diaryContent}>{content}</Text>
-    </View>
-));
+            {/* 폴라로이드 사진 오버레이 (스티커보다 아래, 텍스트 위) */}
+            <View style={cardStyles.photoOverlay} pointerEvents="none">
+                {polaroidPhotos.map((photo, idx) => (
+                    <StaticPhoto
+                        key={`photo-${idx}`}
+                        photo={photo}
+                        bounds={{ width: cardWidth || 300 }}
+                    />
+                ))}
+            </View>
+
+            {/* 스티커 오버레이 */}
+            <View style={cardStyles.stickerOverlay} pointerEvents="none">
+                {stickers.map((sticker, idx) => (
+                    <StaticSticker
+                        key={`sticker-${idx}`}
+                        sticker={sticker}
+                        bounds={{ width: cardWidth || 300 }}
+                    />
+                ))}
+            </View>
+
+            {/* 텍스트 (반투명 사진 zIndex 1보다 높고, 일반 사진 zIndex 5보다 낮게 설정) */}
+            <Text style={[cardStyles.diaryContent, { zIndex: 3 }]}>{content}</Text>
+        </View>
+    );
+});
 
 export const DiaryEntryCard = React.memo(({ diary, activities = [], commentCount = 0, onOpenComment, onPress }) => {
     const mood = getMoodByKey(diary.mood);
@@ -275,7 +293,15 @@ export const cardStyles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 2,
+        zIndex: 5,
+    },
+    transparentPhotoOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 1, // 텍스트 뒤에 배치
     },
     stickerOverlay: {
         position: 'absolute',
@@ -283,7 +309,7 @@ export const cardStyles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        zIndex: 5,
+        zIndex: 10,
     },
 
     // ── 멀티페이지 인디케이터 ──

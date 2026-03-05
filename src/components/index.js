@@ -8,6 +8,7 @@ import { getStickerComponent } from '../constants/stickers';
 import Modal from "react-native-modal";
 import { ComboShakeWrapper } from "./ComboShakeWrapper";
 export { ComboShakeWrapper };
+export * from './DraggableText'; // ✏️ 추가
 
 // ─── Custom Soft Alert Modal ───
 export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmText = "확인", secondaryText, onSecondaryConfirm }) {
@@ -87,15 +88,23 @@ export function StaticSticker({ sticker, bounds }) {
 export function StaticPhoto({ photo }) {
   if (!photo) return null;
 
+  const isTransparent = photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray';
   const isBlackFrame = photo.frameType === 'black';
+
+  // 폴라로이드 프레임 렌더링 (일반 + 반투명 동일 구조)
   const frameColors = {
     pink: '#FFD1DC',
     blue: '#D1E8FF',
     mint: '#D1FFD7',
     white: '#FFFFFF',
     black: '#1A1A1A',
+    transparent_white: 'rgba(255, 255, 255, 0.88)',
+    transparent_gray: 'rgba(200, 200, 198, 0.82)',
   };
   const bgColor = frameColors[photo.frameType] || frameColors.white;
+  const borderColor = isTransparent
+    ? (photo.frameType === 'transparent_gray' ? 'rgba(180, 180, 178, 0.5)' : 'rgba(220, 220, 218, 0.5)')
+    : (isBlackFrame ? 'rgba(255, 255, 255, 0.1)' : 'rgba(200, 190, 180, 0.4)');
 
   return (
     <View style={{
@@ -103,24 +112,24 @@ export function StaticPhoto({ photo }) {
       left: photo.x,
       top: photo.y,
       padding: 2,
-      zIndex: 2, // 스티커보다 아래
+      zIndex: isTransparent ? 1 : 2, // 반투명은 스티커/텍스트보다 아래에 배치
       transform: [{ rotate: `${photo.rotation || 0}deg` }],
     }}>
       <View style={{
         width: 126,
-        height: 144,
+        height: 144, // 일반 프레임과 동일한 하단 여백 구조
         backgroundColor: bgColor,
         borderRadius: 4,
         paddingTop: 8,
         paddingHorizontal: 8,
-        paddingBottom: 20,
+        paddingBottom: 20, // 하단 넉넉한 여백
         shadowColor: isBlackFrame ? '#000000' : '#8B7E74',
         shadowOffset: { width: 1, height: 3 },
-        shadowOpacity: isBlackFrame ? 0.35 : 0.25,
-        shadowRadius: 6,
-        elevation: 4,
+        shadowOpacity: isTransparent ? 0.15 : (isBlackFrame ? 0.35 : 0.25),
+        shadowRadius: isTransparent ? 4 : 6,
+        elevation: isTransparent ? 0 : 4, // 텍스트 위로 튀어나오는 현상 방지용 elevation 0
         borderWidth: 0.5,
-        borderColor: isBlackFrame ? 'rgba(255, 255, 255, 0.1)' : 'rgba(200, 190, 180, 0.4)',
+        borderColor: borderColor,
       }}>
         <Image
           source={{ uri: photo.uri }}
@@ -129,6 +138,7 @@ export function StaticPhoto({ photo }) {
             height: 110,
             borderRadius: 2,
             backgroundColor: isBlackFrame ? '#000000' : '#F0ECE8',
+            opacity: isTransparent ? 0.35 : 1, // 반투명 프레임은 사진도 연하게 처리
           }}
           resizeMode="cover"
         />

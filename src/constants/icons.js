@@ -283,3 +283,12 @@ export function StickerIcon({ size = 24, active = false, style }) {
     );
 }
 
+// ─── 텍스트 탭 아이콘 ───
+export function TextIcon({ size = 24, color = "#83837F", active = false, style }) {
+    const strokeColor = active ? "#37352F" : color;
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" style={style}>
+            <Path d="M5 4h14M12 4v16M8 20h8" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+    );
+}
