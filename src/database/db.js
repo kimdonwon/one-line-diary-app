@@ -12,10 +12,26 @@ export async function initDB() {
 
     initPromise = (async () => {
         try {
+            console.log('[DB]: Opening database...');
             const instance = await SQLite.openDatabaseAsync('diary.db');
             if (!instance) throw new Error('Failed to open database instance');
 
-            // 1. 기본 테이블 생성
+            console.log('[DB]: Setting pragmas...');
+            await instance.execAsync('PRAGMA busy_timeout = 5000;');
+
+            try {
+                await instance.execAsync('PRAGMA journal_mode = WAL;');
+            } catch (e) {
+                console.warn('[DB]: WAL mode setting skipped:', e.message);
+            }
+
+            try {
+                await instance.execAsync('PRAGMA foreign_keys = ON;');
+            } catch (e) {
+                console.warn('[DB]: foreign_keys setting skipped:', e.message);
+            }
+
+            console.log('[DB]: Creating tables...');
             await instance.execAsync(`
                 CREATE TABLE IF NOT EXISTS diary (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT UNIQUE NOT NULL, content TEXT NOT NULL, mood TEXT NOT NULL, stickers TEXT DEFAULT '[]');
                 CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, activity TEXT NOT NULL, title TEXT DEFAULT '', note TEXT DEFAULT '', UNIQUE(date, activity));
@@ -23,7 +39,7 @@ export async function initDB() {
                 CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT);
             `.replace(/\s+/g, ' ').trim());
 
-            // 2. 컬럼 추가 마이그레이션
+            console.log('[DB]: Running migrations...');
             const migrations = [
                 "ALTER TABLE activities ADD COLUMN title TEXT DEFAULT ''",
                 "ALTER TABLE activities ADD COLUMN note TEXT DEFAULT ''",
@@ -35,14 +51,17 @@ export async function initDB() {
             ];
 
             for (const sql of migrations) {
-                try { await instance.execAsync(sql); } catch (e) { /* 컬럼 이미 존재함 */ }
+                try { await instance.execAsync(sql); } catch (e) { /* 이미 존재 */ }
             }
 
-            // 3. 기본 설정 초기화
-            await instance.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['isLockEnabled', 'false']);
-            await instance.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['password', '']);
-            await instance.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['isPremium', 'false']);
-            await instance.runAsync('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)', ['premiumTrialStartDate', new Date().toISOString()]);
+            console.log('[DB]: Initializing app settings...');
+            const now = new Date().toISOString();
+            await instance.execAsync(`
+                INSERT OR IGNORE INTO app_settings (key, value) VALUES ('isLockEnabled', 'false');
+                INSERT OR IGNORE INTO app_settings (key, value) VALUES ('password', '');
+                INSERT OR IGNORE INTO app_settings (key, value) VALUES ('isPremium', 'false');
+                INSERT OR IGNORE INTO app_settings (key, value) VALUES ('premiumTrialStartDate', '${now}');
+            `);
 
             db = instance;
             dbReady = true;
@@ -69,7 +88,6 @@ function ensureDB() {
     return db;
 }
 
-// ─── 데이터베이스 작업 대기열 (Mutex Queue) ───
 let dbQueue = Promise.resolve();
 
 /**
@@ -86,17 +104,21 @@ function enqueueDBTask(taskFn) {
 
                 const d = ensureDB();
                 const result = await taskFn(d);
-                resolve(result);
+                return resolve(result); // Return the resolution to ensure chaining waits
             } catch (err) {
                 console.error('[DB Task Error]:', err);
                 reject(err);
+                // Return resolve to not break the queue chain structure, allowing next tasks to proceed
+                return Promise.resolve();
             }
         }).catch((fatalErr) => {
             console.error('[DB Fatal Exception]:', fatalErr);
             reject(fatalErr);
+            return Promise.resolve(); // Keep queue alive
         });
     });
 }
+
 
 // ─── 설정 관련 ───
 
@@ -204,7 +226,7 @@ export async function saveActivities(date, activities) {
             if (act.selected) {
                 await d.runAsync(
                     'INSERT OR REPLACE INTO activities (date, activity, title, note) VALUES (?, ?, ?, ?)',
-                    [date, act.key, act.title || '', act.note || '']
+                    [date, act.key, '', '']
                 );
             }
         }

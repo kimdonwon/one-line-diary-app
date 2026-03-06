@@ -15,8 +15,7 @@ export const styles = StyleSheet.create({
     },
     dragging: {
         zIndex: 6,
-        opacity: 0.9,
-        ...SOFT_SHADOW.button,
+        // 안드로이드에서 투명도+shadow 조합으로 인한 중복 렌더링(잔상) 방지
     },
     selected: {
         borderColor: 'rgba(232, 213, 204, 0.6)',
@@ -88,26 +87,5 @@ export const styles = StyleSheet.create({
     },
     polaroidBottom: {
         height: 16, // 하단 여백 영역 (글씨를 쓸 수 있는 빈 칸 느낌)
-    },
-
-    // 🔄 회전 핸들 스타일 (스티커와 동일)
-    rotationHandle: {
-        position: 'absolute',
-        right: -10,
-        bottom: -10,
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderWidth: 1,
-        borderColor: '#E2DED0',
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...SOFT_SHADOW.button,
-    },
-    rotationHandleIcon: {
-        fontSize: 12,
-        color: '#9E8E82',
-        fontWeight: '700',
     },
 });

@@ -4,97 +4,29 @@ import { getStickerComponent } from '../../constants/stickers';
 
 import { useDraggableLogic } from './DraggableSticker.logic';
 import { styles } from './DraggableSticker.styles';
-
-function RotationHandle({ containerRef, currentRotation, onRotate, onRotateEnd }) {
-    const startInteraction = useRef({
-        cx: 0,
-        cy: 0,
-        startAngle: 0,
-        initialRotation: 0,
-        ready: false
-    });
-
-    const handlePanResponder = useRef(
-        PanResponder.create({
-            // 우선적으로 터치를 가로채기 위한 설정
-            onStartShouldSetPanResponder: () => true,
-            onStartShouldSetPanResponderCapture: () => true,
-            onMoveShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponderCapture: () => true,
-            onPanResponderTerminationRequest: () => false, // 뺏기지 않음
-
-            onPanResponderGrant: (e, gestureState) => {
-                Keyboard.dismiss(); // 하단 입력창 메뉴 방지 루틴
-                const { x0, y0 } = gestureState; // 터치 시작 절대적 화면 좌표
-                const initRot = currentRotation.current; // 회전 시작 전 기존 각도
-
-                startInteraction.current.ready = false;
-
-                if (containerRef.current) {
-                    // 스티커의 현재 위치/크기를 실시간으로 화면상 좌표 기준으로 측정
-                    containerRef.current.measureInWindow((x, y, w, h) => {
-                        const cx = x + w / 2;
-                        const cy = y + h / 2;
-                        const dx = x0 - cx;
-                        const dy = y0 - cy;
-                        const startAngle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-                        startInteraction.current = { cx, cy, startAngle, initialRotation: initRot, ready: true };
-                    });
-                }
-            },
-            onPanResponderMove: (e, gestureState) => {
-                if (!startInteraction.current.ready) return;
-
-                const { cx, cy, startAngle, initialRotation } = startInteraction.current;
-                const dx = gestureState.moveX - cx;
-                const dy = gestureState.moveY - cy;
-
-                const currentAngle = Math.atan2(dy, dx) * (180 / Math.PI);
-                let delta = currentAngle - startAngle;
-
-                // -180 ~ 180도 경계에서의 튀는 현상(Wrap-around) 보정
-                if (delta > 180) delta -= 360;
-                if (delta < -180) delta += 360;
-
-                onRotate(initialRotation + delta);
-            },
-            onPanResponderRelease: () => {
-                onRotateEnd();
-            },
-            onShouldBlockNativeResponder: () => true,
-        })
-    ).current;
-
-    return (
-        <View
-            style={styles.rotationHandle}
-            {...handlePanResponder.panHandlers}
-        >
-            <Text style={styles.rotationHandleIcon}>↻</Text>
-        </View>
-    );
-}
+import { RotationHandle } from '../RotationHandle';
 
 /**
  * 🎨 스티커 렌더링에만 초점을 맞춘 화면 분리 모듈입니다.
  * 핀치 회전 + 회전 핸들 지원
  */
-export function DraggableStickerView({ sticker, bounds, onDelete, onDragEnd }) {
+export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onDragEnd, onInteractionStart, onInteractionEnd }) => {
     // 내부 애니메이션 드래그 제스처 훅을 연결
     const {
         pan,
         rotation,
         currentRotation,
+        scale,
+        currentTransformScale,
         panResponder,
         isDragging,
         isSelected,
         setMySize,
         mySize,
-        handleRotation,
+        handleRotateAndScale,
         handleRotationEnd,
     } = useDraggableLogic({
-        sticker, bounds, onDelete, onDragEnd
+        sticker, bounds, onDelete, onDragEnd, onInteractionStart, onInteractionEnd
     });
 
     const containerRef = useRef(null);
@@ -103,10 +35,13 @@ export function DraggableStickerView({ sticker, bounds, onDelete, onDragEnd }) {
         if (sticker.isGraphic) {
             const GraphicComponent = getStickerComponent(sticker.type);
             if (GraphicComponent) {
-                return <GraphicComponent size={29} />;
+                // 🎨 화질 팁: 작은 사이즈(29)로 렌더링 후 키우면 비트맵 기반이라 깨짐.
+                // 대신 크게(100) 렌더링하고 transform에서 줄여야 선명함 유지됨.
+                return <GraphicComponent size={100} />;
             }
         }
-        return <Text style={styles.textSticker} selectable={false}>{sticker.type}</Text>;
+        // 이모지도 폰트 크기를 키워서 선명도 확보
+        return <Text style={[styles.textSticker, { fontSize: 80, lineHeight: 90 }]} selectable={false}>{sticker.type}</Text>;
     };
 
     // Animated interpolation: 숫자 → 'Xdeg' 문자열
@@ -115,12 +50,16 @@ export function DraggableStickerView({ sticker, bounds, onDelete, onDragEnd }) {
         outputRange: ['-360deg', '360deg'],
     });
 
+    // 🎨 화질 개선을 위한 보정 스케일 (100px로 렌더링했으므로 0.3을 곱해 기존 크기인 ~30px 유지)
+    const crispScale = Animated.multiply(scale, 0.35);
+
     return (
         <Animated.View
             ref={containerRef}
             onLayout={(e) => {
                 const { width, height } = e.nativeEvent.layout;
-                setMySize({ width, height });
+                // 실제 물리적 영역이 아닌 시각적 영역(scaled)을 mySize로 보고해야 경계선 계산이 정확함
+                setMySize({ width: width * 0.35, height: height * 0.35 });
             }}
             style={[
                 styles.container,
@@ -129,6 +68,7 @@ export function DraggableStickerView({ sticker, bounds, onDelete, onDragEnd }) {
                         { translateX: pan.x },
                         { translateY: pan.y },
                         { rotate: rotateStr },
+                        { scale: crispScale }
                     ]
                 },
                 isDragging && styles.dragging,
@@ -136,7 +76,7 @@ export function DraggableStickerView({ sticker, bounds, onDelete, onDragEnd }) {
             ]}
             {...panResponder.panHandlers}
         >
-            <View pointerEvents="none">
+            <View pointerEvents="none" style={{ width: 100, height: 100, alignItems: 'center', justifyContent: 'center' }}>
                 {renderContent()}
             </View>
 
@@ -145,10 +85,13 @@ export function DraggableStickerView({ sticker, bounds, onDelete, onDragEnd }) {
                 <RotationHandle
                     containerRef={containerRef}
                     currentRotation={currentRotation}
-                    onRotate={handleRotation}
+                    currentScale={currentTransformScale}
+                    onRotateAndScale={handleRotateAndScale}
                     onRotateEnd={handleRotationEnd}
+                    onInteractionStart={onInteractionStart}
+                    onInteractionEnd={onInteractionEnd}
                 />
             )}
         </Animated.View>
     );
-}
+});

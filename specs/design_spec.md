@@ -43,6 +43,7 @@
   * **스티커 서랍장 & 카테고리 (Sortable Tray)**: Notion 탭 UI. 활성 카테고리명 탭(배경색 #F1F1F0, 텍스트 볼드 700 차콜). 1차원 수평 배열 레이블(emoji, legacy, random 등) 스크롤 리스트.
   * **폴라로이드 프레임 렌더 (DraggablePhoto)**: 흰색, 검은색(반투명 필름 오버레이 추가), 핑크, 라벤더, 민트 색상의 폴라로이드 사진 종이 모양 구현. 하단 여백이 두껍고 (126x144 크기), Inner 룩은 정방형(`border 1px border-inner`). 자연스러운 10도 회전이나 Drop shadow 투사로 현실 다이어리 종이에 사진 질감 구현.
   * **반투명 프레임 (Transparent Frame)**: 흰색(`rgba(255,255,255,0.88)`)과 회색(`rgba(200,200,198,0.82)`)의 반투명 프레임. 기존 폴라로이드와 똑같은 형태 및 크기(126x144, 하단 여백 포함)를 유지하되, 약간의 투명도를 통해 은은한 느낌을 줌. 안드로이드 그림자 옵셋(elevation: 0)을 최소화하여 텍스트 레이어(zIndex: 2) 뒤(zIndex: 1)에 자연스럽게 배치됨. 사진 프레임 바텀시트에서 '폴라로이드 색상' / '반투명 프레임' 탭으로 분리 제공.
+  * **디지털 스크랩북 캔버스 (Tap-to-Write)**: 기존 고정 TextInput 영역을 제거하고 전체 카드를 빈 캔버스로 전환. 종이 질감(`#FBF8F4`) 배경과 따뜻한 크라프트지 테두리(`#E2DED0`)로 실제 스크랩북 느낌 구현. 빈 캔버스에 `✏️ 화면을 터치해서 일기를 써보세요` 안내 문구 표시(opacity 0.4). 터치하면 해당 위치에 인라인 편집 가능한 텍스트 카드가 생성됨.
   * **스티커 팩 로테이션 제어기 (Single-Handle Rotation Slider)**: 터치(포커스)된 스티커 우측 하단에만 흰 배경+파스텔 외곽선의 얇은 `↻` 회전 아이콘 마운트. 다중 제스처의 피로도를 낮추고 소형 오브젝트 조작 향상.
 
 ### 2.4 요약 스크린 (SummaryScreen)
@@ -62,6 +63,19 @@
   * 별, 반짝이(Sparkle) 등 장식 SVG(absolute position)가 화면을 꾸며 지루한 비밀번호 창을 친근하게 유도.
   * 인증 에러 발생 시 4개의 상태 도미노(Dots)가 좌우로 흔들리는 ShakeAnimation(20ms interval), 디바이스 진동(Haptics) 연동.
 
+### 2.6 기분 캐릭터 (Mood Characters - Doodle Flash)
+
+* **로케이션**: `src/constants/MoodCharacters.js`
+* **시각적 특징**:
+  * **일관된 스타일**: Damian Orellana의 'Doodle Flash' 아트워크 스타일을 차용하여, 따뜻한 브라운 라인(`#5C4033`)과 파스텔톤 컬러링을 적용.
+  * **캐릭터 구성**:
+    * **🐸 개구리 (기쁨/HAPPY)**: 파스텔 그린, 활짝 웃는 입.
+    * **🐱 고양이 (슬픔/SAD)**: 파스텔 블루, 아머 스타일의 로봇 고양이.
+    * **🐥 병아리 (화남/ANGRY)**: 동그란 얼굴, 삐죽한 눈썹, 다이아몬드 부리.
+    * **🐻 곰 (쏘쏘/SOSO)**: 파스텔 그레이, 살짝 미소 짓는 표정.
+    * **🐰 토끼 (당황/CONFUSED)**: 파스텔 핑크, 긴 귀와 물음표 장식.
+  * **기술적 사양**: `react-native-svg` 기반의 벡터 그래픽으로 구현되어 모든 해상도에서 선명도를 유지하며, `size` prop을 통해 유연한 크기 조절 가능.
+
 ---
 
 ## 3. 공통 라우팅 규칙 및 컬러 토큰 (Theme Palette)
@@ -71,6 +85,6 @@
   * 글쓰기 버튼(`+`)은 탭이 아니라 인터셉트 형식으로 동작해 `WriteScreen`을 메인 스택으로 Push (팝업 같은 뎁스). `Search`, `Modal` 역시 Stack으로 계층화.
 * **Palette & Shadow (theme.js)**:
   * `bgLight`: '#FAFAFA' / `white`: '#FFFFFF'
-  * `text`: '#37352F' (강조) / `textSecondary`: '#83837F' (보조)
-  * `soso`: '#F7EAAE' (옐로톤), `happy`: '#7CD4A0' (그린톤)
-  * Box Shadow는 Android `elevation: 4`, iOS `shadowOpacity: 0.08`, `shadowOffset: { width:0, height:2 }`의 부드러운 분산 규칙 통일 적용.
+  * `text`: '#4A3728' (따뜻한 브라운) / `textSecondary`: '#9E8E82' (보조)
+  * `happy`: '#7CD4A0' (그린), `sad`: '#8BBFEF' (블루), `chick/angry`: '#FEE97D' (옐로우)
+  * Box Shadow는 Android `elevation: 4`, iOS `shadowOpacity: 0.15`, `shadowOffset: { width:0, height:4 }`의 부드러운 분산 규칙 통일 적용.

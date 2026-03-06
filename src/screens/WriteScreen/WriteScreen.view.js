@@ -165,6 +165,8 @@ export function WriteScreenView({ route, navigation }) {
         handleAddText,
         handleDeleteText,
         handleTextDragEnd,
+        handleCanvasTap,
+        handleUpdateText,
 
         handleContentChange,
         handleStickerPress,
@@ -209,6 +211,9 @@ export function WriteScreenView({ route, navigation }) {
         handleMagicDecorate,
         handleMoodPress,
         handleSubmit,
+        isInteracting,
+        handleInteractionStart,
+        handleInteractionEnd,
     } = useWriteLogic(route, navigation, scrollRef);
 
     // ✏️ 텍스트 패널 로컬 상태
@@ -305,6 +310,8 @@ export function WriteScreenView({ route, navigation }) {
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled={true}
+                    scrollEnabled={!isInteracting}
                 >
                     <Text style={styles.sectionTitle}>오늘의 기분은?</Text>
 
@@ -318,6 +325,8 @@ export function WriteScreenView({ route, navigation }) {
                             />
                         ))}
                     </View>
+
+                    <Text style={styles.sectionTitle}>다이어리</Text>
 
                     {/* ─── 멀티페이지 입력 영역 (가로 스와이프 + 엣지 풀 추가) ─── */}
                     <View
@@ -334,6 +343,7 @@ export function WriteScreenView({ route, navigation }) {
                                 horizontal
                                 pagingEnabled
                                 showsHorizontalScrollIndicator={false}
+                                scrollEnabled={!isInteracting}
                                 keyExtractor={(_, idx) => `page-${idx}`}
                                 onMomentumScrollEnd={(e) => {
                                     const idx = Math.round(e.nativeEvent.contentOffset.x / pageCardWidth);
@@ -375,6 +385,17 @@ export function WriteScreenView({ route, navigation }) {
                                     const bgData = getBackgroundById(pageBackgrounds[pageIdx] || 'default');
                                     return (
                                         <Card style={[styles.inputCard, { width: pageCardWidth, backgroundColor: bgData.backgroundColor }]}>
+                                            {/* [층0] 📝 빈 공간 롱탭 전용 배경 (텍스트 생성용) */}
+                                            <Pressable
+                                                style={StyleSheet.absoluteFill}
+                                                onLongPress={(e) => {
+                                                    if (pageIdx === currentPageIndex) {
+                                                        const { locationX, locationY } = e.nativeEvent;
+                                                        handleCanvasTap(locationX, locationY);
+                                                    }
+                                                }}
+                                                delayLongPress={400}
+                                            />
                                             {/* [층0.5] 반투명 프레임 사진 시각 레이어 (텍스트 뒤, 터치 불가) */}
                                             <View
                                                 style={[StyleSheet.absoluteFill, { zIndex: 1, elevation: 0 }]}
@@ -391,31 +412,26 @@ export function WriteScreenView({ route, navigation }) {
                                                             externalRotation={anim.rotation}
                                                             onDelete={handleDeletePhoto}
                                                             onDragEnd={handlePhotoDragEnd}
+                                                            onInteractionStart={handleInteractionStart}
+                                                            onInteractionEnd={handleInteractionEnd}
                                                         />
                                                     );
                                                 })}
                                             </View>
 
-                                            {/* [층1] 텍스트 입력 */}
-                                            <View style={[styles.inputInnerPad, { zIndex: 2, elevation: 2 }]}>
-                                                <TextInput
-                                                    style={styles.textInput}
-                                                    placeholder="오늘 하루를 짧게 적어보세요..."
-                                                    placeholderTextColor={COLORS.textSecondary}
-                                                    multiline
-                                                    maxLength={260}
-                                                    value={pageContent || ''}
-                                                    onChangeText={(text) => {
-                                                        handleContentChange(text, pageIdx);
-                                                    }}
-                                                    textAlignVertical="top"
-                                                    onFocus={() => goToPage(pageIdx)}
-                                                />
-                                                <View style={styles.inputFooter}>
-                                                    <Text style={styles.charCount}>
-                                                        {(pageContent || '').length}/260
-                                                    </Text>
-                                                </View>
+                                            {/* [층1] 📝 빈 캔버스 안내 레이어 (시각 전용, 터치 불가) */}
+                                            <View
+                                                style={[StyleSheet.absoluteFill, { zIndex: 2 }]}
+                                                pointerEvents="none"
+                                            >
+                                                {(pageTexts[pageIdx] || []).length === 0 && (pagePhotos[pageIdx] || []).length === 0 && (pageStickers[pageIdx] || []).length === 0 && (
+                                                    <View style={styles.canvasGuide}>
+                                                        <Text style={styles.canvasGuideEmoji}>✏️</Text>
+                                                        <Text style={styles.canvasGuideText}>
+                                                            화면을 꾹 눌러서 일기를 써보세요
+                                                        </Text>
+                                                    </View>
+                                                )}
                                             </View>
 
                                             {/* [층1.5] 👻 반투명 프레임 사진 터치 레이어 (텍스트 위, 보이지 않음) */}
@@ -435,6 +451,8 @@ export function WriteScreenView({ route, navigation }) {
                                                             externalRotation={anim.rotation}
                                                             onDelete={handleDeletePhoto}
                                                             onDragEnd={handlePhotoDragEnd}
+                                                            onInteractionStart={handleInteractionStart}
+                                                            onInteractionEnd={handleInteractionEnd}
                                                         />
                                                     );
                                                 })}
@@ -480,6 +498,8 @@ export function WriteScreenView({ route, navigation }) {
                                                         bounds={inputBoxBounds}
                                                         onDelete={handleDeletePhoto}
                                                         onDragEnd={handlePhotoDragEnd}
+                                                        onInteractionStart={handleInteractionStart}
+                                                        onInteractionEnd={handleInteractionEnd}
                                                     />
                                                 ))}
                                             </View>
@@ -500,8 +520,13 @@ export function WriteScreenView({ route, navigation }) {
                                                         initialX={textNode.x}
                                                         initialY={textNode.y}
                                                         initialRotation={textNode.rotation}
+                                                        initialScale={textNode.scale}
                                                         onDelete={handleDeleteText}
                                                         onDragEnd={handleTextDragEnd}
+                                                        onTextChange={handleUpdateText}
+                                                        onInteractionStart={handleInteractionStart}
+                                                        onInteractionEnd={handleInteractionEnd}
+                                                        autoFocus={textNode.autoFocus || false}
                                                     />
                                                 ))}
                                             </View>
@@ -513,7 +538,9 @@ export function WriteScreenView({ route, navigation }) {
                                                 onLayout={(e) => {
                                                     if (pageIdx === currentPageIndex) {
                                                         const { width, height, x, y } = e.nativeEvent.layout;
-                                                        setInputBoxBounds({ width, height, x, y });
+                                                        if (width !== inputBoxBounds.width || height !== inputBoxBounds.height) {
+                                                            setInputBoxBounds({ width, height, x, y });
+                                                        }
                                                     }
                                                 }}
                                             >
@@ -524,6 +551,8 @@ export function WriteScreenView({ route, navigation }) {
                                                         bounds={inputBoxBounds}
                                                         onDelete={handleDeleteSticker}
                                                         onDragEnd={handleDragEnd}
+                                                        onInteractionStart={handleInteractionStart}
+                                                        onInteractionEnd={handleInteractionEnd}
                                                     />
                                                 ))}
                                             </View>
@@ -599,7 +628,9 @@ export function WriteScreenView({ route, navigation }) {
                                         placeholderTextColor="#83837F"
                                         value={tempTextValue}
                                         onChangeText={setTempTextValue}
-                                        maxLength={30}
+                                        maxLength={60} // 글자 수도 좀 더 여유 있게
+                                        multiline={true}
+                                        numberOfLines={2}
                                     />
                                     <TouchableOpacity
                                         style={styles.textAddBtn}
@@ -895,7 +926,6 @@ export function WriteScreenView({ route, navigation }) {
                                         styles.activityChip,
                                         isSelected && {
                                             backgroundColor: act.color,
-                                            borderColor: act.color,
                                         },
                                     ]}
                                     onPress={() => toggleActivity(act.key)}
@@ -915,42 +945,7 @@ export function WriteScreenView({ route, navigation }) {
                         })}
                     </View>
 
-                    {/* 선택된 활동별 한줄 느낀점 서술부 */}
-                    {activityStates.filter(a => a.selected).map((state) => {
-                        const act = ACTIVITIES.find(a => a.key === state.key);
-                        return (
-                            <Card key={state.key} style={styles.activityNoteCard}>
-                                <View style={styles.activityNoteHeader}>
-                                    <View style={styles.activityNoteIcon}>
-                                        <ActivityIcon type={act.key} size={20} />
-                                    </View>
-                                    <Text style={[styles.activityNoteLabel, { color: act.color }]}>
-                                        {act.label}
-                                    </Text>
-                                </View>
-                                {act.hasTitle && (
-                                    <TextInput
-                                        style={styles.activityTitleInput}
-                                        placeholder={act.titlePlaceholder}
-                                        placeholderTextColor={COLORS.textSecondary}
-                                        value={state.title}
-                                        onChangeText={(text) => setActivityTitle(state.key, text)}
-                                        onFocus={slideToBottom}
-                                        maxLength={30}
-                                    />
-                                )}
-                                <TextInput
-                                    style={styles.activityNoteInput}
-                                    placeholder={`${act.label}하면서 느낀 점...`}
-                                    placeholderTextColor={COLORS.textSecondary}
-                                    value={state.note}
-                                    onChangeText={(text) => setActivityNote(state.key, text)}
-                                    onFocus={slideToBottom}
-                                    maxLength={50}
-                                />
-                            </Card>
-                        );
-                    })}
+
 
                     <View style={styles.bottomSpacer} />
                 </ScrollView>

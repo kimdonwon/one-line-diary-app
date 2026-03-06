@@ -13,9 +13,8 @@ export const styles = StyleSheet.create({
         borderColor: 'transparent', // 고정 크기 유지를 위해 항상 테두리 영역 확보
     },
     dragging: {
-        opacity: 0.8,
         zIndex: 20,
-        ...SOFT_SHADOW.button,
+        // 안드로이드에서 투명도+그림자 조합으로 인해 잔상(중복 요소)이 보이는 현상 방지
     },
     selected: {
         borderColor: 'rgba(232, 213, 204, 0.6)',
@@ -27,24 +26,4 @@ export const styles = StyleSheet.create({
         lineHeight: 31, // 텍스트 짤림 방지
     },
 
-    // 🔄 회전 핸들 스타일
-    rotationHandle: {
-        position: 'absolute',
-        right: -12,
-        bottom: -12,
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderWidth: 1,
-        borderColor: '#E2DED0',
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...SOFT_SHADOW.button,
-    },
-    rotationHandleIcon: {
-        fontSize: 12,
-        color: '#9E8E82',
-        fontWeight: '700',
-    },
 });

@@ -46,16 +46,22 @@
 - **멀티페이지 시스템 (Multi-Page)**:
   - `useWriteLogic`에서 `pages`, `pageStickers`, `pagePhotos`의 2차원 상태 구조로 여러 페이지 관리.
   - 가로 슬라이더(`FlatList` + `pagingEnabled`)에서 화면 끝에 더미 요소 `'__ADD_PAGE__'`를 배치. 사용자가 끝까지 **엣지 스와이프**를 하면 자동으로 콜백을 타며 `addPage()` 호출.
-- **스티커 드래그 & 회전 (Sticker Engine)**:
-  - `DraggableSticker` 컴포넌트: `PanResponder`를 통해 XY 오프셋 값을 `Animated.ValueXY`로 변경.
-  - 회전 로직: 우측 하단 핀(Point) 하나를 조작해 스티커 방향(`rotation`)을 설정하는 단일 핸들 회전 알고리즘. Touch Start(선택됨 시 3초 타이머 시작) → Touch Move(Math.atan2 각도 산출) → Touch End 상태 분기 구현.
+- **드래그, 회전 & 크기 조절 (Draggable Engine)**:
+  - 스티커, 사진, 텍스트에 공통 적용되는 `useDraggable` 커스텀 훅(`src/hooks/useDraggable.js`) 구현.
+  - `PanResponder`를 통해 위치 이동(`Animated.ValueXY`), 회전(Math.atan2), 크기 조절(거리 비율(scaleRatio) 계산을 통한 `transformScale` 반영), 물리 바운더리 클램핑 등을 통합 관리하며 코드 중복을 최소화함.
+  - 더블 탭 삭제(`DOUBLE_TAP_DELAY`) 및 회전/크기 조절 핸들의 3초 자동 선택 해제(`deselectTimer`) 로직이 내장됨.
 - **다꾸 가챠 (Magic Decorate / Random Stickers)**:
   - 스티커 서랍 헤더의 요술봉(🪄) 버튼 탭 시 발동.
   - 현재 감정(`selectedMood`)을 기반으로 사전에 매핑된 카테고리 기분 기호 풀에서 스티커 2개를 뽑아 화면 내 랜덤 X/Y (-15° ~ +15° 회전 포함) 좌표에 계산 후 즉시 삽입.
   - 스티커 한도 검사 시 15개 제한 규칙이 선 적용됨.
 - **사진 첨부 (Photo Frame)**:
   - 프레임 컬러(화이트, 블랙, 핑크, 블루, 민트)를 먼저 선택하면, `expo-image-picker`를 즉각 로드 (1:1 Aspect ratio, Quality 0.5 압축).
-  - 로드 후 `photos` 배열에 드래거블 객체로 삽입됨. Z-Index 관리 로직상(Z:5) 스티커(Z:10) 아래, 텍스트(Z:1) 위에 무조건 덧대어짐.
+  - 로드 후 `photos` 배열에 드래거블 객체로 삽입됨. Z-Index 관리 로직상(Z:5) 스티커(Z:10) 아래, 텍스트(Z:8) 위에 무조건 덧대어짐.
+- **디지털 스크랩북 캔버스 (Tap-to-Write)**:
+  - 기존 고정 TextInput을 제거하고, 캔버스 전체를 Scrapbook 영역으로 전환.
+  - 빈 캔버스를 터치(`handleCanvasTap`)하면 터치한 좌표에 편집 가능한 `DraggableText` 카드가 생성되며 자동 포커스.
+  - `DraggableText`는 인라인 편집 지원: 선택 상태에서 한번 더 탭하면 TextInput 모드 진입, 내용 입력 후 포커스를 잃으면 자동 저장(`handleUpdateText`). 빈 텍스트는 자동 삭제.
+  - 텍스트 카드는 멀티라인을 지원하여 내용에 따라 자동으로 높이가 늘어남 (장문 일기 대응).
 - **스티커 팩 로딩 및 Sortable Grid 관리**:
   - `CATEGORY_STICKERS`, `STICKER_PACK_DATA` 로컬 데이터 세트 사용.
   - 서랍 관리 시 `react-native-sortable-grid`를 통해 배열 Index를 드래그로 스왑(`reorderCategories`), 비활성화(`enabledCatIds` 필터링) 반영. "랜덤 스티커팩" 등 신규 팩 지원.
@@ -88,6 +94,10 @@
 
 ---
 
-## 4. 확장 인터페이스
+## 4. 확장 인터페이스 및 유지보수
 
-- 향후 추가될 새로운 스티커 팩은 `src/constants/stickers.js` 내부의 카테고리(Object array)에 ID와 Label만 추가하면 WriteScreen 서랍 로직에서 자동으로 UI를 인스턴스화하여 렌더링.
+...
+
+### 4.1. 주요 버그 수정 (Major Bug Fixes)
+
+- **곰(SOSO) 캐릭터 렌더링 에러**: `BearCharacter`가 웹용 SVG 태그(`<svg>`, `<path>`)를 사용하여 React Native에서 렌더링되지 않던 문제를 `react-native-svg` 컴포넌트로 교체하고 속성명을 CamelCase로 수정하여 해결함.

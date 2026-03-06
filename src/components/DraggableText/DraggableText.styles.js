@@ -6,15 +6,25 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 8, // 터치 영역 확보
+        maxWidth: '85%', // 카드 너비를 넘지 않도록 제한
     },
     textWrapper: {
         borderRadius: 8,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        minWidth: 60, // 최소 너비 (탭할 수 있도록)
+        minHeight: 30, // 최소 높이
     },
     textFormat: {
         fontSize: 18,
         includeFontPadding: false,
+        lineHeight: 24,
+    },
+    textInput: {
+        padding: 0,
+        margin: 0,
+        minWidth: 120, // 편집 시 최소 너비
+        textAlignVertical: 'top',
     },
     // 🔄 회전 핸들 스타일
     selected: {
@@ -22,28 +32,5 @@ export const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderRadius: 4,
         borderStyle: 'dashed',
-    },
-    rotationHandle: {
-        position: 'absolute',
-        right: -12,
-        bottom: -12,
-        width: 26,
-        height: 26,
-        borderRadius: 13,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderWidth: 1,
-        borderColor: '#E2DED0',
-        alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-    },
-    rotationHandleIcon: {
-        fontSize: 14,
-        color: '#9E8E82',
-        fontWeight: '700',
     },
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MOOD_LIST } from '../../constants/mood';
@@ -56,6 +56,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
     // 🔔 커스텀 알림 상태 추가
     const [showAlert, setShowAlert] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
+    const [isInteracting, setIsInteracting] = useState(false); // 스티커 등 조작 중인지 여부 (스크롤 방지용)
 
     // (프리미엄 상태는 usePremium 훅에서 관리)
 
@@ -387,23 +388,29 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setTimeout(() => setShowAlert(true), 500);
     };
 
-    const handleDeleteSticker = (id) => {
+    const handleDeleteSticker = useCallback((id) => {
         setPageStickers(prev => {
             const next = [...prev];
             next[currentPageIndex] = (next[currentPageIndex] || []).filter(s => s.id !== id);
             return next;
         });
-    };
+    }, [currentPageIndex]);
 
-    const handleDragEnd = (id, newX, newY, newRotation) => {
+    const handleDragEnd = useCallback((id, newX, newY, newRotation, newScale) => {
         setPageStickers(prev => {
             const next = [...prev];
             next[currentPageIndex] = (next[currentPageIndex] || []).map(s =>
-                s.id === id ? { ...s, x: newX, y: newY, rotation: newRotation !== undefined ? newRotation : (s.rotation || 0) } : s
+                s.id === id ? {
+                    ...s,
+                    x: newX,
+                    y: newY,
+                    rotation: newRotation !== undefined ? newRotation : (s.rotation || 0),
+                    scale: newScale !== undefined ? newScale : (s.scale || 1)
+                } : s
             );
             return next;
         });
-    };
+    }, [currentPageIndex]);
 
     const toggleActivity = (key) => {
         setActivityStates(prev =>
@@ -438,7 +445,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
             // 멀티페이지: pages 배열과 pageStickers 2차원 배열을 JSON으로 저장
             const trimmedPages = pages.map(p => (p || '').trim());
             // 빈 후행 페이지 제거 (마지막 빈 페이지들 정리)
-            while (trimmedPages.length > 1 && trimmedPages[trimmedPages.length - 1] === '' && (pageStickers[trimmedPages.length - 1] || []).length === 0 && (pagePhotos[trimmedPages.length - 1] || []).length === 0) {
+            while (trimmedPages.length > 1 && trimmedPages[trimmedPages.length - 1] === '' && (pageStickers[trimmedPages.length - 1] || []).length === 0 && (pagePhotos[trimmedPages.length - 1] || []).length === 0 && (pageTexts[trimmedPages.length - 1] || []).length === 0) {
                 trimmedPages.pop();
             }
             const stickersToSave = pageStickers.slice(0, trimmedPages.length);
@@ -530,23 +537,29 @@ export function useWriteLogic(route, navigation, scrollRef) {
         }
     };
 
-    const handleDeletePhoto = (id) => {
+    const handleDeletePhoto = useCallback((id) => {
         setPagePhotos(prev => {
             const next = [...prev];
             next[currentPageIndex] = (next[currentPageIndex] || []).filter(p => p.id !== id);
             return next;
         });
-    };
+    }, [currentPageIndex]);
 
-    const handlePhotoDragEnd = (id, newX, newY, newRotation) => {
+    const handlePhotoDragEnd = useCallback((id, newX, newY, newRotation, newScale) => {
         setPagePhotos(prev => {
             const next = [...prev];
             next[currentPageIndex] = (next[currentPageIndex] || []).map(p =>
-                p.id === id ? { ...p, x: newX, y: newY, rotation: newRotation !== undefined ? newRotation : (p.rotation || 0) } : p
+                p.id === id ? {
+                    ...p,
+                    x: newX,
+                    y: newY,
+                    rotation: newRotation !== undefined ? newRotation : (p.rotation || 0),
+                    scale: newScale !== undefined ? newScale : (p.scale || 1)
+                } : p
             );
             return next;
         });
-    };
+    }, [currentPageIndex]);
 
     // ─── ✏️ 커스텀 텍스트 드래그 기능 추가 ───
 
@@ -575,23 +588,65 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setShowTexts(false); // 추가 후 패널 닫기
     };
 
-    const handleDeleteText = (id) => {
+    /**
+     * 📝 캔버스 터치 시 해당 위치에 빈 텍스트 카드 생성 (Tap-to-Write)
+     */
+    const handleCanvasTap = (locationX, locationY) => {
+        const newText = {
+            id: Date.now().toString() + Math.random().toString(36).substring(7),
+            text: '',
+            fontId: 'basic',
+            color: '#37352F',
+            bgColor: 'transparent',
+            x: locationX - 30,
+            y: locationY - 15,
+            rotation: 0,
+            autoFocus: true, // 생성 시 자동 포커스
+        };
+
+        setPageTexts(prev => {
+            const next = [...prev];
+            next[currentPageIndex] = [...(next[currentPageIndex] || []), newText];
+            return next;
+        });
+    };
+
+    /**
+     * ✏️ 텍스트 카드 내용 인라인 업데이트
+     */
+    const handleUpdateText = useCallback((id, newTextValue) => {
+        setPageTexts(prev => {
+            const next = [...prev];
+            next[currentPageIndex] = (next[currentPageIndex] || []).map(t =>
+                t.id === id ? { ...t, text: newTextValue } : t
+            );
+            return next;
+        });
+    }, [currentPageIndex]);
+
+    const handleDeleteText = useCallback((id) => {
         setPageTexts(prev => {
             const next = [...prev];
             next[currentPageIndex] = (next[currentPageIndex] || []).filter(t => t.id !== id);
             return next;
         });
-    };
+    }, [currentPageIndex]);
 
-    const handleTextDragEnd = (id, newX, newY, newRotation) => {
+    const handleTextDragEnd = useCallback((id, newX, newY, newRotation, newScale) => {
         setPageTexts(prev => {
             const next = [...prev];
             next[currentPageIndex] = (next[currentPageIndex] || []).map(t =>
-                t.id === id ? { ...t, x: newX, y: newY, rotation: newRotation !== undefined ? newRotation : (t.rotation || 0) } : t
+                t.id === id ? {
+                    ...t,
+                    x: newX,
+                    y: newY,
+                    rotation: newRotation !== undefined ? newRotation : (t.rotation || 0),
+                    scale: newScale !== undefined ? newScale : (t.scale || 1)
+                } : t
             );
             return next;
         });
-    };
+    }, [currentPageIndex]);
 
     // ─── 🎨 배경지 변경 로직 ───
 
@@ -672,6 +727,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setShowAlert(true);
     };
 
+    const handleInteractionStart = useCallback(() => setIsInteracting(true), []);
+    const handleInteractionEnd = useCallback(() => setIsInteracting(false), []);
+
     return {
         // Properties
         date,
@@ -714,6 +772,8 @@ export function useWriteLogic(route, navigation, scrollRef) {
         handleAddText,
         handleDeleteText,
         handleTextDragEnd,
+        handleCanvasTap,
+        handleUpdateText,
 
         // Handlers
         handleContentChange,
@@ -753,5 +813,8 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
         // 🪄 Magic Decorate (다꾸 가챠)
         handleMagicDecorate,
+        isInteracting,
+        handleInteractionStart,
+        handleInteractionEnd,
     };
 }

@@ -23,8 +23,8 @@ export const MOODS = {
     ANGRY: {
         key: 'ANGRY',
         label: '화남',
-        color: '#FFD485',
-        bgColor: '#FFF8E8',
+        color: '#FEE97D',
+        bgColor: '#FFFBE5',
         character: 'chick',
         description: '화난 노란 병아리',
     },

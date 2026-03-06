@@ -14,7 +14,7 @@ export const COLORS = {
     // Mood colors (파스텔 톤)
     happy: '#7CD4A0',        // 파스텔 그린
     sad: '#8BBFEF',          // 파스텔 블루
-    surprised: '#FFD485',    // 파스텔 옐로우
+    surprised: '#FEE97D',    // 파스텔 옐로우 (병아리 키컬러)
     embarrassed: '#FFB5B5',  // 파스텔 핑크레드
     soso: '#C8BEB7',         // 파스텔 그레이
 };

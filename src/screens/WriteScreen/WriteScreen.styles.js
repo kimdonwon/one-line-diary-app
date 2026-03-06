@@ -18,12 +18,12 @@ export const styles = StyleSheet.create({
         fontSize: 18,
         color: COLORS.text,
         marginBottom: SPACING.md,
-        marginTop: SPACING.lg,
+        marginTop: 16,
     },
     moodRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: SPACING.xl,
+        marginBottom: 22,
     },
 
     // ─── 📱 툴바 (Toggle & Floating Buttons) ───
@@ -558,8 +558,6 @@ export const styles = StyleSheet.create({
         paddingHorizontal: 8,
         borderRadius: 8, // 노션 스타일의 작은 라운딩
         backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: '#E9E9E7',
     },
     activityChipSelected: {
         backgroundColor: '#F1F1F0', // 노션의 선택/활성 상태 배경색
@@ -580,36 +578,35 @@ export const styles = StyleSheet.create({
 
     // 입력 창 (스티커 장식 레이어 포함)
     inputCard: {
-        backgroundColor: COLORS.card,
-        height: DIARY_CARD_HEIGHT, // 기존 340에서 30% 늘림. (글이 길어져도 늘어나지 않음)
-        borderRadius: 12, // 노션 스타일의 라운딩
+        backgroundColor: '#FBF8F4', // 종이 질감 느낌의 따뜻한 배경
+        height: DIARY_CARD_HEIGHT,
+        borderRadius: 12,
         padding: 0,
         overflow: 'hidden',
-        borderWidth: 1,   // 얇은 실선 테두리
-        borderColor: '#E9E9E7', // 노션 선 색상
+        borderWidth: 1,
+        borderColor: '#E2DED0', // 크라프트지 같은 따뜻한 테두리
         ...SOFT_SHADOW.card,
     },
-    inputInnerPad: {
-        padding: SPACING.md,
-        flex: 1,
+    // 📝 탭 투 라이트 캔버스 레이어
+    canvasLayer: {
+        ...StyleSheet.absoluteFillObject,
     },
-    textInput: {
+    // 빈 캔버스 안내 텍스트
+    canvasGuide: {
         flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: 0.4,
+    },
+    canvasGuideEmoji: {
+        fontSize: 32,
+        marginBottom: 8,
+    },
+    canvasGuideText: {
         fontSize: 14,
         fontWeight: '500',
-        color: COLORS.text,
-        lineHeight: 20,
-        padding: 0,  // Android의 기본 TextInput 패딩을 제거하여 Text 컴포넌트와 동일한 래핑 보장
-        margin: 0,
-    },
-    inputFooter: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginTop: SPACING.sm,
-    },
-    charCount: {
-        fontSize: 12,
-        color: COLORS.textSecondary,
+        color: '#9E8E82',
+        textAlign: 'center',
     },
 
     // ─── 멀티페이지 ───
@@ -798,12 +795,15 @@ export const styles = StyleSheet.create({
     textCustomInput: {
         flex: 1,
         backgroundColor: '#F7F3F1',
-        height: 44,
+        height: 64, // 2줄 정도의 높이
         borderRadius: 8,
         paddingHorizontal: 16,
+        paddingTop: 10,
+        paddingBottom: 10,
         fontSize: 15,
         color: '#37352F',
         marginRight: 8,
+        textAlignVertical: 'top', // 멀티라인 시 텍스트를 상단으로 정렬
     },
     textAddBtn: {
         backgroundColor: '#37352F',
