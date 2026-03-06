@@ -14,16 +14,17 @@ const DraggablePhoto = React.memo(({
     bounds,
     onDelete,
     onDragEnd,
-    isGhost = false, // 👻 고스트 모드: 터치 상호작용은 하지만 껍데기만 렌더링 (텍스트 뒤 사진 조작용)
+    isGhost = false,
     externalPan = null,
     externalRotation = null,
     style = null,
     onInteractionStart,
     onInteractionEnd,
+    onDragMove,
+    onDragDrop,
+    onSelect,
+    isSelected: externalIsSelected,
 }) => {
-    const isSelectedFromProps = photo.isSelected; // Renamed to avoid conflict with logic's isSelected
-    const isBlackFrame = photo.frameType === 'black'; // This variable is not used in the provided code, but kept as per instruction.
-
     const {
         pan,
         rotation,
@@ -32,13 +33,25 @@ const DraggablePhoto = React.memo(({
         currentTransformScale,
         panResponder,
         isDragging,
-        isSelected, // This is from useDraggablePhotoLogic, which might be different from isSelectedFromProps
+        isSelected,
+        isLongPressActive,
         setMySize,
         handleRotateAndScale,
         handleRotationEnd,
-    } = useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, externalPan, externalRotation, onInteractionStart, onInteractionEnd });
+    } = useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, externalPan, externalRotation, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected: externalIsSelected });
 
     const containerRef = useRef(null);
+
+    // 💡 버튼 역보정: 부모 스케일에 반비례하여 버튼 크기를 일정하게 유지 (1/x 곡선 근사)
+    const handleScale = scale.interpolate({
+        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [3.33, 2, 1.428, 1, 0.666, 0.5, 0.333, 0.2],
+    });
+
+    const handleOffset = scale.interpolate({
+        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [-80, -48, -34.28, -24, -16, -12, -8, -4.8],
+    });
 
     const rotateStr = rotation.interpolate({
         inputRange: [-360, 360],
@@ -50,25 +63,25 @@ const DraggablePhoto = React.memo(({
             ref={containerRef}
             onLayout={(e) => {
                 const { width, height } = e.nativeEvent.layout;
-                setMySize({ width, height });
+                setMySize({ width: width * currentTransformScale.current, height: height * currentTransformScale.current });
             }}
             style={[
                 styles.container,
                 {
+                    left: pan.x,
+                    top: pan.y,
                     transform: [
-                        { translateX: pan.x },
-                        { translateY: pan.y },
                         { rotate: rotateStr },
                         { scale }
-                    ]
+                    ],
+                    transformOrigin: ['0%', '0%', 0]
                 },
-                isDragging && styles.dragging,
+                isLongPressActive && styles.dragging,
                 isSelected && styles.selected,
-                style, // 외부 주입 스타일
+                style,
             ]}
             {...panResponder.panHandlers}
         >
-            {/* 프레임 렌더링 (isGhost일 때는 시각적으로 숨김) */}
             <View
                 style={[
                     styles.polaroidFrame,
@@ -76,14 +89,11 @@ const DraggablePhoto = React.memo(({
                     photo.frameType === 'pink' && styles.polaroidFramePink,
                     photo.frameType === 'blue' && styles.polaroidFrameBlue,
                     photo.frameType === 'mint' && styles.polaroidFrameMint,
+                    photo.frameType === 'gray' && styles.polaroidFrameGray,
                     photo.frameType === 'transparent_white' && styles.polaroidFrameTransparentWhite,
                     photo.frameType === 'transparent_gray' && styles.polaroidFrameTransparentGray,
-                    isGhost && { opacity: 0, elevation: 0 }, // 👻 터치용 고스트는 프레임 숨김 + 그림자/레이어 제거
+                    isGhost && { opacity: 0, elevation: 0 },
                 ]}
-                onLayout={(e) => {
-                    const { width, height } = e.nativeEvent.layout;
-                    // setMySize(width, height); // logic에서 제공하는 경우 사용
-                }}
             >
                 <Image
                     source={{ uri: photo.uri }}
@@ -107,6 +117,11 @@ const DraggablePhoto = React.memo(({
                     onRotateEnd={handleRotationEnd}
                     onInteractionStart={onInteractionStart}
                     onInteractionEnd={onInteractionEnd}
+                    style={{
+                        right: handleOffset,
+                        bottom: handleOffset,
+                        transform: [{ scale: handleScale }]
+                    }}
                 />
             )}
         </Animated.View>

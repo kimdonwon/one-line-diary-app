@@ -16,6 +16,9 @@ import { styles, chartConstants } from './SummaryScreen.styles';
 import { MoodActivityCorrelation } from './components/MoodActivityCorrelation';
 import { StickerRanking } from './components/StickerRanking';
 
+// 💡 세션 내 넛지 애니메이션 실행 여부 추적
+let SummaryScreenNudged = false;
+
 /**
  * 📊 애니메이션 활동 바 (Reanimated v4 기반)
  */
@@ -155,14 +158,17 @@ export function SummaryScreenView({ route, navigation }) {
         </View>
     );
 
-    // 💡 초기 진입 시 페이지가 더 있음을 알려주는 '넛지' 효과
+    // 💡 초기 진입 시 페이지가 더 있음을 알려주는 '넛지' 효과 (세션당 1회)
     useEffect(() => {
+        if (SummaryScreenNudged) return;
+
         const timer = setTimeout(() => {
             if (scrollRef.current) {
                 // 살짝 오른쪽으로 밀었다가 (60px) 돌아오기
                 scrollRef.current.scrollTo({ x: 60, animated: true });
                 setTimeout(() => {
                     scrollRef.current?.scrollTo({ x: 0, animated: true });
+                    SummaryScreenNudged = true;
                 }, 400);
             }
         }, 600);

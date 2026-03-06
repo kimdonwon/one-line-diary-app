@@ -9,6 +9,8 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo-google-fonts/bebas-neue": "^0.4.1",
+    "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/gowun-dodum": "^0.4.1",
     "@expo-google-fonts/nanum-myeongjo": "^0.4.1",
     "@expo-google-fonts/nanum-pen-script": "^0.4.0",

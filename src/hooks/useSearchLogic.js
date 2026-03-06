@@ -45,7 +45,7 @@ export function useSearchLogic(year) {
         });
         const matchedActivityDates = new Set(matchedActivities.map(a => a.date));
 
-        // 2. 다이어리 본문 내용 혹은 '활동이 매칭된 날짜'에 해당하는 일기 필터링
+        // 2. 다이어리 본문 내용, 드래거블 텍스트, 또는 '활동이 매칭된 날짜'에 해당하는 일기 필터링
         const results = allDiaries.filter(d => {
             // 멀티페이지 content 처리: JSON 배열이면 모든 페이지에서 검색
             let searchableContent = d.content || '';
@@ -57,7 +57,35 @@ export function useSearchLogic(year) {
             } catch (e) {
                 // 단일 문자열 그대로 사용
             }
-            return searchableContent.toLowerCase().includes(query) || matchedActivityDates.has(d.date);
+
+            // 드래거블 텍스트(texts 컬럼) 검색: 2차원 배열 (페이지별) 또는 빈 배열
+            let searchableTexts = '';
+            if (d.texts && d.texts !== '[]') {
+                try {
+                    const parsedTexts = JSON.parse(d.texts);
+                    if (Array.isArray(parsedTexts)) {
+                        // 2차원 배열: [[{text:'...'}, ...], [...]] (멀티페이지)
+                        for (const page of parsedTexts) {
+                            if (Array.isArray(page)) {
+                                for (const node of page) {
+                                    if (node && node.text) {
+                                        searchableTexts += ' ' + node.text;
+                                    }
+                                }
+                            } else if (page && page.text) {
+                                // 1차원 배열 (레거시): [{text:'...'}, ...]
+                                searchableTexts += ' ' + page.text;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // 파싱 실패 시 무시
+                }
+            }
+
+            return searchableContent.toLowerCase().includes(query) ||
+                searchableTexts.toLowerCase().includes(query) ||
+                matchedActivityDates.has(d.date);
         }).map(d => ({
             ...d,
             type: 'mood'

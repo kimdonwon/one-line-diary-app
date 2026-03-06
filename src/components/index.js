@@ -64,10 +64,10 @@ export function StaticSticker({ sticker, bounds }) {
     if (sticker.isGraphic) {
       const GraphicComponent = getStickerComponent(sticker.type);
       if (GraphicComponent) {
-        return <GraphicComponent size={29} />;
+        return <GraphicComponent size={100} />;
       }
     }
-    return <Text style={{ fontSize: 26, lineHeight: 31 }}>{sticker.type}</Text>;
+    return <Text style={{ fontSize: 80, lineHeight: 90 }}>{sticker.type}</Text>;
   };
 
   return (
@@ -77,9 +77,15 @@ export function StaticSticker({ sticker, bounds }) {
       top: sticker.y,
       padding: 4, // DraggableSticker 컨테이너 패딩 보정
       zIndex: 5,
-      transform: [{ rotate: `${sticker.rotation || 0}deg` }],
+      transform: [
+        { rotate: `${sticker.rotation || 0}deg` },
+        { scale: (sticker.scale || 1) * 0.35 }
+      ],
+      transformOrigin: ['0%', '0%', 0]
     }}>
-      {renderContent()}
+      <View style={{ width: 100, height: 100, alignItems: 'center', justifyContent: 'center' }}>
+        {renderContent()}
+      </View>
     </View>
   );
 }
@@ -113,7 +119,11 @@ export function StaticPhoto({ photo }) {
       top: photo.y,
       padding: 2,
       zIndex: isTransparent ? 1 : 2, // 반투명은 스티커/텍스트보다 아래에 배치
-      transform: [{ rotate: `${photo.rotation || 0}deg` }],
+      transform: [
+        { rotate: `${photo.rotation || 0}deg` },
+        { scale: photo.scale || 1 }
+      ],
+      transformOrigin: ['0%', '0%', 0]
     }}>
       <View style={{
         width: 126,
@@ -143,6 +153,59 @@ export function StaticPhoto({ photo }) {
           resizeMode="cover"
         />
         <View style={{ height: 16 }} />
+      </View>
+    </View>
+  );
+}
+
+// ─── Static Text (View Only) ───
+export function StaticText({ textNode }) {
+  if (!textNode || !textNode.text) return null;
+
+  const fontSpecs = {
+    'basic': { fontFamily: 'GowunDodum_400Regular' },
+    'diary': { fontFamily: 'NanumMyeongjo_400Regular', lineHeight: 20 },
+    'hand': { fontFamily: 'SingleDay_400Regular', fontSize: 15 },
+    'y2k': { fontFamily: 'NanumPenScript_400Regular', fontSize: 17 },
+  };
+
+  const spec = fontSpecs[textNode.fontId] || fontSpecs['basic'];
+  const isTransparent = textNode.bgColor === 'transparent';
+
+  return (
+    <View style={{
+      position: 'absolute',
+      left: textNode.x || 0,
+      top: textNode.y || 0,
+      padding: 8, // Draggable container padding
+      maxWidth: '85%',
+      zIndex: 8,
+      transform: [
+        { rotate: `${textNode.rotation || 0}deg` },
+        { scale: textNode.scale || 1 }
+      ],
+      transformOrigin: ['0%', '0%', 0]
+    }}>
+      <View style={{
+        backgroundColor: isTransparent ? 'transparent' : (textNode.bgColor || 'transparent'),
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        minWidth: 60,
+        minHeight: 30,
+        justifyContent: 'center',
+      }}>
+        <Text style={[
+          {
+            fontSize: spec.fontSize || 13,
+            lineHeight: spec.lineHeight || 17,
+            includeFontPadding: false,
+            color: textNode.color || '#37352F',
+            fontFamily: spec.fontFamily,
+          }
+        ]}>
+          {textNode.text}
+        </Text>
       </View>
     </View>
   );
@@ -368,13 +431,14 @@ export function MoodCard({ mood, selected, onPress }) {
           }
         ]}
       >
-        <MoodCharacter character={mood.character} size={selected ? 40 : 30} />
+        <MoodCharacter character={mood.character} size={selected ? 38 : 32} />
       </Animated.View>
       <Text
         style={[
           styles.moodCardLabel,
           selected && { color: mood.color, fontWeight: "700" },
         ]}
+        numberOfLines={1}
       >
         {mood.label}
       </Text>
@@ -548,23 +612,25 @@ const styles = StyleSheet.create({
   moodCard: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: 2,
-    marginHorizontal: 2,
+    justifyContent: "flex-start", // 상단 기준 정렬로 오와열 맞춤
+    paddingVertical: SPACING.xs,
+    marginHorizontal: 1,
+    minHeight: 80, // 고정 높이 확보
   },
   moodCardCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: "center",
     justifyContent: "center",
   },
   moodCardLabel: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "500",
     color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
+    marginTop: 6,
+    textAlign: 'center',
+    includeFontPadding: false, // 폰트 자체 패딩 제거로 높이 균일화
   },
 
   // DiaryListItem (Notion Style)

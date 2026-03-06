@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, TextInput, Animated, TouchableOpacity, Keyboard, Platform } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { styles } from './DraggableText.styles';
 import { useDraggableTextLogic } from './DraggableText.logic';
 import { RotationHandle } from '../RotationHandle';
@@ -11,17 +12,50 @@ const FONT_PRESETS_MAP = {
     },
     'diary': {
         fontFamily: 'NanumMyeongjo_400Regular',
-        lineHeight: 28,
+        lineHeight: 20,
     },
     'hand': {
         fontFamily: 'SingleDay_400Regular',
-        fontSize: 22,
+        fontSize: 15,
     },
     'y2k': {
         fontFamily: 'NanumPenScript_400Regular',
-        fontSize: 24,
+        fontSize: 17,
+    },
+    'bebas': {
+        fontFamily: 'BebasNeue_400Regular',
+        fontSize: 18,
+        letterSpacing: 2,
+    },
+    'dmsans': {
+        fontFamily: 'DMSans_400Regular',
+        fontSize: 12,
     },
 };
+
+/**
+ * ✏️ 편집 아이콘 (연필 모양)
+ */
+function EditIcon({ size = 20, color = '#8B7E74' }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+            <Path
+                d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+                stroke={color}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <Path
+                d="M18.5 2.50023C18.8978 2.1024 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.1024 21.5 2.50023C21.8978 2.89805 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.1024 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z"
+                stroke={color}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </Svg>
+    );
+}
 
 export const DraggableText = React.memo(({
     id,
@@ -38,20 +72,23 @@ export const DraggableText = React.memo(({
     onTextChange,
     onInteractionStart,
     onInteractionEnd,
+    onDragMove,
+    onDragDrop,
+    onSelect,
+    isSelected: externalIsSelected,
     autoFocus = false,
 }) => {
     const [isEditing, setIsEditing] = useState(autoFocus);
     const [localText, setLocalText] = useState(text);
     const inputRef = useRef(null);
-    const isNewlyCreated = useRef(autoFocus); // 새로 생성되었는지 추적
-    const blurTimerRef = useRef(null); // blur 디바운스 타이머
+    const isNewlyCreated = useRef(autoFocus);
+    const blurTimerRef = useRef(null);
 
-    // 편집 모드 중에도 드래그를 허용하기 위해 onFocus 시점에 handleEditTap 대신 탭 판단 수행
     const handleEndEditingProxy = () => {
         handleFinishEditing();
     };
 
-    const { pan, rotation, scale, panResponder, isSelected, setIsSelected, lastRotation, currentTransformScale, handleRotateAndScale, handleRotation, handleRotationEnd } = useDraggableTextLogic({
+    const { pan, rotation, scale, panResponder, isSelected, setIsSelected, isLongPressActive, lastRotation, currentTransformScale, setMySize, handleRotateAndScale, handleRotation, handleRotationEnd } = useDraggableTextLogic({
         id,
         initialX,
         initialY,
@@ -61,31 +98,44 @@ export const DraggableText = React.memo(({
         onDelete,
         onDragEnd,
         onTap: (id, wasSelected) => {
-            // 이미 선택된 상태에서 다시 짧게 탭하면 편집 모드 진입
             if (wasSelected) {
-                handleEditTap();
-                // 팁: DraggableText가 편집 모드로 들어가면 useDraggable 내부에서 
-                // isEditing=true 상태가 되어 드래그 등이 비활성화됨
-                setIsSelected(true); // 편집 모드일 땐 항상 선택 유지
+                // 이미 선택된 상태에서 다시 탭하면 수정 모드 진입
+                handleEditButtonPress();
+            } else {
+                // 선택되지 않은 상태에서 탭하면 즉시 선택
+                setIsSelected(true);
             }
         },
         onInteractionStart,
         onInteractionEnd,
+        onDragMove,
+        onDragDrop,
+        onSelect,
+        isSelected: externalIsSelected,
     });
 
     const containerRef = useRef(null);
 
-    // 폰트 스타일 매핑
+    // 💡 버튼 역보정: 부모 스케일에 반비례하여 버튼 크기를 일정하게 유지 (1/x 곡선 근사)
+    const handleScale = scale.interpolate({
+        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [3.33, 2, 1.428, 1, 0.666, 0.5, 0.333, 0.2],
+    });
+
+    const handleOffset = scale.interpolate({
+        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [-80, -48, -34.28, -24, -16, -12, -8, -4.8], // 화면상 -24px 유지하기 위한 역산
+    });
+
     const currentFontStyle = FONT_PRESETS_MAP[fontId] || FONT_PRESETS_MAP['basic'];
 
     // autoFocus일 때 선택 상태를 강제로 켜고 포커스 진입
     useEffect(() => {
         if (autoFocus) {
             setIsSelected(true);
-            // 약간의 딜레이 후 포커스 (렌더링 안정화 대기)
             const timer = setTimeout(() => {
                 inputRef.current?.focus();
-                isNewlyCreated.current = false; // 포커스 완료 후 신규 생성 플래그 해제
+                isNewlyCreated.current = false;
             }, 300);
             return () => clearTimeout(timer);
         }
@@ -100,7 +150,6 @@ export const DraggableText = React.memo(({
 
     // 편집 완료 처리
     const handleFinishEditing = () => {
-        // blur 디바운스 (연속 blur 이벤트 방지)
         if (blurTimerRef.current) {
             clearTimeout(blurTimerRef.current);
         }
@@ -108,34 +157,30 @@ export const DraggableText = React.memo(({
             setIsEditing(false);
             const trimmed = localText.trim();
             if (trimmed.length === 0) {
-                // 빈 텍스트이면 삭제
                 onDelete?.(id);
             } else if (trimmed !== text) {
-                // 변경되었으면 업데이트
                 onTextChange?.(id, trimmed);
             }
-        }, 100); // 100ms 디바운스 (포커스 전환 시 너무 빨리 삭제되는 것 방지)
+        }, 100);
     };
 
-    // 컴포넌트 언마운트 시 타이머 정리
     useEffect(() => {
         return () => {
             if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
         };
     }, []);
 
-    // 선택 해제 시 편집 모드도 함께 종료 (단, 새로 생성 직후가 아닐 때만)
+    // 선택 해제 시 편집 모드도 함께 종료
     useEffect(() => {
         if (!isSelected && isEditing && !isNewlyCreated.current) {
             handleFinishEditing();
         }
     }, [isSelected]);
 
-    // 선택된 상태에서 한번 더 탭 → 편집 모드 진입
-    const handleEditTap = () => {
+    // ✏️ 수정 버튼 핸들러: 편집 모드 진입
+    const handleEditButtonPress = () => {
         if (isSelected && !isEditing) {
             setIsEditing(true);
-            // blur 타이머가 있으면 취소 (편집 모드로 전환 중이니까)
             if (blurTimerRef.current) {
                 clearTimeout(blurTimerRef.current);
                 blurTimerRef.current = null;
@@ -149,13 +194,17 @@ export const DraggableText = React.memo(({
     return (
         <Animated.View
             ref={containerRef}
+            onLayout={(e) => {
+                const { width, height } = e.nativeEvent.layout;
+                setMySize({ width: width * currentTransformScale.current, height: height * currentTransformScale.current });
+            }}
             {...panResponder.panHandlers}
             style={[
                 styles.container,
                 {
+                    left: pan.x,
+                    top: pan.y,
                     transform: [
-                        { translateX: pan.x },
-                        { translateY: pan.y },
                         {
                             rotate: rotation.interpolate({
                                 inputRange: [-360, 360],
@@ -163,7 +212,8 @@ export const DraggableText = React.memo(({
                             })
                         },
                         { scale }
-                    ]
+                    ],
+                    transformOrigin: ['0%', '0%', 0]
                 },
                 isSelected && styles.selected,
             ]}
@@ -178,11 +228,12 @@ export const DraggableText = React.memo(({
                         multiline
                         autoFocus={autoFocus}
                         onBlur={handleFinishEditing}
-                        onEndEditing={handleEndEditingProxy} // proxy 함수 사용으로 안정성 확보
+                        onEndEditing={handleEndEditingProxy}
                         placeholder="여기에 적어보세요..."
                         placeholderTextColor="rgba(0,0,0,0.25)"
                         scrollEnabled={false}
                         blurOnSubmit={false}
+                        maxLength={200}
                     />
                 ) : (
                     <Text style={[styles.textFormat, currentFontStyle, { color }]}>
@@ -191,7 +242,28 @@ export const DraggableText = React.memo(({
                 )}
             </View>
 
-            {/* 🔄 회전 핸들 (선택 시 표시) */}
+            {/* ✏️ 수정 버튼 (선택 시 좌측 하단에 표시, 편집 모드 아닐 때만) */}
+            {isSelected && !isEditing && (
+                <Animated.View style={[
+                    styles.editHandle,
+                    {
+                        left: handleOffset,
+                        bottom: handleOffset,
+                        transform: [{ scale: handleScale }]
+                    }
+                ]}>
+                    <TouchableOpacity
+                        onPress={handleEditButtonPress}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                        <EditIcon size={20} color="#8B7E74" />
+                    </TouchableOpacity>
+                </Animated.View>
+            )}
+
+            {/* 🔄 회전 핸들 (선택 시 우측 하단에 표시) */}
             {isSelected && (
                 <RotationHandle
                     containerRef={containerRef}
@@ -201,6 +273,11 @@ export const DraggableText = React.memo(({
                     onRotateEnd={handleRotationEnd}
                     onInteractionStart={onInteractionStart}
                     onInteractionEnd={onInteractionEnd}
+                    style={{
+                        right: handleOffset,
+                        bottom: handleOffset,
+                        transform: [{ scale: handleScale }]
+                    }}
                 />
             )}
         </Animated.View>

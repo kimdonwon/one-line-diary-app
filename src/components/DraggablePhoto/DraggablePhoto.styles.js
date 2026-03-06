@@ -49,16 +49,21 @@ export const styles = StyleSheet.create({
         borderColor: '#000000',
     },
     polaroidFramePink: {
-        backgroundColor: '#FFD1DC',
-        borderColor: 'rgba(255, 182, 193, 0.4)',
+        backgroundColor: '#FFEBEF',
+        borderColor: 'rgba(255, 217, 225, 0.4)',
     },
     polaroidFrameBlue: {
-        backgroundColor: '#D1E8FF',
-        borderColor: 'rgba(173, 216, 230, 0.4)',
+        backgroundColor: '#EBF4FF',
+        borderColor: 'rgba(212, 232, 255, 0.4)',
     },
     polaroidFrameMint: {
-        backgroundColor: '#D1FFD7',
-        borderColor: 'rgba(152, 251, 152, 0.4)',
+        backgroundColor: '#EBFFF0',
+        borderColor: 'rgba(212, 255, 224, 0.4)',
+    },
+    polaroidFrameGray: {
+        backgroundColor: '#E0E0E0',
+        borderColor: 'rgba(180, 180, 180, 0.5)',
+        shadowColor: '#999999',
     },
     // ── 반투명 프레임 추가 (일반 폴라로이드와 동일한 크기 및 모양) ──
     polaroidFrameTransparentWhite: {

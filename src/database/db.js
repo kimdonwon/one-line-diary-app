@@ -351,7 +351,7 @@ export async function getAllData() {
         const app_settings = await d.getAllAsync('SELECT * FROM app_settings');
 
         return {
-            version: '1.0.0',
+            version: '2.0.0',
             exported_at: new Date().toISOString(),
             tables: {
                 diary,

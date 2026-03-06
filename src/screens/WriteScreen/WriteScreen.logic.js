@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Alert, Dimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MOOD_LIST } from '../../constants/mood';
 import { ACTIVITIES } from '../../constants/activities';
@@ -57,6 +57,24 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const [showAlert, setShowAlert] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
     const [isInteracting, setIsInteracting] = useState(false); // 스티커 등 조작 중인지 여부 (스크롤 방지용)
+
+    // 💭 오늘의 기분 및 활동 모달 팝업 상태 (첫 화면 진입 시)
+    const [isMoodModalVisible, setMoodModalVisible] = useState(false);
+
+    // 🗑️ 쓰레기통 드래그 삭제 상태
+    const [isDraggingAny, setIsDraggingAny] = useState(false); // 드래거블이 하나라도 드래그 중이면 true
+    const [isOverTrash, setIsOverTrash] = useState(false); // 현재 쓰레기통 위에 있는지
+    const trashZoneRef = useRef({ y: 0, height: 80 });
+    const draggingItemId = useRef(null);
+    const draggingItemType = useRef(null); // 'sticker' | 'photo' | 'text'
+
+    // ✏️ 텍스트 프리셋 상태 (패널에서 설정 → 다음 텍스트 생성 시 적용)
+    const [nextTextFont, setNextTextFont] = useState('basic');
+    const [nextTextColor, setNextTextColor] = useState('#37352F');
+    const [nextTextBgColor, setNextTextBgColor] = useState('transparent');
+
+    // 🎯 선택된 아이템 관리 (중앙 집중식 선택 해제용)
+    const [selectedItemId, setSelectedItemId] = useState(null);
 
     // (프리미엄 상태는 usePremium 훅에서 관리)
 
@@ -142,7 +160,13 @@ export function useWriteLogic(route, navigation, scrollRef) {
                 if (diary.texts) {
                     const rawTexts = JSON.parse(diary.texts);
                     if (Array.isArray(rawTexts)) {
-                        parsedTexts = rawTexts;
+                        // 🛠️ 버그 수정: 불러온 기존 데이터에서 autoFocus를 모두 제거하여, 
+                        // 페이지 진입 시 키보드가 자동으로 올라오는 현상 방지
+                        parsedTexts = rawTexts.map(page =>
+                            Array.isArray(page)
+                                ? page.map(t => ({ ...t, autoFocus: false }))
+                                : []
+                        );
                     }
                 }
             } catch (e) {
@@ -240,6 +264,15 @@ export function useWriteLogic(route, navigation, scrollRef) {
             );
         }
     }, [savedActivities]);
+
+    /**
+     * 🚪 첫 진입 시 (새 일기인 경우) 기분/활동 팝업 자동 오픈
+     */
+    useEffect(() => {
+        if (!loading && !diary && !selectedMood) {
+            setMoodModalVisible(true);
+        }
+    }, [loading]);
 
     const safeContent = content || '';
     const lineCount = safeContent.split('\n').length;
@@ -450,7 +483,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
             }
             const stickersToSave = pageStickers.slice(0, trimmedPages.length);
             const photosToSave = pagePhotos.slice(0, trimmedPages.length);
-            const textsToSave = pageTexts.slice(0, trimmedPages.length);
+            const textsToSave = pageTexts.slice(0, trimmedPages.length).map(page =>
+                (page || []).map(t => ({ ...t, autoFocus: false }))
+            );
 
             // 단일 페이지면 레거시 호환을 위해 문자열/1차원 배열로 저장
             const contentToSave = trimmedPages.length === 1 ? trimmedPages[0] : JSON.stringify(trimmedPages);
@@ -571,7 +606,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
         const newText = {
             id: Date.now().toString() + Math.random().toString(36).substring(7),
-            text: textValue,
+            text: textValue.substring(0, 200),
             fontId,
             color,
             bgColor,
@@ -592,12 +627,15 @@ export function useWriteLogic(route, navigation, scrollRef) {
      * 📝 캔버스 터치 시 해당 위치에 빈 텍스트 카드 생성 (Tap-to-Write)
      */
     const handleCanvasTap = (locationX, locationY) => {
+        // 캔버스 탭 시 기존 선택 해제
+        setSelectedItemId(null);
+
         const newText = {
             id: Date.now().toString() + Math.random().toString(36).substring(7),
             text: '',
-            fontId: 'basic',
-            color: '#37352F',
-            bgColor: 'transparent',
+            fontId: nextTextFont,
+            color: nextTextColor,
+            bgColor: nextTextBgColor,
             x: locationX - 30,
             y: locationY - 15,
             rotation: 0,
@@ -728,10 +766,74 @@ export function useWriteLogic(route, navigation, scrollRef) {
     };
 
     const handleInteractionStart = useCallback(() => setIsInteracting(true), []);
-    const handleInteractionEnd = useCallback(() => setIsInteracting(false), []);
+    const handleInteractionEnd = useCallback(() => {
+        setIsInteracting(false);
+        setIsDraggingAny(false);
+        setIsOverTrash(false);
+    }, []);
+
+    // 🗑️ 쓰레기통 영역 계산 (화면 하단 80px)
+    const screenHeight = Dimensions.get('window').height;
+    const TRASH_ZONE_TOP = screenHeight - 140; // 하단 140px 지점부터 쓰레기통 영역
+
+    /**
+     * 🗑️ 드래그 중 실시간 위치 감지 (쓰레기통 영역 판단)
+     */
+    const handleDragMove = useCallback((itemId, pageX, pageY, itemType = 'sticker') => {
+        if (!isDraggingAny) {
+            setIsDraggingAny(true);
+            draggingItemId.current = itemId;
+            draggingItemType.current = itemType;
+        }
+        setIsOverTrash(pageY > TRASH_ZONE_TOP);
+    }, [isDraggingAny, TRASH_ZONE_TOP]);
+
+    /**
+     * 🗑️ 드롭 시 쓰레기통 위인지 판단 → 삭제 처리
+     */
+    const handleDragDrop = useCallback((itemId, pageX, pageY, itemType = 'sticker') => {
+        const overTrash = pageY > TRASH_ZONE_TOP;
+        setIsDraggingAny(false);
+        setIsOverTrash(false);
+
+        if (overTrash) {
+            // 아이템 타입에 따라 적절한 삭제 함수 호출
+            const type = draggingItemType.current || itemType;
+            if (type === 'sticker') {
+                handleDeleteSticker(itemId);
+            } else if (type === 'photo') {
+                handleDeletePhoto(itemId);
+            } else if (type === 'text') {
+                handleDeleteText(itemId);
+            }
+            return true;
+        }
+        return false;
+    }, [TRASH_ZONE_TOP, handleDeleteSticker, handleDeletePhoto, handleDeleteText]);
+
+    // 스티커용 래퍼 (타입 태깅)
+    const handleStickerDragMove = useCallback((id, px, py) => handleDragMove(id, px, py, 'sticker'), [handleDragMove]);
+    const handleStickerDragDrop = useCallback((id, px, py) => handleDragDrop(id, px, py, 'sticker'), [handleDragDrop]);
+    const handlePhotoDragMove = useCallback((id, px, py) => handleDragMove(id, px, py, 'photo'), [handleDragMove]);
+    const handlePhotoDragDrop = useCallback((id, px, py) => handleDragDrop(id, px, py, 'photo'), [handleDragDrop]);
+    const handleTextDragMove = useCallback((id, px, py) => handleDragMove(id, px, py, 'text'), [handleDragMove]);
+    const handleTextDragDrop = useCallback((id, px, py) => handleDragDrop(id, px, py, 'text'), [handleDragDrop]);
+
+    /**
+     * 🎯 선택 상태 관리
+     */
+    const handleSelect = useCallback((id) => {
+        setSelectedItemId(id);
+    }, []);
+
+    const handleClearSelection = useCallback(() => {
+        setSelectedItemId(null);
+    }, []);
 
     return {
         // Properties
+        isMoodModalVisible,
+        setMoodModalVisible,
         date,
         formattedDate,
         selectedMood,
@@ -816,5 +918,28 @@ export function useWriteLogic(route, navigation, scrollRef) {
         isInteracting,
         handleInteractionStart,
         handleInteractionEnd,
+
+        // 🗑️ Trash Zone
+        isDraggingAny,
+        isOverTrash,
+        handleStickerDragMove,
+        handleStickerDragDrop,
+        handlePhotoDragMove,
+        handlePhotoDragDrop,
+        handleTextDragMove,
+        handleTextDragDrop,
+
+        // ✏️ Text Presets
+        nextTextFont,
+        setNextTextFont,
+        nextTextColor,
+        setNextTextColor,
+        nextTextBgColor,
+        setNextTextBgColor,
+
+        // 🎯 Selection
+        selectedItemId,
+        handleSelect,
+        handleClearSelection,
     };
 }

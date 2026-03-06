@@ -1,9 +1,9 @@
 import React, { useRef } from 'react';
-import { View, PanResponder, Keyboard } from 'react-native';
+import { View, PanResponder, Keyboard, Animated } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { styles } from './RotationHandle.styles';
 
-export default function RotationHandle({ containerRef, currentRotation, currentScale, onRotate, onRotateAndScale, onRotateEnd, onInteractionStart, onInteractionEnd }) {
+export default function RotationHandle({ containerRef, currentRotation, currentScale, onRotate, onRotateAndScale, onRotateEnd, onInteractionStart, onInteractionEnd, style }) {
     const startInteraction = useRef({
         cx: 0,
         cy: 0,
@@ -87,8 +87,8 @@ export default function RotationHandle({ containerRef, currentRotation, currentS
     ).current;
 
     return (
-        <View
-            style={styles.rotationHandle}
+        <Animated.View
+            style={[styles.rotationHandle, style]}
             {...handlePanResponder.panHandlers}
         >
             <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -97,6 +97,6 @@ export default function RotationHandle({ containerRef, currentRotation, currentS
                 <Path d="M21 3L14 10" stroke="#8B7E74" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 <Path d="M3 21L10 14" stroke="#8B7E74" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
-        </View>
+        </Animated.View>
     );
 }

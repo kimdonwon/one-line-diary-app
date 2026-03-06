@@ -1,13 +1,13 @@
 import { useDraggable } from '../../hooks/useDraggable';
 
-export function useDraggableTextLogic({ id, initialX, initialY, initialRotation, initialScale = 1, isEditing, onDelete, onDragEnd, onFocus, onTap, onInteractionStart, onInteractionEnd }) {
+export function useDraggableTextLogic({ id, initialX, initialY, initialRotation, initialScale = 1, isEditing, onDelete, onDragEnd, onFocus, onTap, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected }) {
     return useDraggable({
         id,
         initialX,
         initialY,
         initialRotation: initialRotation || 0,
         initialScale: initialScale || 1,
-        bounds: null, // text has no bounds clamping
+        bounds: null,
         onDelete,
         onDragEnd,
         onFocus,
@@ -15,5 +15,9 @@ export function useDraggableTextLogic({ id, initialX, initialY, initialRotation,
         isEditing,
         onInteractionStart,
         onInteractionEnd,
+        onDragMove,
+        onDragDrop,
+        onSelect,
+        isSelected,
     });
 }

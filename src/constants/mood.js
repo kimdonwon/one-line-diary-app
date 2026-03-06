@@ -7,7 +7,7 @@ export const MOODS = {
     HAPPY: {
         key: 'HAPPY',
         label: '기쁨',
-        color: '#7CD4A0',
+        color: '#B4DCC6',
         bgColor: '#E8F8EE',
         character: 'frog',
         description: '활짝 웃는 초록 개구리',

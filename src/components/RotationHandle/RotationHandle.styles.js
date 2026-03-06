@@ -3,11 +3,11 @@ import { StyleSheet } from 'react-native';
 export const styles = StyleSheet.create({
     rotationHandle: {
         position: 'absolute',
-        right: -20,
-        bottom: -20,
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        right: -24,
+        bottom: -24,
+        width: 43,
+        height: 43,
+        borderRadius: 21.5,
         backgroundColor: '#FFFFFF',
         borderWidth: 1.2,
         borderColor: '#D1C7BD',

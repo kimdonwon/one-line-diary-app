@@ -9,6 +9,8 @@ import { GowunDodum_400Regular } from '@expo-google-fonts/gowun-dodum';
 import { NanumMyeongjo_400Regular } from '@expo-google-fonts/nanum-myeongjo';
 import { SingleDay_400Regular } from '@expo-google-fonts/single-day';
 import { NanumPenScript_400Regular } from '@expo-google-fonts/nanum-pen-script';
+import { BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
+import { DMSans_400Regular } from '@expo-google-fonts/dm-sans';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -212,6 +214,8 @@ export default function App() {
         NanumMyeongjo_400Regular,
         SingleDay_400Regular,
         NanumPenScript_400Regular,
+        BebasNeue_400Regular,
+        DMSans_400Regular,
     });
 
     useEffect(() => {

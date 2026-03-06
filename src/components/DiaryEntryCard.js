@@ -8,7 +8,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Dimensions } from 'react-native';
 
 import { COLORS, SPACING, SOFT_SHADOW, DIARY_CARD_HEIGHT } from '../constants/theme';
-import { StaticSticker, StaticPhoto, ComboShakeMoodCharacter } from '../components';
+import { StaticSticker, StaticPhoto, StaticText, ComboShakeMoodCharacter } from '../components';
 import { MessageCircleIcon } from '../constants/icons';
 import { ActivityIcon } from '../constants/ActivityIcons';
 import { getMoodByKey } from '../constants/mood';
@@ -17,11 +17,12 @@ import { getBackgroundById } from '../constants/backgrounds';
 /**
  * content/stickers를 멀티페이지 형태로 파싱하는 유틸
  */
-function parseMultiPageData(rawContent, rawStickers, rawPhotos, rawBackgrounds) {
+function parseMultiPageData(rawContent, rawStickers, rawPhotos, rawBackgrounds, rawTexts) {
     let pages = [''];
     let stickersPerPage = [[]];
     let photosPerPage = [[]];
     let backgroundsPerPage = ['default'];
+    let textsPerPage = [[]];
 
     // ── content 파싱 ──
     try {
@@ -84,13 +85,28 @@ function parseMultiPageData(rawContent, rawStickers, rawPhotos, rawBackgrounds) 
         backgroundsPerPage.push('default');
     }
 
-    return { pages, stickersPerPage, photosPerPage, backgroundsPerPage, isMultiPage: pages.length > 1 };
+    // ── texts 파싱 ──
+    try {
+        if (rawTexts) {
+            const rawTxts = JSON.parse(rawTexts);
+            if (Array.isArray(rawTxts)) {
+                textsPerPage = rawTxts;
+            }
+        }
+    } catch (e) {
+        textsPerPage = [[]];
+    }
+    while (textsPerPage.length < pages.length) {
+        textsPerPage.push([]);
+    }
+
+    return { pages, stickersPerPage, photosPerPage, backgroundsPerPage, textsPerPage, isMultiPage: pages.length > 1 };
 }
 
 /**
  * 단일 페이지 렌더링 컴포넌트
  */
-const SinglePageContent = React.memo(({ content, stickers = [], photos = [], cardWidth, bgColor }) => {
+const SinglePageContent = React.memo(({ content, stickers = [], photos = [], texts = [], cardWidth, bgColor }) => {
     const transparentPhotos = photos.filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray');
     const polaroidPhotos = photos.filter(p => p.frameType !== 'transparent_white' && p.frameType !== 'transparent_gray');
 
@@ -131,6 +147,17 @@ const SinglePageContent = React.memo(({ content, stickers = [], photos = [], car
                 ))}
             </View>
 
+            {/* 커스텀 텍스트 오버레이 */}
+            <View style={cardStyles.textOverlay} pointerEvents="none">
+                {texts.map((textNode, idx) => (
+                    <StaticText
+                        key={`textNode-${idx}`}
+                        textNode={textNode}
+                        bounds={{ width: cardWidth || 300 }}
+                    />
+                ))}
+            </View>
+
             {/* 텍스트 (반투명 사진 zIndex 1보다 높고, 일반 사진 zIndex 5보다 낮게 설정) */}
             <Text style={[cardStyles.diaryContent, { zIndex: 3 }]}>{content}</Text>
         </View>
@@ -139,7 +166,7 @@ const SinglePageContent = React.memo(({ content, stickers = [], photos = [], car
 
 export const DiaryEntryCard = React.memo(({ diary, activities = [], commentCount = 0, onOpenComment, onPress }) => {
     const mood = getMoodByKey(diary.mood);
-    const { pages, stickersPerPage, photosPerPage, backgroundsPerPage, isMultiPage } = parseMultiPageData(diary.content, diary.stickers, diary.photos, diary.backgrounds);
+    const { pages, stickersPerPage, photosPerPage, backgroundsPerPage, textsPerPage, isMultiPage } = parseMultiPageData(diary.content, diary.stickers, diary.photos, diary.backgrounds, diary.texts);
 
     const [activePageIndex, setActivePageIndex] = useState(0);
     const [cardWidth, setCardWidth] = useState(0);
@@ -171,12 +198,13 @@ export const DiaryEntryCard = React.memo(({ diary, activities = [], commentCount
                     content={item}
                     stickers={stickersPerPage[index] || []}
                     photos={photosPerPage[index] || []}
+                    texts={textsPerPage[index] || []}
                     cardWidth={cardWidth}
                     bgColor={bgData.backgroundColor}
                 />
             </TouchableOpacity>
         );
-    }, [stickersPerPage, photosPerPage, backgroundsPerPage, cardWidth, onPress]);
+    }, [stickersPerPage, photosPerPage, backgroundsPerPage, textsPerPage, cardWidth, onPress]);
 
     const pageKeyExtractor = useCallback((_, index) => `page-${index}`, []);
 
@@ -188,6 +216,15 @@ export const DiaryEntryCard = React.memo(({ diary, activities = [], commentCount
             {/* 일기 본문 영역 */}
             {isMultiPage && cardWidth > 0 ? (
                 <View>
+                    {/* 페이지 인디케이터 (Dots) - 상단 배치 */}
+                    <View style={cardStyles.pageIndicatorWrap}>
+                        {pages.map((_, idx) => (
+                            <View
+                                key={`dot-${idx}`}
+                                style={idx === activePageIndex ? cardStyles.pageDotActive : cardStyles.pageDot}
+                            />
+                        ))}
+                    </View>
                     <FlatList
                         data={pages}
                         renderItem={renderPageItem}
@@ -203,15 +240,6 @@ export const DiaryEntryCard = React.memo(({ diary, activities = [], commentCount
                             index,
                         })}
                     />
-                    {/* 페이지 인디케이터 (Dots) */}
-                    <View style={cardStyles.pageIndicatorWrap}>
-                        {pages.map((_, idx) => (
-                            <View
-                                key={`dot-${idx}`}
-                                style={idx === activePageIndex ? cardStyles.pageDotActive : cardStyles.pageDot}
-                            />
-                        ))}
-                    </View>
                 </View>
             ) : (
                 <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
@@ -219,6 +247,7 @@ export const DiaryEntryCard = React.memo(({ diary, activities = [], commentCount
                         content={pages[0]}
                         stickers={stickersPerPage[0] || []}
                         photos={photosPerPage[0] || []}
+                        texts={textsPerPage[0] || []}
                         cardWidth={cardWidth || undefined}
                         bgColor={getBackgroundById(backgroundsPerPage[0] || 'default').backgroundColor}
                     />
@@ -310,6 +339,14 @@ export const cardStyles = StyleSheet.create({
         right: 0,
         bottom: 0,
         zIndex: 10,
+    },
+    textOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 8,
     },
 
     // ── 멀티페이지 인디케이터 ──

@@ -36,11 +36,11 @@ export const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
 export const RADIUS = { sm: 12, md: 18, lg: 24, full: 999 };
 
 // 📐 일기 카드 공통 높이 — 반응형 (Aspect Ratio + Screen %)
-// 일반 폰(~393×852): ~442px, 작은 폰(~375×667): ~347px, 큰 폰(~430×932): ~485px
+// 기존 길이보다 20% 증가 (가로폭 대비 1.54 비율 적용)
 const { width: _screenW, height: _screenH } = Dimensions.get('window');
 const _cardWidth = _screenW - SPACING.lg * 2;          // 카드 실제 가로폭 (좌우 패딩 제외)
-const _aspectHeight = Math.round(_cardWidth * 1.28);    // 가로 대비 1.28 비율
-const _maxHeight = Math.round(_screenH * 0.52);         // 화면 높이의 52% 상한
+const _aspectHeight = Math.round(_cardWidth * 1.54);    // 가로 대비 1.54 비율 (기존 1.28에서 20% 증가)
+const _maxHeight = Math.round(_screenH * 0.62);         // 화면 높이의 62% 상한 (기존 52%에서 20% 증가)
 export const DIARY_CARD_HEIGHT = Math.min(_aspectHeight, _maxHeight);
 
 // 🍰 소프트 쉐도우 (BRUTALISM 대체)

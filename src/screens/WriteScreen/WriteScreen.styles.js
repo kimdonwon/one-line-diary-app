@@ -11,7 +11,7 @@ export const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: SPACING.lg,
-        paddingBottom: 100,
+        paddingBottom: 40,
     },
     sectionTitle: {
         ...FONTS.subtitle,
@@ -23,59 +23,11 @@ export const styles = StyleSheet.create({
     moodRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 22,
+        alignItems: 'flex-start', // 라벨 텍스트 높이 차이로 인한 뒤틀림 방지
+        paddingHorizontal: 4,
+        marginBottom: 26,
     },
 
-    // ─── 📱 툴바 (Toggle & Floating Buttons) ───
-    floatingToolbar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: SPACING.sm,
-        gap: 10,
-    },
-    // 🎞️ 아이콘 버튼 컨테이너 (배경 카드 제거)
-    pillToggleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    pillSegment: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 8,
-        borderRadius: 8,
-    },
-    pillSegmentActive: {
-        backgroundColor: 'rgba(0, 0, 0, 0.05)', // 활성 상태일 때만 아주 미세한 하이라이트
-    },
-    pillSegmentText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: COLORS.textSecondary,
-    },
-    pillSegmentTextActive: {
-        color: '#37352F', // 노션 본문 차콜 컬러 (확실한 대비)
-        fontWeight: '700', // 좀 더 강하게 강조
-    },
-    // 원래의 동그란 툴 버튼 (가챠 등)
-    floatingToolBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.85)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: '#E9E9E7',
-        ...SOFT_SHADOW.button,
-    },
-    floatingToolBtnActive: {
-        backgroundColor: '#F1F1F0',
-        borderColor: '#D3D3D1',
-    },
-    floatingToolEmoji: {
-        fontSize: 18,
-    },
 
     // ─── 🗂 바텀시트 (Bottom Sheet) 공통 ───
     stickerBottomSheet: {
@@ -84,7 +36,7 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E9E9E7',
         paddingHorizontal: SPACING.md,
-        paddingVertical: 10,
+        paddingVertical: 6, // 10 -> 6 으로 상하 패딩 축소
         marginBottom: SPACING.sm,
         ...SOFT_SHADOW.card,
     },
@@ -94,7 +46,7 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'flex-start',
         gap: 12,
-        paddingVertical: 12,
+        paddingVertical: 6, // 12 -> 6 으로 컨테이너 상하 패딩 축소
         paddingHorizontal: 4,
     },
     frameOptionBtn: {
@@ -127,16 +79,20 @@ export const styles = StyleSheet.create({
         borderColor: '#000000',
     },
     framePreviewPink: {
-        backgroundColor: '#FFDCE5',
-        borderColor: '#FFC1CF',
+        backgroundColor: '#FFEBEF',
+        borderColor: '#FFD9E1',
     },
     framePreviewBlue: {
-        backgroundColor: '#D6EFFF',
-        borderColor: '#B9E1FF',
+        backgroundColor: '#EBF4FF',
+        borderColor: '#D4E8FF',
     },
     framePreviewMint: {
-        backgroundColor: '#D9FFE9',
-        borderColor: '#B8FFD6',
+        backgroundColor: '#EBFFF0',
+        borderColor: '#D4FFE0',
+    },
+    framePreviewGray: {
+        backgroundColor: '#E5E5E5',
+        borderColor: '#D1D1D1',
     },
     // ── 반투명 프레임 프리뷰 ──
     framePreviewTransparentWhite: {
@@ -580,12 +536,13 @@ export const styles = StyleSheet.create({
     inputCard: {
         backgroundColor: '#FBF8F4', // 종이 질감 느낌의 따뜻한 배경
         height: DIARY_CARD_HEIGHT,
-        borderRadius: 12,
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
         padding: 0,
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: '#E2DED0', // 크라프트지 같은 따뜻한 테두리
-        ...SOFT_SHADOW.card,
+        // 통합 카드 내부에 위치하므로 자체 테두리와 그림자는 제거
     },
     // 📝 탭 투 라이트 캔버스 레이어
     canvasLayer: {
@@ -610,9 +567,27 @@ export const styles = StyleSheet.create({
     },
 
     // ─── 멀티페이지 ───
+    integratedDiaryCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E9E9E7',
+        overflow: 'hidden',
+        marginTop: 20, // 날짜와 캔버스 사이 마진 추가
+        ...SOFT_SHADOW.card,
+    },
+    integratedDiaryMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#FCFCFC',
+        borderTopWidth: 1,
+        borderTopColor: '#F1F1F0',
+    },
     pageContainer: {
         overflow: 'hidden',
-        borderRadius: 12,
     },
     // 📷 사진 추가 버튼 (서랍장 하단 단독 버튼)
     addPhotoButton: {
@@ -677,7 +652,10 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
         backgroundColor: '#FAFAFA',
         borderStyle: 'dashed',
+        borderWidth: 1,
         borderColor: '#D3D3D1',
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
     },
     addPageIcon: {
         fontSize: 36,
@@ -783,8 +761,8 @@ export const styles = StyleSheet.create({
     // ─── ✏️ 텍스트 추가 서랍 스타일 ───
     textDrawerWrap: {
         paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 24,
+        paddingTop: 8, // 16 -> 8 로 상단 여백 축소
+        paddingBottom: 12, // 24 -> 12 로 하단 여백 축소
         alignItems: 'stretch',
     },
     textInputRow: {
@@ -794,7 +772,6 @@ export const styles = StyleSheet.create({
     },
     textCustomInput: {
         flex: 1,
-        backgroundColor: '#F7F3F1',
         height: 64, // 2줄 정도의 높이
         borderRadius: 8,
         paddingHorizontal: 16,
@@ -804,6 +781,8 @@ export const styles = StyleSheet.create({
         color: '#37352F',
         marginRight: 8,
         textAlignVertical: 'top', // 멀티라인 시 텍스트를 상단으로 정렬
+        borderWidth: 1,
+        borderColor: '#F1F1F0', // 연한 보더 추가
     },
     textAddBtn: {
         backgroundColor: '#37352F',
@@ -825,38 +804,138 @@ export const styles = StyleSheet.create({
         marginBottom: 8,
         marginTop: 8,
     },
-    presetRow: {
+    colorScrollWrap: {
+        borderRadius: 8,
+        paddingVertical: 6, // 10 -> 6 으로 압축
+        paddingHorizontal: 0,
+        marginBottom: 8, // 16 -> 8 로 폰트 그리드와의 간격 축소
+    },
+    colorScrollContent: {
+        alignItems: 'flex-start',
+    },
+    colorRowsContainer: {
+        flexDirection: 'column',
+        gap: 10, // 14 -> 10 으로 두 줄 사이 간격 축소
+    },
+    colorRow: {
         flexDirection: 'row',
-        marginBottom: 8,
-    },
-    presetBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#F7F3F1',
-        marginRight: 8,
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    presetBtnActive: {
-        borderColor: '#37352F',
-        backgroundColor: '#FFF',
-    },
-    presetBtnText: {
-        color: '#37352F',
+        alignItems: 'center',
     },
     colorBtn: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         marginRight: 10,
         justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#E9E9E7',
+        borderColor: '#EFEFEF', // 투명/흰색 구분을 위한 기본 연한 테두리
     },
     colorBtnActive: {
-        borderColor: '#37352F',
         borderWidth: 2,
+        borderColor: '#EFEFEF', // 활성 시 약간의 시각적 강조 피드백
+        transform: [{ scale: 1.1 }], // 선택 시 직관적으로 크기 키움
+    },
+    checkIconOverlay: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    colorDivider: {
+        width: 1,
+        height: 24,
+        backgroundColor: '#D1D5DB',
+        marginHorizontal: 12, // 간격 조절
+    },
+    transparentSlash: {
+        position: 'absolute',
+        width: 1.5,
+        height: '140%',
+        backgroundColor: '#D1D5DB',
+        transform: [{ rotate: '45deg' }],
+    },
+
+    // ─── 텍스트 탭 폰트 (3열 그리드) ───
+    fontGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        rowGap: 8,
+    },
+    fontGridItem: {
+        width: '32%', // 3열 배치
+        aspectRatio: 1.8, // 살짝 더 직사각형
+        borderRadius: 6, // 각진 노션 스타일
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 4,
+        borderWidth: 1,
+        borderColor: 'transparent', // 비활성 상태에서는 투명 테두리
+    },
+    fontGridItemActive: {
+        backgroundColor: 'transparent',
+        borderColor: COLORS.soso, // 우리 스타일의 파스텔 그레이
+        borderWidth: 2,
+    },
+    fontGridItemText: {
+        color: '#111827',
+        fontSize: 15,
+        textAlign: 'center',
+    },
+    fontGridItemTextActive: {
+        color: '#111827',
+        fontWeight: 'bold',
+    },
+
+    // ─── 🗑️ 인스타그램 스타일 다크 펄스 쓰레기통 ───
+    trashZone: {
+        position: 'absolute',
+        bottom: 110,
+        alignSelf: 'center',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 64,
+        height: 64,
+        borderRadius: 32, // 완벽한 원형
+        backgroundColor: 'rgba(0, 0, 0, 0.45)', // 인스타 스타일 다크 반투명
+        zIndex: 9999,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    trashZoneActive: {
+        backgroundColor: 'rgba(235, 87, 87, 0.95)', // 강렬한 빨강 피드백
+        transform: [{ scale: 1.25 }], // 화끈하게 커짐
+        shadowOpacity: 0.4,
+        shadowColor: '#EB5757',
+    },
+    trashIconContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    trashText: {
+        display: 'none', // 인스타 스타일은 텍스트 없이 아이콘만 표시
+    },
+    trashTextActive: {
+        display: 'none',
+    },
+
+    // 세그먼트 컨트롤 삭제됨
+    textPanelFooter: {
+        marginTop: 12, // 20 -> 12 로 축소
+        alignItems: 'center',
+        paddingTop: 8, // 12 -> 8 로 축소
+        borderTopWidth: 1,
+        borderTopColor: '#F1F1F0',
+    },
+    textPanelHelp: {
+        fontSize: 12,
+        color: '#A1A19F',
+        fontWeight: '500',
     },
 });

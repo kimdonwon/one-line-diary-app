@@ -228,67 +228,74 @@ export function MessageCircleIcon({ size = 20, color = "#666666" }) {
 }
 
 // ─── 카메라 아이콘 (Doodle Flash: Line Art with Flash Rays) ───
-export function CameraIcon({ size = 24, color = "#37352F", style }) {
-    const bodyColor = "#8BBFEF"; // 스카이 블루
-    const lensColor = "#D6EFFF"; // 더 밝은 블루 (입체감)
-
+export function CameraIcon({ size = 24, color = "#2D1E16", style }) {
     return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={style}>
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
             {/* Flash Rays (광선) */}
-            <Path d="M12 1.5v2M7.5 3.5l1.2 1.2M3.5 7l2 .5M16.5 3.5l-1.2 1.2M20.5 7l-2 .5" />
+            <Path d="M12 1.5v2M7.5 3.5l1.2 1.2M3.5 7l2 .5M16.5 3.5l-1.2 1.2M20.5 7l-2 .5" fill="none" />
 
             {/* Top Bump (셔터/뷰파인더) */}
-            <Path d="M9 9V7.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V9" fill={bodyColor} />
+            <Path d="M9 9V7.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V9" fill="none" />
 
             {/* Body (본체) */}
-            <Rect x="3" y="9" width="18" height="12" rx="2.5" fill={bodyColor} />
+            <Rect x="3" y="9" width="18" height="12" rx="2.5" fill="none" />
 
             {/* Lens (렌즈) */}
-            <Circle cx="12" cy="15" r="3.5" fill={lensColor} />
-            <Circle cx="12" cy="15" r="1.2" fill={color} stroke="none" />
+            <Circle cx="12" cy="15" r="3.5" fill="none" />
+            <Circle cx="12" cy="15" r="1.2" strokeWidth="1.2" fill="none" />
 
             {/* Small Detail */}
-            <Circle cx="18" cy="12" r="0.8" fill={color} stroke="none" />
+            <Circle cx="18" cy="12" r="0.8" strokeWidth="1" fill="none" />
         </Svg>
     );
 }
 
 // ─── 스티커 아이콘 (Doodle Flash: Line Art Sparkling Sticker) ───
 export function StickerIcon({ size = 24, active = false, style }) {
-    const color = active ? "#37352F" : "#83837F";
-    const bodyColor = "#FFD485"; // 파스텔 옐로우
-    const peeledColor = "#FFF4E0"; // 더 밝은 옐로우 (입체감)
+    const color = active ? "#2D1E16" : "#8B7E74"; // 활성: 딥브라운, 비활성: 딥 그레이베이지
 
     return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={style}>
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
             {/* Sparkles (상단 반짝임) */}
-            <Path d="M12 2v2M8 4l1 1M16 4l-1 1" />
+            <Path d="M12 2v2M8 4l1 1M16 4l-1 1" fill="none" />
 
             {/* Sticker Body */}
             <Path
                 d="M6 7h12a2 2 0 0 1 2 2v7l-4 4H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"
-                fill={bodyColor}
+                fill="none"
             />
             {/* 접힌 모서리 부분 */}
             <Path
                 d="M20 16l-4 4v-2a2 2 0 0 1 2-2h2z"
-                fill={peeledColor}
+                fill="none"
             />
 
             {/* Petit Face (귀여운 미소) */}
-            <Circle cx="9" cy="12" r="0.8" fill={color} stroke="none" />
-            <Circle cx="13" cy="12" r="0.8" fill={color} stroke="none" />
-            <Path d="M10 15c.5.5 1.5.5 2 0" />
+            <Circle cx="9" cy="12" r="0.8" strokeWidth="1" fill="none" />
+            <Circle cx="13" cy="12" r="0.8" strokeWidth="1" fill="none" />
+            <Path d="M10 15c.5.5 1.5.5 2 0" fill="none" />
         </Svg>
     );
 }
 
-// ─── 텍스트 탭 아이콘 ───
-export function TextIcon({ size = 24, color = "#83837F", active = false, style }) {
-    const strokeColor = active ? "#37352F" : color;
+// ─── 텍스트 아이콘 (Doodle Flash: Gizmo Box with 'T') ───
+// 사용자가 제공한 바운딩 박 형태를 우리 스타일(코랄 포인트 + 반짝임)로 재해석
+export function TextIcon({ size = 24, active = false, style }) {
+    const color = active ? "#2D1E16" : "#8B7E74"; // 활성: 딥브라운, 비활성: 딥 그레이베이지
+
     return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" style={style}>
-            <Path d="M5 4h14M12 4v16M8 20h8" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+            {/* Bounding Box Frame */}
+            <Rect x="4" y="4" width="16" height="16" strokeWidth="1.5" fill="none" />
+
+            {/* Gizmo Handles (4 corners) */}
+            <Rect x="2.5" y="2.5" width="3.5" height="3.5" rx="1" fill="none" />
+            <Rect x="18" y="2.5" width="3.5" height="3.5" rx="1" fill="none" />
+            <Rect x="2.5" y="18" width="3.5" height="3.5" rx="1" fill="none" />
+            <Rect x="18" y="18" width="3.5" height="3.5" rx="1" fill="none" />
+
+            {/* 'T' Character (Bold) */}
+            <Path d="M8.5 9h7M12 9v7" strokeWidth="2.2" fill="none" />
         </Svg>
     );
 }

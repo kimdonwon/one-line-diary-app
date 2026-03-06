@@ -10,8 +10,7 @@ import { RotationHandle } from '../RotationHandle';
  * 🎨 스티커 렌더링에만 초점을 맞춘 화면 분리 모듈입니다.
  * 핀치 회전 + 회전 핸들 지원
  */
-export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onDragEnd, onInteractionStart, onInteractionEnd }) => {
-    // 내부 애니메이션 드래그 제스처 훅을 연결
+export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onDragEnd, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected: externalIsSelected }) => {
     const {
         pan,
         rotation,
@@ -21,12 +20,13 @@ export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onD
         panResponder,
         isDragging,
         isSelected,
+        isLongPressActive,
         setMySize,
         mySize,
         handleRotateAndScale,
         handleRotationEnd,
     } = useDraggableLogic({
-        sticker, bounds, onDelete, onDragEnd, onInteractionStart, onInteractionEnd
+        sticker, bounds, onDelete, onDragEnd, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected: externalIsSelected
     });
 
     const containerRef = useRef(null);
@@ -35,43 +35,52 @@ export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onD
         if (sticker.isGraphic) {
             const GraphicComponent = getStickerComponent(sticker.type);
             if (GraphicComponent) {
-                // 🎨 화질 팁: 작은 사이즈(29)로 렌더링 후 키우면 비트맵 기반이라 깨짐.
-                // 대신 크게(100) 렌더링하고 transform에서 줄여야 선명함 유지됨.
                 return <GraphicComponent size={100} />;
             }
         }
-        // 이모지도 폰트 크기를 키워서 선명도 확보
         return <Text style={[styles.textSticker, { fontSize: 80, lineHeight: 90 }]} selectable={false}>{sticker.type}</Text>;
     };
 
-    // Animated interpolation: 숫자 → 'Xdeg' 문자열
     const rotateStr = rotation.interpolate({
         inputRange: [-360, 360],
         outputRange: ['-360deg', '360deg'],
     });
 
-    // 🎨 화질 개선을 위한 보정 스케일 (100px로 렌더링했으므로 0.3을 곱해 기존 크기인 ~30px 유지)
     const crispScale = Animated.multiply(scale, 0.35);
+
+    // 💡 버튼 역보정: 1/x 곡선을 촘촘하게 근사하여 부모 크기에 상관없이 화면상 '절대 크기(43px)' 유지
+    const handleScale = crispScale.interpolate({
+        inputRange: [0.1, 0.2, 0.35, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [10, 5, 2.857, 2, 1.428, 1, 0.666, 0.5, 0.333, 0.2],
+    });
+
+    // 💡 오프셋 역보정: 화면상에서 항상 테두리 밖 -24px 지점을 유지하도록 역산
+    const handleOffset = crispScale.interpolate({
+        inputRange: [0.1, 0.2, 0.35, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [-240, -120, -68.57, -48, -34.28, -24, -16, -12, -8, -4.8],
+    });
 
     return (
         <Animated.View
             ref={containerRef}
             onLayout={(e) => {
                 const { width, height } = e.nativeEvent.layout;
-                // 실제 물리적 영역이 아닌 시각적 영역(scaled)을 mySize로 보고해야 경계선 계산이 정확함
-                setMySize({ width: width * 0.35, height: height * 0.35 });
+                // 💡 crispScale은 Animated Value이므로 layout 시점의 실제 스케일 값을 반영하여 크기 보고
+                const currentScale = currentTransformScale.current * 0.35;
+                setMySize({ width: width * currentScale, height: height * currentScale });
             }}
             style={[
                 styles.container,
                 {
+                    left: pan.x,
+                    top: pan.y,
                     transform: [
-                        { translateX: pan.x },
-                        { translateY: pan.y },
                         { rotate: rotateStr },
                         { scale: crispScale }
-                    ]
+                    ],
+                    transformOrigin: ['0%', '0%', 0]
                 },
-                isDragging && styles.dragging,
+                isLongPressActive && styles.dragging,
                 isSelected && styles.selected,
             ]}
             {...panResponder.panHandlers}
@@ -90,6 +99,11 @@ export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onD
                     onRotateEnd={handleRotationEnd}
                     onInteractionStart={onInteractionStart}
                     onInteractionEnd={onInteractionEnd}
+                    style={{
+                        right: handleOffset,
+                        bottom: handleOffset,
+                        transform: [{ scale: handleScale }]
+                    }}
                 />
             )}
         </Animated.View>

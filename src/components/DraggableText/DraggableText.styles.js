@@ -5,32 +5,52 @@ export const styles = StyleSheet.create({
         position: 'absolute',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 8, // 터치 영역 확보
-        maxWidth: '85%', // 카드 너비를 넘지 않도록 제한
+        padding: 8,
+        maxWidth: '85%',
+        borderWidth: 1.5,
+        borderColor: 'transparent',
     },
     textWrapper: {
         borderRadius: 8,
         paddingHorizontal: 10,
         paddingVertical: 6,
-        minWidth: 60, // 최소 너비 (탭할 수 있도록)
-        minHeight: 30, // 최소 높이
+        minWidth: 60,
+        minHeight: 30,
     },
     textFormat: {
-        fontSize: 18,
+        fontSize: 13,
         includeFontPadding: false,
-        lineHeight: 24,
+        lineHeight: 17,
     },
     textInput: {
         padding: 0,
         margin: 0,
-        minWidth: 120, // 편집 시 최소 너비
+        minWidth: 120,
         textAlignVertical: 'top',
     },
-    // 🔄 회전 핸들 스타일
     selected: {
         borderColor: 'rgba(232, 213, 204, 0.6)',
-        borderWidth: 1.5,
         borderRadius: 4,
         borderStyle: 'dashed',
+    },
+    // ✏️ 수정 버튼 (좌측 하단, 회전 핸들의 대칭 위치)
+    editHandle: {
+        position: 'absolute',
+        left: -24,
+        bottom: -24,
+        width: 43,
+        height: 43,
+        borderRadius: 21.5,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1.2,
+        borderColor: '#D1C7BD',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 999,
+        shadowColor: '#8B7E74',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 6,
     },
 });

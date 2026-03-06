@@ -1,6 +1,6 @@
 import { useDraggable } from '../../hooks/useDraggable';
 
-export function useDraggableLogic({ sticker, bounds, onDelete, onDragEnd, onInteractionStart, onInteractionEnd }) {
+export function useDraggableLogic({ sticker, bounds, onDelete, onDragEnd, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected }) {
     return useDraggable({
         id: sticker.id,
         initialX: sticker.x,
@@ -12,5 +12,9 @@ export function useDraggableLogic({ sticker, bounds, onDelete, onDragEnd, onInte
         onDragEnd,
         onInteractionStart,
         onInteractionEnd,
+        onDragMove,
+        onDragDrop,
+        onSelect,
+        isSelected,
     });
 }

@@ -22,6 +22,11 @@ description: 항상 디자인(UI)과 로직(Business Logic)을 분리하고, 기
    - UI 디자인 시 [Material Design 3 (M3)](https://m3.material.io/)의 가이드라인과 컴포넌트 원칙을 최우선으로 참고합니다.
    - 인라인 스타일보다는 `StyleSheet`를 사용하거나 스타일 전용 파일을 분리합니다.
    - 애니메이션(Reanimated 등)과 일관된 테마(Spacing, Colors)를 적용합니다.
+   
+4. **레이아웃 안정성 (Layout Stability)**
+   - 선택(Selection)이나 드래그 등 상태 변화에 따라 테두리(`borderWidth`)가 생기는 컴포넌트는, 비활성 상태에서도 미리 `transparent` 테두리를 확보하여 레이아웃이 튀는 현상(Layout Shift)을 방지합니다.
+   - 예: `borderWidth: 1.5, borderColor: 'transparent'`를 기본값으로 설정.
+
 
 ## 디렉토리 구조 가이드라인
 
