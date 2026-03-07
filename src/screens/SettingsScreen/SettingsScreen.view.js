@@ -193,6 +193,7 @@ export function SettingsScreenView({ navigation }) {
                         <Text style={styles.premiumBenefitItem}>✓ 페이지당 사진 최대 5장 첨부 </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 스티커 서랍장 카테고리 6개 (전원) </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 파스텔 사진 프레임 사용 가능 </Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 모든 다이어리 텍스트 폰트 사용 가능 </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 몽글몽글 파스텔 스티커팩 증정 </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 광고 없는 쾌적한 다이어리 작성</Text>
                     </View>

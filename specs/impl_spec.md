@@ -96,8 +96,8 @@
 ### 3.4. 과금 및 광고사양 (AdContext & Business Policy)
 
 - **제한 정책 (Hard Cap)**: 앱 전체 다이어리 작성 당 스티커는 최대 15장 (성능 및 UX 문제 고려).
-- **Free User 로직**: 기본 스티커 부착 한도 3개. 추가 클릭 시 `SoftAlertModal`이 떠서 +2장 확장 보상형 광고(AdMob Reward) 유도 (15개까지 중첩 가능). 활성화 슬롯 서랍 3개.
-- **Premium User 로직**: 한도 즉각 15장으로 기본 연장. 모든 광고 차단. 프리미엄 인증은 `SettingsContext`를 타고 DB 캐싱.
+- **Free User 로직**: 기본 스티커 부착 한도 3개. 추가 클릭 시 `SoftAlertModal`이 떠서 +2장 확장 보상형 광고(AdMob Reward) 유도 (15개까지 중첩 가능). 텍스트 폰트는 'basic', 'diary' 폰트 제공.
+- **Premium User 로직**: 한도 즉각 15장으로 기본 연장. 모든 광고 차단 및 파스텔 플라로이드 프레임 사용 가능, 다양한 다이어리 커스텀 텍스트 폰트 무제한 혜택 제공. 프리미엄 인증은 `SettingsContext`를 타고 DB 캐싱.
 
 ### 3.5. 암호화 백업 로직 (Backup/Restore Logic)
 
@@ -128,3 +128,4 @@
 - **당황(CONFUSED) 토끼 정렬**: 토끼 몸체가 화면 왼쪽으로 쏠려 보이던 현상을 해결하기 위해 X축 방향으로 10유닛 이동(translate)하여 중앙 정렬을 맞춤.
 - **기분 선택 UI(Mood Selector) 정렬**: 텍스트 높이 편차로 인해 캐릭터가 삐뚤어 보이던 현상을 해결하기 위해 `includeFontPadding: false` 적용 및 `flex-start` 기반 상단 정렬로 오와열을 맞춤.
 - **활동 아이콘(Activity Icons) 전면 재디자인**: `ActivityIcons.js`의 그래픽을 기분 캐릭터들과 동일한 "Doodle Flash" 스타일(딥 네이비 외곽선 #283665, 파스텔 색상, 둥글고 귀여운 쉐입, 굵은 선 두께 4.5)로 전면 재설계함.
+- **곰(SOSO) 캐릭터 위치 조정**: 캐릭터가 전체적으로 상단에 치우쳐 보이던 현상을 해결하기 위해 Y축 방향으로 7유닛 이동(translate)하여 수직 중앙 정렬을 개선함.

@@ -848,6 +848,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
         showAlert,
         setShowAlert,
         alertConfig,
+        setAlertConfig,
 
         // 멀티페이지
         pages,

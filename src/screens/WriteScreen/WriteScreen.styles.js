@@ -29,16 +29,33 @@ export const styles = StyleSheet.create({
     },
 
 
-    // ─── 🗂 바텀시트 (Bottom Sheet) 공통 ───
-    stickerBottomSheet: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
+    // ─── 🗂 도구 패널 (Bottom Sheet) 공통: Floating Glass Island ───
+    floatingDockContainer: {
+        position: 'absolute', // 카드 흐름에서 분리 (밀림 방지)
+        bottom: 64, // integratedDiaryMeta 바 위에 뜨도록 설정
+        left: 16, // 좌우 여백
+        right: 16,
+        zIndex: 100, // 패널이 드로잉 영역 위에 표시되게 설정
+        borderRadius: 24,
+        overflow: 'hidden', // BlurView가 둥근 모서리에 맞게 잘림
         borderWidth: 1,
-        borderColor: '#E9E9E7',
+        borderColor: 'rgba(230, 230, 228, 0.5)',
+        backgroundColor: 'rgba(255, 255, 255, 0.5)', // 아주 옅은 흰색
+        elevation: 8,
+    },
+    floatingDockBlur: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+    },
+    floatingDockContent: {
         paddingHorizontal: SPACING.md,
-        paddingVertical: 6, // 10 -> 6 으로 상하 패딩 축소
-        marginBottom: SPACING.sm,
-        ...SOFT_SHADOW.card,
+        paddingVertical: 14,
+        width: '100%',
+    },
+    stickerBottomSheet: {
+        backgroundColor: 'transparent',
+        paddingHorizontal: 0,
+        paddingVertical: 0,
     },
 
     // ─── 📷 사진 프레임 선택 바텀시트 영역 (MZ 폴꾸 테마) ───
@@ -134,6 +151,12 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: 4,
+    },
+    premiumTag: {
+        position: 'absolute',
+        top: 2,
+        right: 4,
+        zIndex: 5,
     },
 
     // (레거시 호환 — 사용하지 않지만 참조 에러 방지)
