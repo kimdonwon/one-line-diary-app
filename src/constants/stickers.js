@@ -31,6 +31,14 @@ import {
     FaceHappyGirl, FaceHeadphones
 } from './FaceStickers';
 import {
+    RfOrangeWobbly, RfYellowSquint, RfPinkStraight, RfPurpleSmile,
+    RfBeigeSad, RfPinkOpen, RfPurpleFrown, RfGreenSleepy,
+    RfBlueSurprise, RfYellowSideSmile, RfGreenSmile, RfMintO,
+    RfBeigeTriangle, RfMintD, RfOrangeSad, RfBlueWideSmile,
+    RfYellowDot, RfPurpleSmallSmile
+} from './RoundFaceStickers';
+
+import {
     ItSticker, ItCamera, ItLaptop, ItSmartphone,
     ItJoystick, ItKeyboard, ItMouse, ItGameboy,
     ItHeadphones, ItSmartwatch, ItFloppy, ItTablet,
@@ -46,17 +54,19 @@ export const STICKER_CATEGORIES = [
     { id: 'food', label: '푸드' },
     { id: 'mzline', label: '라인' },
     { id: 'people', label: '피플' },
-    { id: 'random', label: '랜덤' },
+    { id: 'it', label: '아이티' },
+    { id: 'roundface', label: '동글' },
 ];
 
 export const STICKER_PACK_DATA = [
     { id: 'pack1', title: '기본 다꾸 이모지 팩', desc: '다양한 감정 표현', icon: '🐾', isFree: true, isDefault: true, catId: 'emoji' },
     { id: 'pack2', title: '기본 캐릭터 팩', desc: '오늘조각 시그니처', icon: '✨', isFree: true, isDefault: true, catId: 'legacy' },
     { id: 'pack3', title: '몽글몽글 파스텔 팩', desc: '몽글몽글한 손그림 느낌', icon: '🎨', isFree: false, isDefault: false, catId: 'pastel', price: '1,100' },
-    { id: 'pack4', title: '냠냠 먹방 팩', desc: '커피, 마라탕, 탕후루까지!', icon: '🍡', isFree: true, isDefault: false, catId: 'food', tagLabel: '푸드' },
-    { id: 'pack5', title: '삐뚤빼뚤 라인 팩', desc: '대충 그린 꾸안꾸 갬성', icon: '〰️', isFree: true, isDefault: false, catId: 'mzline', tagLabel: '라인' },
-    { id: 'pack7', title: '오밀조밀 동네 친구들', desc: '귀엽고 다양한 얼굴 모음!', icon: '👦', isFree: false, isDefault: false, catId: 'people', tagLabel: '피플', price: '1,500' },
-    { id: 'pack8', title: '랜덤 스티커팩', desc: '스티커, 카메라, IT소품 가득!', icon: '🎁', isFree: false, isDefault: false, catId: 'random', tagLabel: '랜덤', price: '1,500' },
+    { id: 'pack4', title: '냠냠 먹방 팩', desc: '커피, 마라탕, 탕후루까지!', icon: '🍡', isFree: false, isDefault: false, catId: 'food', tagLabel: '푸드', price: '1,100' },
+    { id: 'pack5', title: '삐뚤빼뚤 라인 팩', desc: '대충 그린 꾸안꾸 갬성', icon: '〰️', isFree: false, isDefault: false, catId: 'mzline', tagLabel: '라인', price: '1,100' },
+    { id: 'pack7', title: '오밀조밀 동네 친구들', desc: '귀엽고 다양한 얼굴 모음!', icon: '👦', isFree: false, isDefault: false, catId: 'people', tagLabel: '피플', price: '1,100' },
+    { id: 'pack8', title: '아이티 스티커팩', desc: '컴퓨터, 카메라, IT소품 가득!', icon: '🎁', isFree: false, isDefault: false, catId: 'it', tagLabel: '아이티', price: '1,100' },
+    { id: 'pack9', title: '동글뱅이 얼굴 팩', desc: '낙서처럼 동글동글 귀여운', icon: '🎨', isFree: true, isDefault: false, catId: 'roundface', tagLabel: '동글' },
 ];
 
 // ─── 카테고리별 스티커 모음 ────────────────────────────────
@@ -171,8 +181,8 @@ export const CATEGORIZED_STICKERS = {
         { key: 'pp_hp', label: '헤드폰', Component: FaceHeadphones },
     ],
 
-    /** 🎁 랜덤 — 카메라, 스티커, 노트북, 폰, IT소품 등 (Doodle Flash Style) */
-    random: [
+    /** 🎁 아이티 — 카메라, 스티커, 노트북, 폰, IT소품 등 (Doodle Flash Style) */
+    it: [
         { key: 'r_sticker', label: '스티커', Component: ItSticker },
         { key: 'r_camera', label: '카메라', Component: ItCamera },
         { key: 'r_laptop', label: '노트북', Component: ItLaptop },
@@ -191,6 +201,28 @@ export const CATEGORIZED_STICKERS = {
         { key: 'r_cas', label: '카세트', Component: ItCassette },
         { key: 'r_vr', label: 'VR기기', Component: ItVr },
         { key: 'r_mon', label: '모니터', Component: ItMonitor },
+    ],
+
+    /** 🎨 동글 — 낙서 같은 삐뚤빼뚤 동그라미 얼굴들 */
+    roundface: [
+        { key: 'rf_orange_w', label: '주황떨림', Component: RfOrangeWobbly },
+        { key: 'rf_yellow_sq', label: '노랑질끈', Component: RfYellowSquint },
+        { key: 'rf_pink_st', label: '일자분홍', Component: RfPinkStraight },
+        { key: 'rf_purp_s', label: '보라미소', Component: RfPurpleSmile },
+        { key: 'rf_beige_s', label: '베이지슬픔', Component: RfBeigeSad },
+        { key: 'rf_pink_o', label: '분홍우와', Component: RfPinkOpen },
+        { key: 'rf_purp_f', label: '보라삐짐', Component: RfPurpleFrown },
+        { key: 'rf_grn_sl', label: '초록평온', Component: RfGreenSleepy },
+        { key: 'rf_blue_su', label: '파랑놀람', Component: RfBlueSurprise },
+        { key: 'rf_yel_ss', label: '노랑씨익', Component: RfYellowSideSmile },
+        { key: 'rf_grn_sm', label: '초록스마일', Component: RfGreenSmile },
+        { key: 'rf_mint_o', label: '민트오', Component: RfMintO },
+        { key: 'rf_beige_tri', label: '베이지놀람', Component: RfBeigeTriangle },
+        { key: 'rf_mint_d', label: '민트디', Component: RfMintD },
+        { key: 'rf_org_sd', label: '주황우울', Component: RfOrangeSad },
+        { key: 'rf_blu_ws', label: '파랑빅스마일', Component: RfBlueWideSmile },
+        { key: 'rf_yel_dot', label: '노랑점', Component: RfYellowDot },
+        { key: 'rf_purp_ss', label: '보라작은미소', Component: RfPurpleSmallSmile },
     ],
 };
 

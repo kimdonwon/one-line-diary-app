@@ -144,4 +144,69 @@ export const styles = StyleSheet.create({
     legendMarginBottom: { marginBottom: 4 },
     navIconArrow: { fontSize: 16, color: COLORS.border, marginLeft: 4, marginBottom: 8 },
     activityNavIconArrow: { fontSize: 16, color: COLORS.border, marginLeft: 4 },
+
+    // ─── 연도 선택 모달 (Year Picker) 🎨 ───
+    yearModalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    yearModalContent: {
+        width: SCREEN_WIDTH * 0.8,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 24,
+        padding: SPACING.lg,
+        ...SOFT_SHADOW.card,
+    },
+    yearModalTitle: {
+        ...FONTS.subtitle,
+        fontSize: 18,
+        textAlign: 'center',
+        marginBottom: SPACING.lg,
+        color: '#37352F',
+    },
+    yearList: {
+        maxHeight: 300,
+    },
+    yearItem: {
+        paddingVertical: SPACING.md,
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F1F0',
+    },
+    yearItemActive: {
+        backgroundColor: '#F1F1F0',
+        borderRadius: 12,
+        borderBottomWidth: 0,
+    },
+    yearItemText: {
+        fontSize: 17,
+        fontWeight: '600',
+        color: COLORS.textSecondary,
+    },
+    yearItemTextActive: {
+        color: '#37352F',
+        fontWeight: '700',
+    },
+    yearCloseBtn: {
+        marginTop: SPACING.md,
+        paddingVertical: SPACING.sm,
+        alignItems: 'center',
+    },
+    yearCloseBtnText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: COLORS.textSecondary,
+    },
+    headerTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerTitleArrow: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        marginLeft: 4,
+        marginTop: 2,
+    },
 });

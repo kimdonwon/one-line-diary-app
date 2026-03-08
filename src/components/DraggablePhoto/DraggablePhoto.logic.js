@@ -1,6 +1,6 @@
 import { useDraggable } from '../../hooks/useDraggable';
 
-export function useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, externalPan, externalRotation, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected }) {
+export function useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, externalPan, externalRotation, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected, onTap }) {
     return useDraggable({
         id: photo.id,
         initialX: photo.x,
@@ -19,5 +19,7 @@ export function useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, ext
         onDragDrop,
         onSelect,
         isSelected,
+        onTap,
+        createdAt: photo.createdAt,
     });
 }

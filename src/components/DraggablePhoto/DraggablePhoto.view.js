@@ -4,6 +4,7 @@ import { View, Text, Image, Animated, PanResponder, Keyboard } from 'react-nativ
 import { useDraggablePhotoLogic } from './DraggablePhoto.logic';
 import { styles } from './DraggablePhoto.styles';
 import { RotationHandle } from '../RotationHandle';
+import { CameraIcon } from '../../constants/icons';
 
 /**
  * 📷 폴라로이드 감성의 드래그 가능한 사진 컴포넌트
@@ -24,6 +25,7 @@ const DraggablePhoto = React.memo(({
     onDragDrop,
     onSelect,
     isSelected: externalIsSelected,
+    onTap,
 }) => {
     const {
         pan,
@@ -38,7 +40,7 @@ const DraggablePhoto = React.memo(({
         setMySize,
         handleRotateAndScale,
         handleRotationEnd,
-    } = useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, externalPan, externalRotation, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected: externalIsSelected });
+    } = useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, externalPan, externalRotation, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected: externalIsSelected, onTap });
 
     const containerRef = useRef(null);
 
@@ -95,15 +97,26 @@ const DraggablePhoto = React.memo(({
                     isGhost && { opacity: 0, elevation: 0 },
                 ]}
             >
-                <Image
-                    source={{ uri: photo.uri }}
-                    style={[
+                {photo.uri ? (
+                    <Image
+                        source={{ uri: photo.uri }}
+                        style={[
+                            styles.polaroidImage,
+                            (photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray') && styles.transparentImage,
+                            (photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray') && isSelected && styles.transparentImageSelected,
+                        ]}
+                        resizeMode="cover"
+                    />
+                ) : (
+                    <View style={[
                         styles.polaroidImage,
-                        (photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray') && styles.transparentImage,
-                        (photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray') && isSelected && styles.transparentImageSelected,
-                    ]}
-                    resizeMode="cover"
-                />
+                        styles.placeholderContainer,
+                        (photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray') && styles.transparentImage
+                    ]}>
+                        <CameraIcon size={28} color="#C4C4C4" />
+                        <Text style={styles.placeholderText}>사진 선택</Text>
+                    </View>
+                )}
                 <View style={styles.polaroidBottom} />
             </View>
 

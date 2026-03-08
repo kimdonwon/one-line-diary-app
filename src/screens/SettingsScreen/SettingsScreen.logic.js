@@ -221,7 +221,6 @@ export function useSettingsLogic() {
     const resetPurchases = async () => {
         try {
             // 1. 상태 초기화
-            setIsPremium(false);
             setPurchasedPacks([]);
 
             // 2. DB 업데이트 (app_settings)
@@ -235,7 +234,7 @@ export function useSettingsLogic() {
 
             setAlertConfig({
                 title: '초기화 완료! ♻️',
-                message: '프리미엄 상태 및 스티커 구매 내역이 모두 초기화되었습니다.'
+                message: '프리미엄 상태 및 스티커 구매 내역이 모두 초기화되었습니다. 변경사항을 반영하려면 앱을 재실행해 주세요.'
             });
             setShowAlert(true);
         } catch (e) {

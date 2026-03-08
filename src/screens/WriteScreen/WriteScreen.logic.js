@@ -383,13 +383,15 @@ export function useWriteLogic(route, navigation, scrollRef) {
         // 화면 정중앙 혹은 고정 위치에 스폰(생성)
         const spawnX = inputBoxBounds.width > 0 ? inputBoxBounds.width / 2 - 20 : 100;
         const spawnY = inputBoxBounds.height > 0 ? inputBoxBounds.height / 2 - 20 : 80;
+        const randomOffset = Math.random() * 20 - 10; // 자연스럽게 분산
 
         const newSticker = {
             id: Date.now().toString() + Math.random().toString(36).substring(7),
             type: stickerId,
             isGraphic,
-            x: spawnX,
-            y: spawnY,
+            x: spawnX + randomOffset,
+            y: spawnY + randomOffset,
+            createdAt: Date.now(),
         };
         setPageStickers(prev => {
             const next = [...prev];
@@ -519,9 +521,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
     // ─── 📷 사진 첨부 로직 ───
 
     /**
-     * 📷 갤러리에서 사진 선택 (1:1 크롭, 압축) 및 프레임 지정
+     * 📷 사진 첨부 통합 로직: 프레임 선택 즉시 갤러리를 엽니다.
      */
-    const handleAddPhoto = async (frameType = 'white') => {
+    const handlePickPhotoWithFrame = async (frameType = 'white') => {
         const currentPhotos = pagePhotos[currentPageIndex] || [];
         if (currentPhotos.length >= MAX_PHOTOS_PER_PAGE) {
             setAlertConfig({
@@ -532,6 +534,63 @@ export function useWriteLogic(route, navigation, scrollRef) {
             return;
         }
 
+        // 1. 권한 확인
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            setAlertConfig({
+                title: '권한 필요 🔒',
+                message: '사진을 추가하려면 갤러리 접근 권한이 필요해요.'
+            });
+            setShowAlert(true);
+            return;
+        }
+
+        // 2. 갤러리 팝업
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5,
+        });
+
+        // 3. 선택 완료 시 데이터 부착
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+            const asset = result.assets[0];
+            const spawnX = inputBoxBounds.width > 0 ? inputBoxBounds.width / 2 - 65 : 40;
+            const spawnY = inputBoxBounds.height > 0 ? inputBoxBounds.height / 2 - 72 : 40;
+            const randomOffset = Math.random() * 20 - 10;
+            const newId = Date.now().toString() + Math.random().toString(36).substring(7);
+
+            const newPhoto = {
+                id: newId,
+                uri: asset.uri,
+                x: spawnX + randomOffset,
+                y: spawnY + randomOffset,
+                rotation: 0,
+                frameType,
+                isNewPlaceholder: false,
+                createdAt: Date.now(),
+            };
+
+            setPagePhotos(prev => {
+                const next = [...prev];
+                next[currentPageIndex] = [...(next[currentPageIndex] || []), newPhoto];
+                return next;
+            });
+        }
+    };
+
+    /**
+     * @deprecated handlePickPhotoWithFrame 로 교체됨
+     */
+    const handleAddPhoto = (frameType = 'white') => {
+        handlePickPhotoWithFrame(frameType);
+    };
+
+    /**
+     * 📷 기존 Placeholder 탭 할 때 호출되는 함수
+     */
+    const handlePickPhotoForId = async (id) => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
             setAlertConfig({
@@ -545,30 +604,19 @@ export function useWriteLogic(route, navigation, scrollRef) {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
             allowsEditing: true,
-            aspect: [1, 1],    // 1:1 정방형 크롭 강제
-            quality: 0.5,      // 50% 품질 (용량 절약)
+            aspect: [1, 1],
+            quality: 0.5,
         });
 
         if (!result.canceled && result.assets && result.assets.length > 0) {
             const asset = result.assets[0];
-            const spawnX = inputBoxBounds.width > 0 ? inputBoxBounds.width / 2 - 65 : 40;
-            const spawnY = inputBoxBounds.height > 0 ? inputBoxBounds.height / 2 - 72 : 40;
-
-            const newPhoto = {
-                id: Date.now().toString() + Math.random().toString(36).substring(7),
-                uri: asset.uri,
-                x: spawnX,
-                y: spawnY,
-                rotation: 0,
-                frameType,
-            };
-
             setPagePhotos(prev => {
                 const next = [...prev];
-                next[currentPageIndex] = [...(next[currentPageIndex] || []), newPhoto];
+                next[currentPageIndex] = (next[currentPageIndex] || []).map(p =>
+                    p.id === id ? { ...p, uri: asset.uri, isNewPlaceholder: false } : p
+                );
                 return next;
             });
-            setShowPhotos(false); // 선택 후 프레임 서랍 닫기
         }
     };
 
@@ -581,19 +629,34 @@ export function useWriteLogic(route, navigation, scrollRef) {
     }, [currentPageIndex]);
 
     const handlePhotoDragEnd = useCallback((id, newX, newY, newRotation, newScale) => {
+        let shouldOpenGallery = false;
+
         setPagePhotos(prev => {
             const next = [...prev];
-            next[currentPageIndex] = (next[currentPageIndex] || []).map(p =>
-                p.id === id ? {
-                    ...p,
-                    x: newX,
-                    y: newY,
-                    rotation: newRotation !== undefined ? newRotation : (p.rotation || 0),
-                    scale: newScale !== undefined ? newScale : (p.scale || 1)
-                } : p
-            );
+            const photos = next[currentPageIndex] || [];
+
+            const updatedPhotos = photos.map(p => {
+                if (p.id === id) {
+                    if (p.isNewPlaceholder) {
+                        shouldOpenGallery = true;
+                    }
+                    return {
+                        ...p,
+                        x: newX,
+                        y: newY,
+                        rotation: newRotation !== undefined ? newRotation : (p.rotation || 0),
+                        scale: newScale !== undefined ? newScale : (p.scale || 1)
+                    };
+                }
+                return p;
+            });
+            next[currentPageIndex] = updatedPhotos;
             return next;
         });
+
+        if (shouldOpenGallery) {
+            setTimeout(() => handlePickPhotoForId(id), 100);
+        }
     }, [currentPageIndex]);
 
     // ─── ✏️ 커스텀 텍스트 드래그 기능 추가 ───
@@ -603,6 +666,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
         const spawnX = inputBoxBounds.width > 0 ? inputBoxBounds.width / 2 - 50 : 60;
         const spawnY = inputBoxBounds.height > 0 ? inputBoxBounds.height / 2 - 20 : 60;
+        const randomOffset = Math.random() * 20 - 10;
 
         const newText = {
             id: Date.now().toString() + Math.random().toString(36).substring(7),
@@ -610,9 +674,10 @@ export function useWriteLogic(route, navigation, scrollRef) {
             fontId,
             color,
             bgColor,
-            x: spawnX,
-            y: spawnY,
+            x: spawnX + randomOffset,
+            y: spawnY + randomOffset,
             rotation: 0,
+            createdAt: Date.now(),
         };
 
         setPageTexts(prev => {
@@ -640,6 +705,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
             y: locationY - 15,
             rotation: 0,
             autoFocus: true, // 생성 시 자동 포커스
+            createdAt: Date.now(),
         };
 
         setPageTexts(prev => {
@@ -895,6 +961,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
         handleAddPhoto,
         handleDeletePhoto,
         handlePhotoDragEnd,
+        handlePickPhotoForId,
 
         // 🎨 Background
         showBackgrounds,

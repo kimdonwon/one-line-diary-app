@@ -31,12 +31,14 @@ export function useDraggable({
     onDragDrop,       // (id, pageX, pageY) => boolean 드롭 시 쓰레기통 위인지 반환
     onSelect,         // (id) 선택되었음을 알림 (중앙 관리용)
     isSelected: externalIsSelected = null, // 외부에서 관리되는 선택 상태
+    createdAt,        // 생성 시간 (애니메이션용)
 }) {
-    const pan = externalPan || useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
+    const isRecent = createdAt && (Date.now() - createdAt < 1000);
+    const pan = externalPan || useRef(new Animated.ValueXY({ x: initialX, y: isRecent ? initialY + 300 : initialY })).current;
     const rotation = externalRotation || useRef(new Animated.Value(initialRotation)).current;
     const currentRotation = useRef(initialRotation);
 
-    const springScale = useRef(new Animated.Value(1)).current;
+    const springScale = useRef(new Animated.Value(isRecent ? 0.2 : 1)).current;
     const transformScale = useRef(new Animated.Value(initialScale)).current;
     const currentTransformScale = useRef(initialScale);
     const combinedScale = Animated.multiply(springScale, transformScale);
@@ -55,6 +57,26 @@ export function useDraggable({
     effectiveSelectedRef.current = effectiveSelected;
 
     const prevSelected = useRef(effectiveSelected);
+
+    // 💡 생성 직후 슝 날아오는 애니메이션 (바텀시트 -> 캔버스)
+    useEffect(() => {
+        if (isRecent && !externalPan) {
+            Animated.parallel([
+                Animated.spring(pan, {
+                    toValue: { x: initialX, y: initialY },
+                    friction: 7,
+                    tension: 60,
+                    useNativeDriver: false
+                }),
+                Animated.spring(springScale, {
+                    toValue: 1,
+                    friction: 7,
+                    tension: 60,
+                    useNativeDriver: false
+                })
+            ]).start();
+        }
+    }, []);
 
     // 💡 선택 상태 진입 시 귀여운 씰룩 효과 (Wiggle Animation)
     useEffect(() => {

@@ -178,7 +178,7 @@ export function StaticText({ textNode }) {
       left: textNode.x || 0,
       top: textNode.y || 0,
       padding: 8, // Draggable container padding
-      maxWidth: '85%',
+      maxWidth: '95%',
       zIndex: 8,
       transform: [
         { rotate: `${textNode.rotation || 0}deg` },

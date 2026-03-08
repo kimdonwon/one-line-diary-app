@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Animated, Modal, Pressable, FlatList, Dimensions, Alert, LayoutAnimation } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Animated, Modal, Pressable, FlatList, Dimensions, Alert, LayoutAnimation, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import RNModal from 'react-native-modal';
@@ -31,6 +31,7 @@ import {
 
 import { useWriteLogic } from './WriteScreen.logic';
 import { styles } from './WriteScreen.styles';
+import { useGlobalWeeklyMood } from '../../context/MoodContext';
 
 const FONT_PRESETS = [
     { id: 'basic', label: 'BASIC' },
@@ -150,6 +151,8 @@ let WriteScreenNudged = false;
 export function WriteScreenView({ route, navigation }) {
     const scrollRef = useRef(null);
     const pageFlatListRef = useRef(null);
+    const bottomSheetScrollRef = useRef(null);
+    const windowWidth = Dimensions.get('window').width;
     const [activeCategoryId, setActiveCategoryId] = useState(STICKER_CATEGORIES[0].id);
     const [pageCardWidth, setPageCardWidth] = useState(0);
     const [photoFrameTab, setPhotoFrameTab] = useState('polaroid'); // 'polaroid' | 'transparent' (탭은 유지하되 UI는 하나)
@@ -267,7 +270,30 @@ export function WriteScreenView({ route, navigation }) {
         handleClearSelection,
     } = useWriteLogic(route, navigation, scrollRef);
 
+    // 💡 중앙 확인 버튼 색상: 오늘 선택한 기분 색상을 최우선으로, 없으면 주간 기분 색상 적용
+    const weeklyMood = useGlobalWeeklyMood();
+    const activeColor = activeMood ? activeMood.color : (weeklyMood ? weeklyMood.color : COLORS.soso);
+
     // ✏️ 텍스트 패널 — 프리셋만 (문구 입력 제거됨, 로직의 nextText* 상태 사용)
+
+    // ─── 🚀 바텀시트 페이징 스크롤 자동 동기화 ───
+    const prevBottomSheetOpen = useRef(false);
+    useEffect(() => {
+        const isOpen = showStickers || showPhotos || showTexts;
+        if (!isOpen) {
+            prevBottomSheetOpen.current = false;
+            return;
+        }
+        if (!bottomSheetScrollRef.current) return;
+
+        let x = 0;
+        if (showPhotos) x = windowWidth;
+        else if (showTexts) x = windowWidth * 2;
+
+        // 처음 열릴 때는 애니메이션 없이, 이미 열려있는 상태에서 탭 전환 시에만 애니메이션 적용
+        bottomSheetScrollRef.current.scrollTo({ x, animated: prevBottomSheetOpen.current });
+        prevBottomSheetOpen.current = true;
+    }, [showStickers, showPhotos, showTexts, windowWidth]);
 
     // 📷 사진용 공유 애니메이션 관리 (반투명 사진 실시간 동기화용)
     const photoAnimations = useRef({});
@@ -342,24 +368,6 @@ export function WriteScreenView({ route, navigation }) {
             <StatusBar style="dark" />
             <Header
                 title={formattedDate}
-                rightButton={
-                    <TouchableOpacity
-                        style={{
-                            backgroundColor: activeMood ? activeMood.color : COLORS.soso, // 기분 색상 적용
-                            paddingHorizontal: 8,
-                            paddingVertical: 6,
-                            borderRadius: 6, // 둥글지 않은 노션 특유의 작은 라운딩
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minWidth: 40,
-                            ...SOFT_SHADOW.button,
-                        }}
-                        onPress={handleSave}
-                        activeOpacity={0.8}
-                    >
-                        <CheckIcon size={20} color="#FFFFFF" />
-                    </TouchableOpacity>
-                }
             />
 
             <KeyboardAvoidingView
@@ -639,294 +647,7 @@ export function WriteScreenView({ route, navigation }) {
 
                         </View>
 
-                        {/* ─── 🚀 플로팅 글래스 아일랜드 (Seamless Morphing Dock) ─── */}
-                        {(showTexts || showPhotos || showStickers) && (
-                            <View style={styles.floatingDockContainer}>
-                                <BlurView intensity={75} tint="light" style={styles.floatingDockBlur} />
 
-                                <View style={styles.floatingDockContent}>
-                                    {/* ─── 🗂 ✏️ 텍스트 프리셋 패널 (Stitch v2: 프리미엄 디자인) ─── */}
-                                    {showTexts && (
-                                        <View style={[styles.textDrawerWrap, { backgroundColor: 'transparent' }]}>
-                                            {/*  색상 선택 (2줄: 위 문자색, 아래 하이라이트색) */}
-                                            <View style={styles.colorScrollWrap}>
-                                                <View style={styles.colorRowsContainer}>
-                                                    {/* 첫 번째 줄: 문자 색상 */}
-                                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.colorScrollContent}>
-                                                        <View style={styles.colorRow}>
-                                                            {TEXT_COLORS.map(color => {
-                                                                const isSelected = nextTextColor === color;
-                                                                return (
-                                                                    <TouchableOpacity
-                                                                        key={`txt-${color}`}
-                                                                        style={[
-                                                                            styles.colorBtn,
-                                                                            { backgroundColor: color },
-                                                                            isSelected && styles.colorBtnActive
-                                                                        ]}
-                                                                        onPress={() => setNextTextColor(color)}
-                                                                        activeOpacity={0.8}
-                                                                    >
-                                                                        {isSelected && <CheckIcon size={20} color={color === '#FFFFFF' || color === 'transparent' ? '#37352F' : '#FFF'} />}
-                                                                    </TouchableOpacity>
-                                                                );
-                                                            })}
-                                                        </View>
-                                                    </ScrollView>
-
-                                                    {/* 두 번째 줄: 하이라이트(배경) 색상 */}
-                                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.colorScrollContent}>
-                                                        <View style={styles.colorRow}>
-                                                            {HIGHLIGHTER_COLORS.map((color, idx) => {
-                                                                const isSelected = nextTextBgColor === color;
-                                                                // 투명일 경우 표시용 흰색 배경 적용
-                                                                const displayColor = color === 'transparent' ? '#FFF' : color;
-                                                                return (
-                                                                    <TouchableOpacity
-                                                                        key={`bg-${idx}`}
-                                                                        style={[
-                                                                            styles.colorBtn,
-                                                                            { backgroundColor: displayColor },
-                                                                            isSelected && styles.colorBtnActive
-                                                                        ]}
-                                                                        onPress={() => setNextTextBgColor(color)}
-                                                                        activeOpacity={0.8}
-                                                                    >
-                                                                        {color === 'transparent' && <View style={styles.transparentSlash} />}
-                                                                        {isSelected && (
-                                                                            <View style={styles.checkIconOverlay}>
-                                                                                <CheckIcon size={20} color={color === 'transparent' ? '#37352F' : '#FFF'} />
-                                                                            </View>
-                                                                        )}
-                                                                    </TouchableOpacity>
-                                                                );
-                                                            })}
-                                                        </View>
-                                                    </ScrollView>
-                                                </View>
-                                            </View>
-
-                                            {/* 폰트 (그리드) */}
-                                            <View style={styles.fontGrid}>
-                                                {FONT_PRESETS.map(font => {
-                                                    const previewStyle = {};
-                                                    if (font.id === 'basic') previewStyle.fontFamily = 'GowunDodum_400Regular';
-                                                    else if (font.id === 'diary') previewStyle.fontFamily = 'NanumMyeongjo_400Regular';
-                                                    else if (font.id === 'hand') previewStyle.fontFamily = 'SingleDay_400Regular';
-                                                    else if (font.id === 'y2k') previewStyle.fontFamily = 'NanumPenScript_400Regular';
-                                                    else if (font.id === 'bebas') { previewStyle.fontFamily = 'BebasNeue_400Regular'; previewStyle.letterSpacing = 1.5; previewStyle.fontSize = 17; }
-                                                    else if (font.id === 'dmsans') { previewStyle.fontFamily = 'DMSans_400Regular'; previewStyle.fontSize = 12; }
-
-                                                    const isLocked = !isPremium && font.id !== 'basic' && font.id !== 'diary';
-                                                    const isActive = nextTextFont === font.id;
-                                                    return (
-                                                        <TouchableOpacity
-                                                            key={font.id}
-                                                            style={[styles.fontGridItem, isActive && styles.fontGridItemActive]}
-                                                            onPress={() => {
-                                                                if (isLocked) {
-                                                                    setAlertConfig({
-                                                                        title: '프리미엄 전용 폰트 ✨',
-                                                                        message: '다양한 폰트는 프리미엄 버전에서\n무제한으로 사용할 수 있어요!'
-                                                                    });
-                                                                    setShowAlert(true);
-                                                                    return;
-                                                                }
-                                                                setNextTextFont(font.id);
-                                                            }}
-                                                            activeOpacity={0.8}
-                                                        >
-                                                            <Text style={[styles.fontGridItemText, isActive && styles.fontGridItemTextActive, previewStyle, isLocked && { opacity: 0.6 }]}>
-                                                                {font.label}
-                                                            </Text>
-                                                            {isLocked && (
-                                                                <View style={styles.premiumTag}>
-                                                                    <Text style={{ fontSize: 8 }}>✨</Text>
-                                                                </View>
-                                                            )}
-                                                        </TouchableOpacity>
-                                                    );
-                                                })}
-                                            </View>
-                                        </View>
-                                    )}
-
-                                    {/* ─── 🗂 📷 사진 프레임 바텀시트 (Bottom Sheet) ─── */}
-                                    {showPhotos && (
-                                        <View style={styles.stickerBottomSheet}>
-                                            {/* 바텀시트 상단 헤더 (탭 구조 유지) */}
-                                            <View style={styles.stickerBottomSheetHeader}>
-                                                <View style={styles.categoryTabBar}>
-                                                    <TouchableOpacity
-                                                        style={[styles.categoryTab, styles.categoryTabActive]}
-                                                        activeOpacity={1}
-                                                    >
-                                                        <Text style={[styles.categoryTabText, styles.categoryTabTextActive]}>프레임</Text>
-                                                    </TouchableOpacity>
-                                                </View>
-                                            </View>
-
-                                            <ScrollView
-                                                horizontal
-                                                showsHorizontalScrollIndicator={false}
-                                                contentContainerStyle={styles.photoFrameContainer}
-                                            >
-                                                <TouchableOpacity
-                                                    style={styles.frameOptionBtn}
-                                                    onPress={() => handleAddPhoto('white')}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <View style={[styles.framePreview, styles.framePreviewWhite]}>
-                                                        <View style={styles.frameInnerPhoto} />
-                                                    </View>
-                                                </TouchableOpacity>
-
-                                                <TouchableOpacity
-                                                    style={styles.frameOptionBtn}
-                                                    onPress={() => handleAddPhoto('black')}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <View style={[styles.framePreview, styles.framePreviewBlack]}>
-                                                        <View style={[styles.frameInnerPhoto, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-                                                    </View>
-                                                </TouchableOpacity>
-
-                                                <TouchableOpacity
-                                                    style={styles.frameOptionBtn}
-                                                    onPress={() => handleAddPhoto('gray')}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <View style={[styles.framePreview, styles.framePreviewGray]}>
-                                                        <View style={styles.frameInnerPhoto} />
-                                                    </View>
-                                                </TouchableOpacity>
-
-                                                <TouchableOpacity
-                                                    style={styles.frameOptionBtn}
-                                                    onPress={() => {
-                                                        if (isPremium) {
-                                                            handleAddPhoto('pink');
-                                                        } else {
-                                                            Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
-                                                        }
-                                                    }}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <View style={[styles.framePreview, styles.framePreviewPink, !isPremium && { opacity: 0.8 }]}>
-                                                        <View style={styles.frameInnerPhoto} />
-                                                        {!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}
-                                                    </View>
-                                                </TouchableOpacity>
-
-                                                <TouchableOpacity
-                                                    style={styles.frameOptionBtn}
-                                                    onPress={() => {
-                                                        if (isPremium) {
-                                                            handleAddPhoto('blue');
-                                                        } else {
-                                                            Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
-                                                        }
-                                                    }}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <View style={[styles.framePreview, styles.framePreviewBlue, !isPremium && { opacity: 0.8 }]}>
-                                                        <View style={styles.frameInnerPhoto} />
-                                                        {!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}
-                                                    </View>
-                                                </TouchableOpacity>
-
-                                                <TouchableOpacity
-                                                    style={styles.frameOptionBtn}
-                                                    onPress={() => {
-                                                        if (isPremium) {
-                                                            handleAddPhoto('mint');
-                                                        } else {
-                                                            Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.');
-                                                        }
-                                                    }}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <View style={[styles.framePreview, styles.framePreviewMint, !isPremium && { opacity: 0.8 }]}>
-                                                        <View style={styles.frameInnerPhoto} />
-                                                        {!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}
-                                                    </View>
-                                                </TouchableOpacity>
-                                            </ScrollView>
-                                        </View>
-                                    )}
-
-                                    {/* ─── 🗂 ✨ 스티커 바텀시트 (Bottom Sheet) ─── */}
-                                    {showStickers && (
-                                        <View style={styles.stickerBottomSheet}>
-                                            {/* 바텀시트 상단 헤더 (카테고리 탭 + 설정 버튼) */}
-                                            <View style={styles.stickerBottomSheetHeader}>
-                                                <ScrollView
-                                                    horizontal
-                                                    showsHorizontalScrollIndicator={false}
-                                                    style={styles.categoryTabBar}
-                                                    keyboardShouldPersistTaps="always"
-                                                >
-                                                    {visibleCategories.map((cat) => (
-                                                        <TouchableOpacity
-                                                            key={cat.id}
-                                                            style={[
-                                                                styles.categoryTab,
-                                                                activeCategoryId === cat.id && styles.categoryTabActive,
-                                                            ]}
-                                                            onPress={() => setActiveCategoryId(cat.id)}
-                                                            activeOpacity={0.7}
-                                                        >
-                                                            <Text style={[
-                                                                styles.categoryTabText,
-                                                                activeCategoryId === cat.id && styles.categoryTabTextActive,
-                                                            ]}>
-                                                                {cat.label}
-                                                            </Text>
-                                                        </TouchableOpacity>
-                                                    ))}
-                                                </ScrollView>
-
-                                                {/* ⚙️ 스티커 관리 버튼 */}
-                                                <TouchableOpacity
-                                                    style={styles.stickerManageBtnInside}
-                                                    onPress={() => setShowManager(true)}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <SettingsTabIcon size={16} color="#999" />
-                                                </TouchableOpacity>
-                                            </View>
-
-                                            {/* 스티커 목록 */}
-                                            <ScrollView
-                                                style={styles.stickerScrollArea}
-                                                showsVerticalScrollIndicator={true}
-                                                keyboardShouldPersistTaps="always"
-                                                contentContainerStyle={styles.stickerRow}
-                                            >
-                                                {isEmojiCategory
-                                                    ? currentStickers.map((emoji, idx) => (
-                                                        <AnimatedStickerItem
-                                                            key={`emoji-${idx}`}
-                                                            onPress={() => handleStickerPress(emoji, false)}
-                                                        >
-                                                            <Text style={styles.stickerItemEmoji}>{emoji}</Text>
-                                                        </AnimatedStickerItem>
-                                                    ))
-                                                    : currentStickers.map((item) => (
-                                                        <AnimatedStickerItem
-                                                            key={item.key}
-                                                            onPress={() => handleStickerPress(item.key, true)}
-                                                        >
-                                                            <item.Component size={28} />
-                                                        </AnimatedStickerItem>
-                                                    ))
-                                                }
-                                            </ScrollView>
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-                        )}
 
 
                         {/* ─── 📊 피드 레이아웃의 하단 메타 정보 영역 ─── */}
@@ -935,6 +656,7 @@ export function WriteScreenView({ route, navigation }) {
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
                                 <TouchableOpacity
                                     onPress={() => {
+                                        Keyboard.dismiss();
                                         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                                         setShowStickers(!showStickers);
                                         setShowPhotos(false);
@@ -947,6 +669,7 @@ export function WriteScreenView({ route, navigation }) {
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={() => {
+                                        Keyboard.dismiss();
                                         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                                         setShowPhotos(!showPhotos);
                                         setShowStickers(false);
@@ -959,6 +682,7 @@ export function WriteScreenView({ route, navigation }) {
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={() => {
+                                        Keyboard.dismiss();
                                         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                                         setShowTexts(!showTexts);
                                         setShowStickers(false);
@@ -1000,6 +724,258 @@ export function WriteScreenView({ route, navigation }) {
 
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {/* ─── 🚀 메인 화면 스타일 그대로 가져온 하단 탭바 ─── */}
+            {/* KeyboardAvoidingView 밖으로 빼서 키보드와 상관없이 하단에 고정 */}
+            <View style={[styles.bottomTabBar, { bottom: 16 + insets.bottom }]}>
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })}
+                    style={styles.navTabContainer}
+                    activeOpacity={0.7}
+                >
+                    <HomeTabIcon size={24} color="#999999" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('MainTabs', { screen: 'DiaryTab' })}
+                    style={styles.navTabContainer}
+                    activeOpacity={0.7}
+                >
+                    <DiaryTabIcon size={24} color="#999999" />
+                </TouchableOpacity>
+
+                {/* ✅ 중앙 확인(저장) 버튼 (색바뀌는 로직 포함) */}
+                <View style={styles.navTabContainer}>
+                    <TouchableOpacity
+                        style={[styles.centerCheckButton, { backgroundColor: activeColor }]}
+                        onPress={handleSave}
+                        activeOpacity={0.8}
+                    >
+                        <CheckIcon size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('MainTabs', { screen: 'SummaryTab' })}
+                    style={styles.navTabContainer}
+                    activeOpacity={0.7}
+                >
+                    <SummaryTabIcon size={24} color="#999999" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })}
+                    style={styles.navTabContainer}
+                    activeOpacity={0.7}
+                >
+                    <SettingsTabIcon size={24} color="#999999" />
+                </TouchableOpacity>
+            </View>
+            {/* ─── 🚀 닫기용 투명 오버레이 ─── */}
+            {(showTexts || showPhotos || showStickers) && !isDraggingAny && (
+                <Pressable
+                    style={[StyleSheet.absoluteFill, { zIndex: 999 }]}
+                    onPress={() => {
+                        setShowStickers(false);
+                        setShowPhotos(false);
+                        setShowTexts(false);
+                    }}
+                />
+            )}
+
+            {/* ─── 🚀 플로팅 글래스 아일랜드 (Seamless Morphing Dock) ─── */}
+            {(showTexts || showPhotos || showStickers) && (
+                <View style={[styles.floatingDockContainer, {
+                    paddingBottom: insets.bottom + 8,
+                    height: 280 + insets.bottom,
+                    zIndex: 1000,
+                    opacity: isDraggingAny ? 0 : 1
+                }]} pointerEvents={isDraggingAny ? 'none' : 'auto'}>
+                    <BlurView intensity={75} tint="light" style={styles.floatingDockBlur} />
+
+                    <View style={[styles.floatingDockContent, { paddingHorizontal: 0, paddingBottom: 0 }]}>
+                        <View style={styles.bottomSheetHeader}>
+                            <View style={styles.bottomSheetHandle} />
+
+                            {/* 🚀 무빙 캡슐 (Morphing Pill) 타이틀 영역 */}
+                            <View style={styles.pillNavContainer}>
+                                <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    style={[styles.pillButton, showStickers && styles.pillButtonActiveSticker]}
+                                    onPress={() => {
+                                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                        setShowStickers(true); setShowPhotos(false); setShowTexts(false);
+                                    }}
+                                >
+                                    <StickerIcon size={24} active={showStickers} />
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    style={[styles.pillButton, showPhotos && styles.pillButtonActivePhoto]}
+                                    onPress={() => {
+                                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                        setShowStickers(false); setShowPhotos(true); setShowTexts(false);
+                                    }}
+                                >
+                                    <CameraIcon size={24} color={showPhotos ? "#2D1E16" : "#8B7E74"} />
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    style={[styles.pillButton, showTexts && styles.pillButtonActiveText]}
+                                    onPress={() => {
+                                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                        setShowStickers(false); setShowPhotos(false); setShowTexts(true);
+                                    }}
+                                >
+                                    <TextIcon size={24} active={showTexts} color={showTexts ? "#2D1E16" : "#8B7E74"} />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <ScrollView
+                            ref={bottomSheetScrollRef}
+                            horizontal
+                            pagingEnabled
+                            showsHorizontalScrollIndicator={false}
+                            keyboardShouldPersistTaps="always"
+                            contentOffset={{ x: showPhotos ? windowWidth : (showTexts ? windowWidth * 2 : 0), y: 0 }}
+                            onMomentumScrollEnd={(e) => {
+                                const idx = Math.round(e.nativeEvent.contentOffset.x / windowWidth);
+                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                if (idx === 0) { setShowStickers(true); setShowPhotos(false); setShowTexts(false); }
+                                else if (idx === 1) { setShowStickers(false); setShowPhotos(true); setShowTexts(false); }
+                                else if (idx === 2) { setShowStickers(false); setShowPhotos(false); setShowTexts(true); }
+                            }}
+                        >
+                            {/* [Page 1] Stickers */}
+                            <View style={{ width: windowWidth, paddingHorizontal: 16 }}>
+                                <View style={styles.stickerBottomSheet}>
+                                    <View style={styles.stickerBottomSheetHeader}>
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryTabBar} keyboardShouldPersistTaps="always">
+                                            {visibleCategories.map((cat) => (
+                                                <TouchableOpacity
+                                                    key={cat.id}
+                                                    style={[styles.categoryTab, activeCategoryId === cat.id && styles.categoryTabActive]}
+                                                    onPress={() => setActiveCategoryId(cat.id)}
+                                                    activeOpacity={0.7}
+                                                >
+                                                    <Text style={[styles.categoryTabText, activeCategoryId === cat.id && styles.categoryTabTextActive]}>
+                                                        {cat.label}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </ScrollView>
+                                        <TouchableOpacity style={styles.stickerManageBtnInside} onPress={() => setShowManager(true)} activeOpacity={0.7}>
+                                            <SettingsTabIcon size={16} color="#999" />
+                                        </TouchableOpacity>
+                                    </View>
+                                    <View style={[styles.stickerRow, { height: 140 }]}>
+                                        {isEmojiCategory
+                                            ? currentStickers.map((emoji, idx) => (
+                                                <AnimatedStickerItem key={`emoji-${idx}`} onPress={() => handleStickerPress(emoji, false)}>
+                                                    <Text style={styles.stickerItemEmoji}>{emoji}</Text>
+                                                </AnimatedStickerItem>
+                                            ))
+                                            : currentStickers.map((item) => (
+                                                <AnimatedStickerItem key={item.key} onPress={() => handleStickerPress(item.key, true)}>
+                                                    <item.Component size={28} />
+                                                </AnimatedStickerItem>
+                                            ))
+                                        }
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* [Page 2] Photos */}
+                            <View style={{ width: windowWidth, paddingHorizontal: 16 }}>
+                                <View style={styles.stickerBottomSheet}>
+                                    <View style={styles.stickerBottomSheetHeader}>
+                                        <View style={styles.categoryTabBar}>
+                                            <TouchableOpacity style={[styles.categoryTab, styles.categoryTabActive]} activeOpacity={1}>
+                                                <Text style={[styles.categoryTabText, styles.categoryTabTextActive]}>프레임</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoFrameContainer}>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => handleAddPhoto('white')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewWhite]}><View style={styles.frameInnerPhoto} /></View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => handleAddPhoto('black')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewBlack]}><View style={[styles.frameInnerPhoto, { backgroundColor: 'rgba(255,255,255,0.1)' }]} /></View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => handleAddPhoto('gray')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewGray]}><View style={styles.frameInnerPhoto} /></View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => isPremium ? handleAddPhoto('pink') : Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewPink, !isPremium && { opacity: 0.8 }]}><View style={styles.frameInnerPhoto} />{!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}</View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => isPremium ? handleAddPhoto('blue') : Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewBlue, !isPremium && { opacity: 0.8 }]}><View style={styles.frameInnerPhoto} />{!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}</View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => isPremium ? handleAddPhoto('mint') : Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewMint, !isPremium && { opacity: 0.8 }]}><View style={styles.frameInnerPhoto} />{!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}</View>
+                                        </TouchableOpacity>
+                                    </ScrollView>
+                                </View>
+                            </View>
+
+                            {/* [Page 3] Text Styles */}
+                            <View style={{ width: windowWidth, paddingHorizontal: 16 }}>
+                                <View style={[styles.textDrawerWrap, { backgroundColor: 'transparent' }]}>
+                                    <View style={styles.colorScrollWrap}>
+                                        <View style={styles.colorRowsContainer}>
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.colorScrollContent}>
+                                                <View style={styles.colorRow}>
+                                                    {TEXT_COLORS.map(color => (
+                                                        <TouchableOpacity key={`txt-${color}`} style={[styles.colorBtn, { backgroundColor: color }, nextTextColor === color && styles.colorBtnActive]} onPress={() => setNextTextColor(color)} activeOpacity={0.8}>
+                                                            {nextTextColor === color && <CheckIcon size={20} color={color === '#FFFFFF' || color === 'transparent' ? '#37352F' : '#FFF'} />}
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            </ScrollView>
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.colorScrollContent}>
+                                                <View style={styles.colorRow}>
+                                                    {HIGHLIGHTER_COLORS.map((color, idx) => {
+                                                        const isSelected = nextTextBgColor === color;
+                                                        const displayColor = color === 'transparent' ? '#FFF' : color;
+                                                        return (
+                                                            <TouchableOpacity key={`bg-${idx}`} style={[styles.colorBtn, { backgroundColor: displayColor }, isSelected && styles.colorBtnActive]} onPress={() => setNextTextBgColor(color)} activeOpacity={0.8}>
+                                                                {color === 'transparent' && <View style={styles.transparentSlash} />}
+                                                                {isSelected && <View style={styles.checkIconOverlay}><CheckIcon size={20} color={color === 'transparent' ? '#37352F' : '#FFF'} /></View>}
+                                                            </TouchableOpacity>
+                                                        );
+                                                    })}
+                                                </View>
+                                            </ScrollView>
+                                        </View>
+                                    </View>
+                                    <View style={styles.fontGrid}>
+                                        {FONT_PRESETS.map(font => {
+                                            const previewStyle = {};
+                                            if (font.id === 'basic') previewStyle.fontFamily = 'GowunDodum_400Regular';
+                                            else if (font.id === 'diary') previewStyle.fontFamily = 'NanumMyeongjo_400Regular';
+                                            else if (font.id === 'hand') previewStyle.fontFamily = 'SingleDay_400Regular';
+                                            else if (font.id === 'y2k') previewStyle.fontFamily = 'NanumPenScript_400Regular';
+                                            else if (font.id === 'bebas') { previewStyle.fontFamily = 'BebasNeue_400Regular'; previewStyle.letterSpacing = 1.5; previewStyle.fontSize = 17; }
+                                            else if (font.id === 'dmsans') { previewStyle.fontFamily = 'DMSans_400Regular'; previewStyle.fontSize = 12; }
+
+                                            const isLocked = !isPremium && font.id !== 'basic' && font.id !== 'diary';
+                                            const isActive = nextTextFont === font.id;
+                                            return (
+                                                <TouchableOpacity key={font.id} style={[styles.fontGridItem, isActive && styles.fontGridItemActive]} onPress={() => isLocked ? (setAlertConfig({ title: '프리미엄 전용 폰트 ✨', message: '다양한 폰트는 프리미엄 버전에서\n무제한으로 사용할 수 있어요!' }), setShowAlert(true)) : setNextTextFont(font.id)} activeOpacity={0.8}>
+                                                    <Text style={[styles.fontGridItemText, isActive && styles.fontGridItemTextActive, previewStyle, isLocked && { opacity: 0.6 }]}>{font.label}</Text>
+                                                    {isLocked && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </View>
+                                </View>
+                            </View>
+                        </ScrollView>
+                    </View>
+                </View>
+            )}
+
 
             {/* 🗑️ 인스타그램 스타일 다크 펄스 쓰레기통 (드래그 중에만 표시) */}
             {isDraggingAny && (

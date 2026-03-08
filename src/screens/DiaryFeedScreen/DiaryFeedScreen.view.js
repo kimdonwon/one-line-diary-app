@@ -11,10 +11,11 @@
 import React, { useRef, useCallback, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, Animated, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Modal from 'react-native-modal';
 
-import { COLORS } from '../../constants/theme';
+import { COLORS, DIARY_CARD_HEIGHT } from '../../constants/theme';
 import { Header, StaticSticker, ComboShakeMoodCharacter } from '../../components';
 import { DiaryEntryCard } from '../../components/DiaryEntryCard';
 import { MessageCircleIcon, XIcon } from '../../constants/icons';
@@ -165,16 +166,20 @@ export function DiaryFeedScreenView({ navigation }) {
         handleNavigateToWrite
     } = useDiaryFeedLogic(navigation);
 
+    const insets = useSafeAreaInsets();
     const flatListRef = useRef(null);
     const hasInitialScrolled = useRef(false);
     const prevYearMonthRef = useRef(`${selectedYear}-${selectedMonth}`);
 
     // 각 카드의 대략적인 높이를 계산하여 스크롤 성능 향상 (뚝뚝 끊김 방지)
-    const getItemLayout = useCallback((data, index) => ({
-        length: 925, // diaryCardInner(340) + diaryMeta(65) + marginBottom(20) 대략적인 합산
-        offset: 425 * index,
-        index,
-    }), []);
+    const getItemLayout = useCallback((data, index) => {
+        const itemHeight = DIARY_CARD_HEIGHT + 89; // diaryCardInner(DIARY_CARD_HEIGHT) + diaryMeta(약 65) + marginBottom(24)
+        return {
+            length: itemHeight,
+            offset: itemHeight * index,
+            index,
+        };
+    }, []);
 
     // 연/월이 바뀌면 스크롤 초기화
     const currentYearMonth = `${selectedYear}-${selectedMonth}`;
@@ -183,16 +188,10 @@ export function DiaryFeedScreenView({ navigation }) {
         prevYearMonthRef.current = currentYearMonth;
     }
 
-    // 첫 로드 시 최하단으로 스크롤
+    // 첫 로드 시 최하단으로 스크롤 (Inverted List로 변경되어 자동으로 최하단 Index 0부터 시작함)
     const onContentSizeChange = useCallback(() => {
-        if (diaries.length > 0 && flatListRef.current && !hasInitialScrolled.current) {
-            const timer = setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-                hasInitialScrolled.current = true;
-            }, 300);
-            return () => clearTimeout(timer);
-        }
-    }, [diaries.length]);
+        // inverted 속성 덕분에 더 이상 수동 스크롤이 필요 없습니다.
+    }, []);
 
     const renderDiaryItem = useCallback(({ item }) => (
         <DiaryEntryCard
@@ -234,11 +233,14 @@ export function DiaryFeedScreenView({ navigation }) {
                     renderItem={renderDiaryItem}
                     keyExtractor={keyExtractor}
                     style={styles.feedList}
-                    contentContainerStyle={styles.feedContent}
+                    contentContainerStyle={[
+                        styles.feedContent,
+                        { paddingTop: insets.bottom + 90 } // 🚀 기종별 하단 여백 + 탭바 높이만큼 충분히 확보
+                    ]}
                     showsVerticalScrollIndicator={false}
-                    onContentSizeChange={onContentSizeChange}
                     getItemLayout={getItemLayout}
                     initialNumToRender={10}
+                    inverted={true} // 🚀 최신 일기가 아래에 오도록 리스트 뒤집기
                 />
             ) : (
                 <View style={styles.emptyContainer}>

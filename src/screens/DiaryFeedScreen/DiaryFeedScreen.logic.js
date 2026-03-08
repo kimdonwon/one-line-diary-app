@@ -127,14 +127,16 @@ export function useDiaryFeedLogic(navigation) {
         reloadComments();
     }, [reloadComments]);
 
+    const reversedDiaries = useMemo(() => [...diaries].reverse(), [diaries]);
+
     return {
         // 연/월 데이터
         selectedYear,
         selectedMonth,
         isYearMonthPickerVisible,
 
-        // 일기 데이터
-        diaries,
+        // 일기 데이터 (최신순으로 정렬하여 inverted FlatList에서 사용)
+        diaries: reversedDiaries,
         loading,
         reload,
         activitiesMap,

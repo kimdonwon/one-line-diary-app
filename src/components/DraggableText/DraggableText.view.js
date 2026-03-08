@@ -77,6 +77,7 @@ export const DraggableText = React.memo(({
     onSelect,
     isSelected: externalIsSelected,
     autoFocus = false,
+    createdAt,
 }) => {
     const [isEditing, setIsEditing] = useState(autoFocus);
     const [localText, setLocalText] = useState(text);
@@ -112,6 +113,7 @@ export const DraggableText = React.memo(({
         onDragDrop,
         onSelect,
         isSelected: externalIsSelected,
+        createdAt,
     });
 
     const containerRef = useRef(null);

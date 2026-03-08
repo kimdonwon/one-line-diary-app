@@ -6,7 +6,7 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 8,
-        maxWidth: '85%',
+        maxWidth: '95%',
         borderWidth: 1.5,
         borderColor: 'transparent',
     },

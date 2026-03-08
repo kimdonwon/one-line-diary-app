@@ -90,6 +90,20 @@ export const styles = StyleSheet.create({
     transparentImageSelected: {
         opacity: 0.7, // 선택 시에는 위치 확인을 위해 조금 더 선명하게
     },
+    placeholderContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FAFAF9',
+        borderWidth: 1.5,
+        borderColor: '#D9D9D6',
+        borderStyle: 'dashed',
+    },
+    placeholderText: {
+        fontSize: 10,
+        color: '#A0A09F',
+        fontWeight: '600',
+        marginTop: 4,
+    },
     polaroidBottom: {
         height: 16, // 하단 여백 영역 (글씨를 쓸 수 있는 빈 칸 느낌)
     },

@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, TextInput } from 'react-native';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Animated, TextInput, Modal, Pressable, FlatList } from 'react-native';
 import Reanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, withDelay, useAnimatedProps } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
@@ -79,12 +79,23 @@ export function SummaryScreenView({ route, navigation }) {
         moodLineData, maxLineValue, activityStats, maxActivityCount,
         maxActivityLineValue, activityLineData, moodActivityCorrelation, stickerStats,
         onPageScroll, onMomentumScrollEnd, handleTabPress, handleGoBack, handleMoodPress,
-        handleActivityPress, getActivityByKey
+        handleActivityPress, getActivityByKey, setYear
     } = useSummaryLogic(route, navigation, scrollRef);
 
     const moodConfettiRef = useRef(null);
     const activityConfettiRef = useRef(null);
     const [animKey, setAnimKey] = useState(0);
+    const [showYearPicker, setShowYearPicker] = useState(false);
+
+    // ─── 🗓 연도 리스트 생성 (2020년부터 현재 연도까지) ───
+    const currentFullYear = new Date().getFullYear();
+    const availableYears = useMemo(() => {
+        const years = [];
+        for (let y = currentFullYear; y >= 2020; y--) {
+            years.push(y);
+        }
+        return years;
+    }, [currentFullYear]);
 
     useFocusEffect(
         useCallback(() => {
@@ -100,6 +111,11 @@ export function SummaryScreenView({ route, navigation }) {
     const handleActivityHeroPress = (evt) => {
         const { pageX, pageY } = evt.nativeEvent;
         activityConfettiRef.current?.burst(pageX, pageY);
+    };
+
+    const handleYearSelect = (selectedYear) => {
+        setYear(selectedYear);
+        setShowYearPicker(false);
     };
 
 
@@ -181,7 +197,18 @@ export function SummaryScreenView({ route, navigation }) {
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
-            <Header title={`${year}년 기록`} />
+            <Header
+                title={
+                    <TouchableOpacity
+                        style={styles.headerTitleContainer}
+                        onPress={() => setShowYearPicker(true)}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.headerTitle}>{year}년 기록</Text>
+                        <Text style={styles.headerTitleArrow}>▾</Text>
+                    </TouchableOpacity>
+                }
+            />
 
             <View style={styles.pageIndicator}>
                 <View style={[
@@ -201,7 +228,7 @@ export function SummaryScreenView({ route, navigation }) {
                             <>
                                 <TouchableOpacity style={[styles.heroBanner, { backgroundColor: topMoodData ? topMoodData.color : COLORS.happy }]} onPress={handleMoodHeroPress} activeOpacity={0.8}>
                                     <View style={styles.heroTextWrap}>
-                                        <Text style={styles.heroLabel}>올해 가장 많이 느낀 기분</Text>
+                                        <Text style={styles.heroLabel}>{year}년 가장 많이 느낀 기분</Text>
                                         <Text style={styles.heroTitle}>"{topMoodData ? topMoodData.label : '기록 없음'}"</Text>
                                         <Text style={styles.heroSub}>{topMoodCount}일의 기록이 쌓였어요</Text>
                                     </View>
@@ -226,7 +253,7 @@ export function SummaryScreenView({ route, navigation }) {
                             </>
                         ) : (
                             <Card style={styles.emptyCard}>
-                                <Text style={styles.emptyTitle}>올해 작성한 일기가 없어요</Text>
+                                <Text style={styles.emptyTitle}>{year}년 작성한 일기가 없어요</Text>
                                 <Text style={styles.emptyText}>첫 번째 하루를 기록해보세요 ✧</Text>
                             </Card>
                         )}
@@ -240,7 +267,7 @@ export function SummaryScreenView({ route, navigation }) {
                             <>
                                 <TouchableOpacity style={[styles.heroBanner, { backgroundColor: '#5776DB' }]} onPress={handleActivityHeroPress} activeOpacity={0.8}>
                                     <View style={styles.heroTextWrap}>
-                                        <Text style={styles.heroLabel}>올해 가장 많이 한 활동</Text>
+                                        <Text style={styles.heroLabel}>{year}년 가장 많이 한 활동</Text>
                                         <Text style={styles.heroTitle}>{getActivityByKey(activityStats[0].activity)?.label || '기록 없음'}</Text>
                                         <Text style={styles.heroSub}>{activityStats[0].count}번 기록했어요</Text>
                                     </View>
@@ -270,7 +297,7 @@ export function SummaryScreenView({ route, navigation }) {
                             </>
                         ) : (
                             <Card style={styles.emptyCard}>
-                                <Text style={styles.emptyTitle}>올해 기록한 활동이 없어요</Text>
+                                <Text style={styles.emptyTitle}>{year}년 기록한 활동이 없어요</Text>
                                 <Text style={styles.emptyText}>어떤 하루를 보냈는지 남겨봐요 ✧</Text>
                             </Card>
                         )}
@@ -278,6 +305,47 @@ export function SummaryScreenView({ route, navigation }) {
                     </ScrollView>
                 </View>
             </ScrollView>
+
+            {/* ─── 🗓 연도 선택 모달 ─── */}
+            <Modal
+                transparent={true}
+                visible={showYearPicker}
+                animationType="fade"
+                onRequestClose={() => setShowYearPicker(false)}
+            >
+                <Pressable
+                    style={styles.yearModalBackdrop}
+                    onPress={() => setShowYearPicker(false)}
+                >
+                    <View style={styles.yearModalContent}>
+                        <Text style={styles.yearModalTitle}>연도 선택</Text>
+                        <FlatList
+                            data={availableYears}
+                            keyExtractor={(item) => item.toString()}
+                            style={styles.yearList}
+                            renderItem={({ item }) => {
+                                const isActive = item === year;
+                                return (
+                                    <TouchableOpacity
+                                        style={[styles.yearItem, isActive && styles.yearItemActive]}
+                                        onPress={() => handleYearSelect(item)}
+                                    >
+                                        <Text style={[styles.yearItemText, isActive && styles.yearItemTextActive]}>
+                                            {item}년
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                        <TouchableOpacity
+                            style={styles.yearCloseBtn}
+                            onPress={() => setShowYearPicker(false)}
+                        >
+                            <Text style={styles.yearCloseBtnText}>닫기</Text>
+                        </TouchableOpacity>
+                    </View>
+                </Pressable>
+            </Modal>
 
             {/* 화면 전체를 덮는 절대 좌표 기준 폭죽 효과 (Ref 사용으로 리렌더링 방지) */}
             <ConfettiEffect

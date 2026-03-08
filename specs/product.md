@@ -31,6 +31,7 @@
 
 *   `emoji`: 기본 다꾸 이모지 팩 (무료)
 *   `legacy`: 기본 캐릭터 팩 (무료)
+*   `roundface`: 동글뱅이 얼굴 팩 (무료)
 
 ## 4. 관리 및 연동 가이드
 1.  **스토어 등록:** 구글 플레이 콘솔의 '인앱 상품' 메뉴에 위 ID를 동일하게 등록합니다.
@@ -39,3 +40,4 @@
 
 ## 5. 핵심 UX/UI 업데이트 (Refining Tool Panel UX)
 *   **Floating Glass Island & Seamless Morphing Dock:** 하단 도구 패널(텍스트, 사진, 스티커)은 반투명 블러 효과(BlurView)가 적용된 단일 컨테이너로 통합되었으며, 탭 전환 시 창이 닫히지 않고 내부에서 매끄럽게 교체(LayoutAnimation)되어 MZ세대 트렌드에 맞는 세련된 인터페이스를 제공합니다.
+*   **Interactive Year Selection (Summary View):** 요약 화면 상단의 연도를 터치하여 다른 연도의 통계를 즉시 확인할 수 있는 연도 선택 시스템이 추가되었습니다. Notion 스타일의 깔끔한 모달 디자인을 적용하여 시각적 일관성을 유지합니다.

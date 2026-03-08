@@ -29,28 +29,85 @@ export const styles = StyleSheet.create({
     },
 
 
-    // ─── 🗂 도구 패널 (Bottom Sheet) 공통: Floating Glass Island ───
+    // ─── 🗂 도구 패널 (Bottom Sheet) ───
     floatingDockContainer: {
-        position: 'absolute', // 카드 흐름에서 분리 (밀림 방지)
-        bottom: 64, // integratedDiaryMeta 바 위에 뜨도록 설정
-        left: 16, // 좌우 여백
-        right: 16,
-        zIndex: 100, // 패널이 드로잉 영역 위에 표시되게 설정
-        borderRadius: 24,
-        overflow: 'hidden', // BlurView가 둥근 모서리에 맞게 잘림
-        borderWidth: 1,
-        borderColor: 'rgba(230, 230, 228, 0.5)',
-        backgroundColor: 'rgba(255, 255, 255, 0.5)', // 아주 옅은 흰색
-        elevation: 8,
-    },
-    floatingDockBlur: {
         position: 'absolute',
-        top: 0, left: 0, right: 0, bottom: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '26%', // 화면의 약 1/4 (25~30% 사이 적절한 크기)
+        zIndex: 100,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        backgroundColor: '#FFFFFF',
+        ...SOFT_SHADOW.card,
+        borderWidth: 1,
+        borderColor: '#E9E9E7',
+        borderBottomWidth: 0,
+        paddingTop: 8,
     },
+    bottomSheetHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        height: 60,
+        marginBottom: 8,
+    },
+    bottomSheetHandle: {
+        position: 'absolute',
+        top: 0,
+        width: 36,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#E6E6E6',
+        alignSelf: 'center',
+    },
+    bottomSheetTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#37352F',
+    },
+    // Morphing Pill Navigation
+    pillNavContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        marginTop: 18, // 핸들 아래에 위치하도록 마진 추가
+    },
+    pillButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: 'transparent',
+    },
+    pillButtonActiveSticker: {
+        backgroundColor: '#E6F4EA', // 연녹색
+    },
+    pillButtonActivePhoto: {
+        backgroundColor: '#FCE8E6', // 연분홍
+    },
+    pillButtonActiveText: {
+        backgroundColor: '#FEF7E0', // 연노랑
+    },
+    pillIconText: {
+        fontSize: 16,
+    },
+    pillLabel: {
+        fontSize: 13,
+        fontWeight: '700',
+        marginLeft: 6,
+    },
+    pillLabelSticker: { color: '#0F7B6C' },
+    pillLabelPhoto: { color: '#E03E3E' },
+    pillLabelText: { color: '#D9730D' },
     floatingDockContent: {
         paddingHorizontal: SPACING.md,
-        paddingVertical: 14,
         width: '100%',
+        flex: 1,
     },
     stickerBottomSheet: {
         backgroundColor: 'transparent',
@@ -960,5 +1017,47 @@ export const styles = StyleSheet.create({
         fontSize: 12,
         color: '#A1A19F',
         fontWeight: '500',
+    },
+
+    // ─── 🚀 하단 탭바 (App.js MainTabs 스타일 복제) ───
+    bottomTabBar: {
+        position: 'absolute',
+        bottom: 16, // + insets.bottom
+        left: 20,
+        right: 20,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,   // 노션 컨테이너 라운딩
+        borderWidth: 1,
+        borderColor: '#E9E9E7', // 노션 테두리 실선
+        borderTopWidth: 1, // App.js와 동일한 상단 보더
+        height: 64, // 약간 더 슬림하게 (App.js 크기와 일치)
+        flexDirection: 'row',
+        alignItems: 'center',
+        elevation: 4,
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+    },
+    navTabContainer: {
+        flex: 1,
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    centerCheckButton: {
+        width: 56,
+        height: 56,
+        borderRadius: 16, // 노션의 스쿼클(Squircle) 스타일
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: -20, // 살짝 떠있도록
+        borderWidth: 3,
+        borderColor: '#FFFFFF', // 흰색 테두리
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 5,
     },
 });

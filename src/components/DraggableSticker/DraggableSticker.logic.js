@@ -16,5 +16,6 @@ export function useDraggableLogic({ sticker, bounds, onDelete, onDragEnd, onInte
         onDragDrop,
         onSelect,
         isSelected,
+        createdAt: sticker.createdAt,
     });
 }

@@ -1,6 +1,6 @@
 import { useDraggable } from '../../hooks/useDraggable';
 
-export function useDraggableTextLogic({ id, initialX, initialY, initialRotation, initialScale = 1, isEditing, onDelete, onDragEnd, onFocus, onTap, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected }) {
+export function useDraggableTextLogic({ id, initialX, initialY, initialRotation, initialScale = 1, isEditing, onDelete, onDragEnd, onFocus, onTap, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected, createdAt }) {
     return useDraggable({
         id,
         initialX,
@@ -19,5 +19,6 @@ export function useDraggableTextLogic({ id, initialX, initialY, initialRotation,
         onDragDrop,
         onSelect,
         isSelected,
+        createdAt,
     });
 }

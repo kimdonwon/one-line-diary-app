@@ -4,7 +4,7 @@
  * - 멀티페이지 일기의 경우 인스타그램 스타일 가로 스와이프 + 도트 인디케이터 제공
  */
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Dimensions } from 'react-native';
 
 import { COLORS, SPACING, SOFT_SHADOW, DIARY_CARD_HEIGHT } from '../constants/theme';
@@ -166,7 +166,11 @@ const SinglePageContent = React.memo(({ content, stickers = [], photos = [], tex
 
 export const DiaryEntryCard = React.memo(({ diary, activities = [], commentCount = 0, onOpenComment, onPress }) => {
     const mood = getMoodByKey(diary.mood);
-    const { pages, stickersPerPage, photosPerPage, backgroundsPerPage, textsPerPage, isMultiPage } = parseMultiPageData(diary.content, diary.stickers, diary.photos, diary.backgrounds, diary.texts);
+
+    // 🚀 JSON 파싱 연산을 메모이제이션하여 렌더링 부하 최소화
+    const { pages, stickersPerPage, photosPerPage, backgroundsPerPage, textsPerPage, isMultiPage } = useMemo(() => {
+        return parseMultiPageData(diary.content, diary.stickers, diary.photos, diary.backgrounds, diary.texts);
+    }, [diary.content, diary.stickers, diary.photos, diary.backgrounds, diary.texts]);
 
     const [activePageIndex, setActivePageIndex] = useState(0);
     const [cardWidth, setCardWidth] = useState(0);
