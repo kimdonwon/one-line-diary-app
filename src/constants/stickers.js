@@ -61,11 +61,11 @@ export const STICKER_CATEGORIES = [
 export const STICKER_PACK_DATA = [
     { id: 'pack1', title: '기본 다꾸 이모지 팩', desc: '다양한 감정 표현', icon: '🐾', isFree: true, isDefault: true, catId: 'emoji' },
     { id: 'pack2', title: '기본 캐릭터 팩', desc: '오늘조각 시그니처', icon: '✨', isFree: true, isDefault: true, catId: 'legacy' },
-    { id: 'pack3', title: '몽글몽글 파스텔 팩', desc: '몽글몽글한 손그림 느낌', icon: '🎨', isFree: false, isDefault: false, catId: 'pastel', price: '1,100' },
-    { id: 'pack4', title: '냠냠 먹방 팩', desc: '커피, 마라탕, 탕후루까지!', icon: '🍡', isFree: false, isDefault: false, catId: 'food', tagLabel: '푸드', price: '1,100' },
-    { id: 'pack5', title: '삐뚤빼뚤 라인 팩', desc: '대충 그린 꾸안꾸 갬성', icon: '〰️', isFree: false, isDefault: false, catId: 'mzline', tagLabel: '라인', price: '1,100' },
-    { id: 'pack7', title: '오밀조밀 동네 친구들', desc: '귀엽고 다양한 얼굴 모음!', icon: '👦', isFree: false, isDefault: false, catId: 'people', tagLabel: '피플', price: '1,100' },
-    { id: 'pack8', title: '아이티 스티커팩', desc: '컴퓨터, 카메라, IT소품 가득!', icon: '🎁', isFree: false, isDefault: false, catId: 'it', tagLabel: '아이티', price: '1,100' },
+    { id: 'pack3', title: '몽글몽글 파스텔 팩', desc: '몽글몽글한 손그림 느낌', icon: '🎨', isFree: true, isDefault: false, catId: 'pastel' },
+    { id: 'pack4', title: '냠냠 먹방 팩', desc: '커피, 마라탕, 탕후루까지!', icon: '🍡', isFree: true, isDefault: false, catId: 'food', tagLabel: '푸드' },
+    { id: 'pack5', title: '삐뚤빼뚤 라인 팩', desc: '대충 그린 꾸안꾸 갬성', icon: '〰️', isFree: true, isDefault: false, catId: 'mzline', tagLabel: '라인' },
+    { id: 'pack7', title: '오밀조밀 동네 친구들', desc: '귀엽고 다양한 얼굴 모음!', icon: '👦', isFree: true, isDefault: false, catId: 'people', tagLabel: '피플' },
+    { id: 'pack8', title: '아이티 스티커팩', desc: '컴퓨터, 카메라, IT소품 가득!', icon: '🎁', isFree: true, isDefault: false, catId: 'it', tagLabel: '아이티' },
     { id: 'pack9', title: '동글뱅이 얼굴 팩', desc: '낙서처럼 동글동글 귀여운', icon: '🎨', isFree: true, isDefault: false, catId: 'roundface', tagLabel: '동글' },
 ];
 

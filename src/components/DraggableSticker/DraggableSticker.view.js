@@ -59,6 +59,10 @@ export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onD
         inputRange: [0.1, 0.2, 0.35, 0.5, 0.7, 1, 1.5, 2, 3, 5],
         outputRange: [-240, -120, -68.57, -48, -34.28, -24, -16, -12, -8, -4.8],
     });
+    const dragHandleOffset = crispScale.interpolate({
+        inputRange: [0.1, 0.2, 0.35, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [-360, -180, -102.85, -72, -51.42, -36, -24, -18, -12, -7.2],
+    });
 
     return (
         <Animated.View
@@ -88,6 +92,21 @@ export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onD
             <View pointerEvents="none" style={{ width: 100, height: 100, alignItems: 'center', justifyContent: 'center' }}>
                 {renderContent()}
             </View>
+
+            {/* 👆 드래그 막대 핸들 (선택 시 하단 중앙에 표시) */}
+            {isSelected && (
+                <Animated.View style={{
+                    position: 'absolute',
+                    bottom: dragHandleOffset,
+                    left: '50%',
+                    marginLeft: -20, // width 40의 절반 무조건 중앙 정렬
+                    width: 40,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: '#8B7E74',
+                    transform: [{ scale: handleScale }]
+                }} />
+            )}
 
             {/* 🔄 회전 핸들 (선택 시에만 표시) */}
             {isSelected && (

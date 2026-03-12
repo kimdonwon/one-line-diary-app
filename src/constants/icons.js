@@ -299,3 +299,18 @@ export function TextIcon({ size = 24, active = false, style }) {
         </Svg>
     );
 }
+
+// ─── 페이지 추가 아이콘 (Doodle Flash: Line Art Document with Plus) ───
+export function PageAddIcon({ size = 24, color = "#8B7E74", style }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={style}>
+            {/* Document Frame */}
+            <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <Path d="M14 2v6h6" />
+            
+            {/* Plus Symbol */}
+            <Line x1="12" y1="12" x2="12" y2="18" strokeWidth="2" />
+            <Line x1="9" y1="15" x2="15" y2="15" strokeWidth="2" />
+        </Svg>
+    );
+}

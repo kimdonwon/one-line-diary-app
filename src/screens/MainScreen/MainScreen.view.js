@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, ScrollView, Animated, PanResponder } from
 import { StatusBar } from 'expo-status-bar';
 
 import { COLORS } from '../../constants/theme';
-import { Card, MoodBar, Header } from '../../components';
-import { SearchIcon } from '../../constants/icons';
+import { Card, MoodBar, Header, SoftAlertModal, ComboShakeMoodCharacter } from '../../components';
+import { SearchIcon, TrashIcon } from '../../constants/icons';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { ActivityIcon } from '../../constants/ActivityIcons';
 import { getMoodByKey } from '../../constants/mood';
@@ -23,7 +23,7 @@ import { useGlobalWeeklyMood } from '../../context/MoodContext';
 /**
  * 📅 캘린더 셀 컴포넌트 (외부 추출로 re-mount 방지)
  */
-const CalendarCell = ({ day, year, month, diaryMap, isToday, getWeekMoodColor, onDayPress }) => {
+const CalendarCell = ({ day, year, month, diaryMap, isToday, getWeekMoodColor, onDayPress, onDayLongPress }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const flashAnim = useRef(new Animated.Value(0)).current;
 
@@ -64,6 +64,8 @@ const CalendarCell = ({ day, year, month, diaryMap, isToday, getWeekMoodColor, o
         <TouchableOpacity
             style={styles.dayCell}
             onPress={() => onDayPress(day)}
+            onLongPress={() => onDayLongPress(day)}
+            delayLongPress={400}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             activeOpacity={1}
@@ -135,7 +137,8 @@ export function MainScreenView({ navigation }) {
     const {
         year, month, diaries, activityStats, diaryMap,
         firstDay, daysInMonth, topMoodData, allMoodStats, maxCount, dailyMoodFlow,
-        isToday, goToPrevMonth, goToNextMonth, onDayPress, onMoodPress, onActivityPress
+        showAlert, alertConfig,
+        isToday, goToPrevMonth, goToNextMonth, onDayPress, onDayLongPress, onMoodPress, onActivityPress, setShowAlert
     } = useMainLogic(navigation);
 
     const weeklyMood = useGlobalWeeklyMood();
@@ -292,7 +295,7 @@ export function MainScreenView({ navigation }) {
             <Header
                 title="오늘조각"
                 subtitle={`${year}년 ${month}월`}
-                titleIcon={<MoodCharacter character={currentHeaderMood.character} size={28} />}
+                titleIcon={<ComboShakeMoodCharacter character={currentHeaderMood.character} size={28} />}
                 rightButton={
                     <TouchableOpacity
                         onPress={() => navigation.navigate('Search')}
@@ -346,6 +349,7 @@ export function MainScreenView({ navigation }) {
                                 isToday={isToday}
                                 getWeekMoodColor={getWeekMoodColor}
                                 onDayPress={onDayPress}
+                                onDayLongPress={onDayLongPress}
                             />
                         ))}
                     </View>
@@ -416,6 +420,16 @@ export function MainScreenView({ navigation }) {
             <ConfettiEffect
                 ref={confettiRef}
                 renderItem={() => <MoodCharacter character={topMoodData?.character} size={24} />}
+            />
+            
+            <SoftAlertModal
+                isVisible={showAlert}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                confirmText={alertConfig.confirmText}
+                onConfirm={alertConfig.onConfirm}
+                secondaryText={alertConfig.secondaryText}
+                onSecondaryConfirm={alertConfig.onSecondaryConfirm}
             />
         </View>
     );

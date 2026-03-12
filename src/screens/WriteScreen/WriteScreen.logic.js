@@ -45,6 +45,22 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const [showBackgrounds, setShowBackgrounds] = useState(false); // 배경지 서랍 열림 상태
     const [currentPageIndex, setCurrentPageIndex] = useState(0);
     const MAX_PHOTOS_PER_PAGE = isPremium ? 5 : 1; // 프리미엄 5장, 무료 1장
+    const MAX_TEXTS_PER_PAGE = isPremium ? 15 : 3; // ✏️ 프리미엄 15개, 무료 3개
+
+    // 스티커 서랍 관리 상태
+    const defaultCats = STICKER_PACK_DATA.filter(p => p.isDefault).map(p => p.catId);
+    const [enabledCatIds, setEnabledCatIds] = useState(defaultCats);
+    const [showManager, setShowManager] = useState(false);
+
+    // 📺 광고 보상 추가 스티커 수
+    const [adBonusStickers, setAdBonusStickers] = useState(0);
+    // 📺 광고 보상 추가 텍스트 수
+    const [adBonusTexts, setAdBonusTexts] = useState(0);
+
+    // 활동 선택 및 서술 관리를 위한 상태 (메타데이터 배열)
+    const [activityStates, setActivityStates] = useState(
+        ACTIVITIES.map(a => ({ key: a.key, selected: false, title: '', note: '' }))
+    );
 
     // 현재 페이지의 content와 stickers (편의용 alias)
     const content = pages[currentPageIndex] || '';
@@ -52,6 +68,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
     const [inputBoxBounds, setInputBoxBounds] = useState({ width: 0, height: 0, x: 0, y: 0 });
     const [isStickerLimitModalVisible, setStickerLimitModalVisible] = useState(false);
+    const [isTextLimitModalVisible, setTextLimitModalVisible] = useState(false);
 
     // 🔔 커스텀 알림 상태 추가
     const [showAlert, setShowAlert] = useState(false);
@@ -76,20 +93,47 @@ export function useWriteLogic(route, navigation, scrollRef) {
     // 🎯 선택된 아이템 관리 (중앙 집중식 선택 해제용)
     const [selectedItemId, setSelectedItemId] = useState(null);
 
+    // ─── 💾 자동 저장(Auto-save) 로직 ───
+    const latestData = useRef({ selectedMood, pages, pageStickers, pagePhotos, pageTexts, pageBackgrounds, activityStates, date });
+    useEffect(() => {
+        latestData.current = { selectedMood, pages, pageStickers, pagePhotos, pageTexts, pageBackgrounds, activityStates, date };
+    }, [selectedMood, pages, pageStickers, pagePhotos, pageTexts, pageBackgrounds, activityStates, date]);
+
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+            const data = latestData.current;
+            if (data.selectedMood) {
+                // 멀티페이지: pages 배열과 pageStickers 등 데이터를 저장 형식에 맞게 변환
+                const trimmedPages = data.pages.map(p => (p || '').trim());
+                // 빈 후행 페이지 제거
+                while (trimmedPages.length > 1 && trimmedPages[trimmedPages.length - 1] === '' && (data.pageStickers[trimmedPages.length - 1] || []).length === 0 && (data.pagePhotos[trimmedPages.length - 1] || []).length === 0 && (data.pageTexts[trimmedPages.length - 1] || []).length === 0) {
+                    trimmedPages.pop();
+                }
+                const stickersToSave = data.pageStickers.slice(0, trimmedPages.length);
+                const photosToSave = data.pagePhotos.slice(0, trimmedPages.length);
+                const textsToSave = data.pageTexts.slice(0, trimmedPages.length).map(page =>
+                    (page || []).map(t => ({ ...t, autoFocus: false }))
+                );
+
+                const contentToSave = trimmedPages.length === 1 ? trimmedPages[0] : JSON.stringify(trimmedPages);
+                const stickersStrToSave = trimmedPages.length === 1 ? JSON.stringify(stickersToSave[0] || []) : JSON.stringify(stickersToSave);
+                const photosStrToSave = JSON.stringify(photosToSave);
+                const textsStrToSave = JSON.stringify(textsToSave);
+                const bgsToSave = data.pageBackgrounds.slice(0, trimmedPages.length);
+                const bgsStrToSave = JSON.stringify(bgsToSave);
+
+                // 화면 이탈 시 비동기 저장 백그라운드 수행 (Fire and Forget)
+                saveDiary(data.date, contentToSave, data.selectedMood, stickersStrToSave, photosStrToSave, bgsStrToSave, textsStrToSave).catch(console.error);
+                saveActivities(data.date, data.activityStates).catch(console.error);
+            }
+        });
+        return unsubscribe;
+    }, [navigation]);
+
     // (프리미엄 상태는 usePremium 훅에서 관리)
 
-    // 스티커 서랍 관리 상태
-    const defaultCats = STICKER_PACK_DATA.filter(p => p.isDefault).map(p => p.catId);
-    const [enabledCatIds, setEnabledCatIds] = useState(defaultCats);
-    const [showManager, setShowManager] = useState(false);
 
-    // 📺 광고 보상 추가 스티커 수
-    const [adBonusStickers, setAdBonusStickers] = useState(0);
-
-    // 활동 선택 및 서술 관리를 위한 상태 (메타데이터 배열)
-    const [activityStates, setActivityStates] = useState(
-        ACTIVITIES.map(a => ({ key: a.key, selected: false, title: '', note: '' }))
-    );
+    // ─── 💾 데이터 복원 및 관리 ───
 
     /**
      * 기존 일기 데이터가 있으면 폼 상태를 복원합니다.
@@ -265,14 +309,50 @@ export function useWriteLogic(route, navigation, scrollRef) {
         }
     }, [savedActivities]);
 
+    // 📸 기분/활동 모달 상태 스냅샷 (편집 취소 복구용)
+    const modalSnapshot = useRef(null);
+
+    const openMoodModal = useCallback(() => {
+        // 모달 열기 직전에 현재 선택된 기분과 활동 상태를 스냅샷으로 저장
+        modalSnapshot.current = {
+            mood: selectedMood,
+            activities: JSON.parse(JSON.stringify(activityStates)),
+        };
+        setMoodModalVisible(true);
+    }, [selectedMood, activityStates]);
+
+    const handleMoodModalDismiss = useCallback(() => {
+        if (modalSnapshot.current && modalSnapshot.current.mood) {
+            // 이전에 선택해둔 기분/활동이 있었으면, 변경 사항을 저장하지 않고 모달 열기 전 스냅샷으로 되돌림
+            setSelectedMood(modalSnapshot.current.mood);
+            setActivityStates(modalSnapshot.current.activities);
+            modalSnapshot.current = null;
+            setMoodModalVisible(false);
+        } else {
+            // 아무것도 선택하지 않은 첫 진입 상태에서 모달을 닫으면 뒤로가기
+            setMoodModalVisible(false);
+            navigation.goBack();
+        }
+    }, [navigation]);
+
+    const handleMoodModalConfirm = useCallback(() => {
+        // [선택하기]를 눌러 변경 사항을 확정 (스냅샷 파기)
+        modalSnapshot.current = null;
+        setMoodModalVisible(false);
+    }, []);
+
     /**
      * 🚪 첫 진입 시 (새 일기인 경우) 기분/활동 팝업 자동 오픈
      */
     useEffect(() => {
         if (!loading && !diary && !selectedMood) {
-            setMoodModalVisible(true);
+            // 화면 전환(트랜지션) 애니메이션이 끝날 때까지 기다린 후 모달 스냅샷을 찍으며 열기
+            const timer = setTimeout(() => {
+                openMoodModal();
+            }, 150);
+            return () => clearTimeout(timer);
         }
-    }, [loading]);
+    }, [loading, diary, selectedMood, openMoodModal]);
 
     const safeContent = content || '';
     const lineCount = safeContent.split('\n').length;
@@ -307,10 +387,18 @@ export function useWriteLogic(route, navigation, scrollRef) {
     };
 
     /**
-     * 🗑️ 현재 페이지 삭제 (최소 1페이지는 유지)
+     * 🗑️ 현재 페이지 삭제 (1페이지일 때는 내용 및 에셋 초기화)
      */
     const deletePage = (index) => {
-        if (pages.length <= 1) return;
+        if (pages.length <= 1) {
+            setPages(['']);
+            setPageStickers([[]]);
+            setPagePhotos([[]]);
+            setPageTexts([[]]);
+            setPageBackgrounds(['default']);
+            setCurrentPageIndex(0);
+            return 0;
+        }
 
         const newPages = pages.filter((_, i) => i !== index);
         const newPageStickers = pageStickers.filter((_, i) => i !== index);
@@ -423,6 +511,27 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setTimeout(() => setShowAlert(true), 500);
     };
 
+    /**
+     * 📺 텍스트 서랍 & 캔버스 탭용 광고 보상 핸들러
+     */
+    const handleAdRewardForText = () => {
+        // 실제로는 여기서 광고 SDK 호출
+        const baseLimit = 3;
+        const currentPageTexts = pageTexts[currentPageIndex]?.length || 0;
+        const currentEffectiveLimit = Math.max(baseLimit + adBonusTexts, currentPageTexts);
+
+        const nextBonus = (currentEffectiveLimit + 2) - baseLimit;
+
+        setAdBonusTexts(nextBonus);
+        setTextLimitModalVisible(false);
+
+        setAlertConfig({
+            title: '광고 보상 🎁',
+            message: `보너스 텍스트 박스가 추가되어 이제 최대 ${baseLimit + nextBonus}개까지 넣을 수 있어요! ✨`
+        });
+        setTimeout(() => setShowAlert(true), 500);
+    };
+
     const handleDeleteSticker = useCallback((id) => {
         setPageStickers(prev => {
             const next = [...prev];
@@ -466,44 +575,14 @@ export function useWriteLogic(route, navigation, scrollRef) {
     };
 
     /**
-     * 💾 작성된 전체 폼 데이터를 데이터베이스에 기록합니다.
+     * 💾 작성된 전체 폼 데이터를 데이터베이스에 기록합니다. (수동 버튼 클릭 시 호출)
      */
     const handleSave = async () => {
         if (!selectedMood) {
-            setAlertConfig({ title: '기분을 정해주세요!', message: '오늘의 조각을 완성하려면\n기분 선택이 필요해요 ✨' });
-            setShowAlert(true);
+            openMoodModal();
             return;
         }
-
-
-        try {
-            // 멀티페이지: pages 배열과 pageStickers 2차원 배열을 JSON으로 저장
-            const trimmedPages = pages.map(p => (p || '').trim());
-            // 빈 후행 페이지 제거 (마지막 빈 페이지들 정리)
-            while (trimmedPages.length > 1 && trimmedPages[trimmedPages.length - 1] === '' && (pageStickers[trimmedPages.length - 1] || []).length === 0 && (pagePhotos[trimmedPages.length - 1] || []).length === 0 && (pageTexts[trimmedPages.length - 1] || []).length === 0) {
-                trimmedPages.pop();
-            }
-            const stickersToSave = pageStickers.slice(0, trimmedPages.length);
-            const photosToSave = pagePhotos.slice(0, trimmedPages.length);
-            const textsToSave = pageTexts.slice(0, trimmedPages.length).map(page =>
-                (page || []).map(t => ({ ...t, autoFocus: false }))
-            );
-
-            // 단일 페이지면 레거시 호환을 위해 문자열/1차원 배열로 저장
-            const contentToSave = trimmedPages.length === 1 ? trimmedPages[0] : JSON.stringify(trimmedPages);
-            const stickersStrToSave = trimmedPages.length === 1 ? JSON.stringify(stickersToSave[0] || []) : JSON.stringify(stickersToSave);
-            const photosStrToSave = JSON.stringify(photosToSave);
-            const textsStrToSave = JSON.stringify(textsToSave);
-            const bgsToSave = pageBackgrounds.slice(0, trimmedPages.length);
-            const bgsStrToSave = JSON.stringify(bgsToSave);
-
-            await saveDiary(date, contentToSave, selectedMood, stickersStrToSave, photosStrToSave, bgsStrToSave, textsStrToSave);
-            await saveActivities(date, activityStates);
-            navigation.goBack(); // 저장 후 목록으로 이동
-        } catch (e) {
-            console.error('Failed to save diary:', e);
-            Alert.alert('오류', '저장에 실패했어요');
-        }
+        navigation.goBack(); // goBack 시 beforeRemove 이벤트가 발생하여 최신 데이터가 자동 저장됨
     };
 
     const formattedDate = date.replace(/-/g, '.');
@@ -664,6 +743,15 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const handleAddText = (textValue, fontId, color, bgColor) => {
         if (!textValue || textValue.trim().length === 0) return;
 
+        // 🚨 텍스트 개수 제한 체크
+        const currentTexts = pageTexts[currentPageIndex] || [];
+        const baseTextLimit = isPremium ? 15 : 3;
+        const currentEffectiveTextLimit = Math.min(baseTextLimit + adBonusTexts, 15);
+        if (currentTexts.length >= currentEffectiveTextLimit) {
+            setTextLimitModalVisible(true);
+            return;
+        }
+
         const spawnX = inputBoxBounds.width > 0 ? inputBoxBounds.width / 2 - 50 : 60;
         const spawnY = inputBoxBounds.height > 0 ? inputBoxBounds.height / 2 - 20 : 60;
         const randomOffset = Math.random() * 20 - 10;
@@ -694,6 +782,15 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const handleCanvasTap = (locationX, locationY) => {
         // 캔버스 탭 시 기존 선택 해제
         setSelectedItemId(null);
+
+        // 🚨 텍스트 개수 제한 체크
+        const currentTexts = pageTexts[currentPageIndex] || [];
+        const baseTextLimit = isPremium ? 15 : 3;
+        const currentEffectiveTextLimit = Math.min(baseTextLimit + adBonusTexts, 15);
+        if (currentTexts.length >= currentEffectiveTextLimit) {
+            setTextLimitModalVisible(true);
+            return;
+        }
 
         const newText = {
             id: Date.now().toString() + Math.random().toString(36).substring(7),
@@ -831,7 +928,10 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setShowAlert(true);
     };
 
-    const handleInteractionStart = useCallback(() => setIsInteracting(true), []);
+    const handleInteractionStart = useCallback(() => {
+        setIsInteracting(true);
+        setIsDraggingAny(true); // 💡 터치 즉시 부모 스크롤을 막기 위해 상태 즉시 업데이트
+    }, []);
     const handleInteractionEnd = useCallback(() => {
         setIsInteracting(false);
         setIsDraggingAny(false);
@@ -933,6 +1033,12 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setShowStickers,
         setInputBoxBounds,
         setStickerLimitModalVisible,
+        
+        // Ad Models
+        isTextLimitModalVisible,
+        setTextLimitModalVisible,
+        handleAdReward,
+        handleAdRewardForText,
 
         // ✏️ Text state
         pageTexts,
@@ -1009,5 +1115,10 @@ export function useWriteLogic(route, navigation, scrollRef) {
         selectedItemId,
         handleSelect,
         handleClearSelection,
+
+        // 🔮 Mood Modal
+        openMoodModal,
+        handleMoodModalDismiss,
+        handleMoodModalConfirm,
     };
 }

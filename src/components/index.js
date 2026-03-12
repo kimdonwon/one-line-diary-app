@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { TouchableOpacity, Text, View, StyleSheet, Animated, Easing, Pressable, TextInput, Image } from "react-native";
 import Reanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, withDelay, useAnimatedProps } from 'react-native-reanimated';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW } from '../constants/theme';
+import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW, PHOTO_FRAME_COLORS } from '../constants/theme';
 import { MoodCharacter } from '../constants/MoodCharacters';
 import { getStickerComponent } from '../constants/stickers';
 import Modal from "react-native-modal";
@@ -11,7 +11,7 @@ export { ComboShakeWrapper };
 export * from './DraggableText'; // ✏️ 추가
 
 // ─── Custom Soft Alert Modal ───
-export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmText = "확인", secondaryText, onSecondaryConfirm }) {
+export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmText = "확인", secondaryText, onSecondaryConfirm, onClose }) {
   return (
     <Modal
       isVisible={isVisible}
@@ -22,8 +22,8 @@ export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmTe
       animationOutTiming={200}
       backdropTransitionInTiming={300}
       backdropTransitionOutTiming={200}
-      onBackdropPress={onConfirm}
-      onBackButtonPress={onConfirm}
+      onBackdropPress={onClose || onConfirm}
+      onBackButtonPress={onClose || onConfirm}
       style={{ margin: SPACING.xl, justifyContent: "center" }}
     >
       <View style={[styles.alertModalContainer, SOFT_SHADOW.card]}>
@@ -98,16 +98,7 @@ export function StaticPhoto({ photo }) {
   const isBlackFrame = photo.frameType === 'black';
 
   // 폴라로이드 프레임 렌더링 (일반 + 반투명 동일 구조)
-  const frameColors = {
-    pink: '#FFD1DC',
-    blue: '#D1E8FF',
-    mint: '#D1FFD7',
-    white: '#FFFFFF',
-    black: '#1A1A1A',
-    transparent_white: 'rgba(255, 255, 255, 0.88)',
-    transparent_gray: 'rgba(200, 200, 198, 0.82)',
-  };
-  const bgColor = frameColors[photo.frameType] || frameColors.white;
+  const bgColor = PHOTO_FRAME_COLORS[photo.frameType] || PHOTO_FRAME_COLORS.white;
   const borderColor = isTransparent
     ? (photo.frameType === 'transparent_gray' ? 'rgba(180, 180, 178, 0.5)' : 'rgba(220, 220, 218, 0.5)')
     : (isBlackFrame ? 'rgba(255, 255, 255, 0.1)' : 'rgba(200, 190, 180, 0.4)');

@@ -31,7 +31,14 @@
   - `note` (TEXT): 한 줄 느낀 점
 - **app_settings (설정 및 캐시)**
   - `key` (TEXT UNIQUE PK), `value` (TEXT)
-  - 사용: Lock 활성화 여부, Pin 비밀번호, Premium 구독 여부 등 저장.
+  - 사용: Lock 활성화 여부, Pin 비밀번호, Premium 구독 여부, **벤토 보드 키워드 캐시(`bento_word_cache_{year}`)** 등 저장.
+- **word_stats (단어 빈도 통계)** *(v2.1 추가)*
+  - `id` (INTEGER PK AUTOINCREMENT)
+  - `date` (TEXT): 'YYYY-MM-DD' — 해당 일기의 날짜
+  - `word` (TEXT): 추출된 단어
+  - `count` (INTEGER): 해당 날짜에서의 출현 횟수
+  - UNIQUE(date, word) — 일자별 단어 중복 방지
+  - **증분 동기화**: 일기 저장 시점(`saveDiary`)에 `InteractionManager.runAfterInteractions`로 백그라운드에서 해당 날짜의 단어 빈도를 즉시 반영.
 
 ### 2.2. 안정성 확보 로직 (Mutex Queue & NPE 방지)
 
@@ -48,25 +55,31 @@
 - **통합 다이어리 카드 (Integrated Diary Card)**:
   - 다이어리 캔버스(입력 영역)와 기분/활동 정보(메타 영역)를 하나의 `integratedDiaryCard` 스타일로 묶어 피드와 시각적 일관성을 확보.
   - 메타 영역(`integratedDiaryMeta`)은 탭이 가능하며, 탭 시 다시 선택 모달이 열리는 상호작용 제공.
+  - **인디케이터 색상 동기화**: `integratedDiaryCard`와 `cardIndicatorWrap`의 배경색을 현재 `currentPageIndex`에 해당하는 캔버스 배경색(`dynamicCanvasColor`)과 실시간으로 동기화하여 시각적 일체감을 부여함. *(v2.3 추가)*
 - **멀티페이지 시스템 (Multi-Page)**:
   - `useWriteLogic`에서 `pages`, `pageStickers`, `pagePhotos`의 2차원 상태 구조로 여러 페이지 관리.
   - 가로 슬라이더(`FlatList` + `pagingEnabled`)에서 화면 끝에 더미 요소 `'__ADD_PAGE__'`를 배치. 사용자가 끝까지 **엣지 스와이프**를 하면 자동으로 콜백을 타며 `addPage()` 호출.
+  - **인디케이터 위치 개선**: 다이어리 피드와의 시각적 일관성을 위해 페이지 인디케이터(Dots)를 캔버스(카드) 내부에서 상단 영역으로 외부 분리하여 배치. 이를 통해 드래거블 요소가 인디케이터에 가려지는 문제를 해결함. *(v2.2 추가)*
 - **드래그, 회전 & 크기 조절 (Draggable Engine v2 — 롱프레스 기반)**:
   - 스티커, 사진, 텍스트에 공통 적용되는 `useDraggable` 커스텀 훅(`src/hooks/useDraggable.js`) 구현.
   - **롱프레스(400ms) 후에만 드래그 활성화**. 릴리즈 시 선택 상태(isSelected) 진입 → 회전/크기 조절 핸들 표시.
+  - **드래그-스크롤 충돌 방지 시스템**:
+    - `onMoveShouldSetPanResponderCapture`를 통해 부모(FlatList)보다 먼저 제스처를 선점하여 네이티브 스크롤 간섭을 차단.
+    - 터치 시작(`onPanResponderGrant`) 시점에 즉시 부모 스크롤을 비활성화(`isDraggingAny: true`)하여 "페이지 이동 후 멈춤" 버그 해결.
+    - 드래그 중 `pagingEnabled={false}` 연동을 통해 네이티브 페이징 엔진의 강제 개입을 원천 봉쇄.
   - 더블탭 삭제 제거 → 인스타그램 스타일 **쓰레기통 드래그 삭제**로 대체. 드래그 중 화면 하단에 플로팅 쓰레기통 표시, 드래거블을 끌어 넣으면 삭제.
   - `onDragMove(id, pageX, pageY)` / `onDragDrop(id, pageX, pageY)` 콜백으로 쓰레기통 영역 감지를 외부에 위임.
   - 선택 상태 5초 자동 해제(`deselectTimer`).
 - **사진 첨부 (Photo Frame)**:
   - 프레임 컬러(화이트, 블랙, 파스텔 핑크, 파스텔 블루, 파스텔 민트)를 먼저 선택하면, `expo-image-picker`를 즉각 로드 (1:1 Aspect ratio, Quality 0.5 압축).
   - 로드 후 `photos` 배열에 드래거블 객체로 삽입됨. Z-Index 관리 로직상(Z:5) 스티커(Z:10) 아래, 텍스트(Z:8) 위에 무조건 덧대어짐.
-- **디지털 스크랩북 캔버스 (Tap-to-Write v2)**:
-  - 빈 캔버스를 꾹 누르면(`handleCanvasTap`) 해당 좌표에 편집 가능한 `DraggableText` 카드가 생성되며 자동 포커스.
+- **디지털 스크랩북 캔버스 (Tap-to-Write)**: 기존 고정 TextInput 영역을 제거하고 전체 카드를 빈 캔버스로 전환. 종이 질감(`#FBF8F4`) 배경과 따뜻한 크라프트지 테두리(`#E2DED0`)로 실제 스크랩북 느낌 구현. 빈 캔버스에 `✏️ 화면을 터치해서 일기를 써보세요` 안내 문구 표시(opacity 0.4). 터치하면 해당 위치에 인라인 편집 가능한 텍스트 카드가 생성됨.
+  - **인디케이터 색상 동기화**: 상단 페이지 인디케이터 영역의 배경색을 현재 선택된 캔버스 배경 테마와 일치시켜, 카드 전체가 하나의 유기적인 테마로 보이도록 개선. *(v2.3 추가)*
   - 생성 시 텍스트 패널의 **프리셋 설정**(`nextTextFont`, `nextTextColor`, `nextTextBgColor`)이 자동 적용됨.
   - **글자수 제한**: 각 텍스트 박스 당 최대 **200자**까지 입력을 제한함 (성능 및 디자인 보호).
   - **텍스트 프리셋 UI 개선**: 텍스트 추가 패널에서 문자 색상(TEXT_COLORS)과 하이라이트 색상(HIGHLIGHTER_COLORS) 선택 영역을 각각 독립된 `ScrollView`로 분리하여 조작 편의성을 극대화함.
 - **다꾸 전용 하단 플로팅 탭바 (Floating Tab Bar)**:
-  - 하단 화면 영역에 `[홈 | 일기 | 완료 | 요약 | 설정]` 구성의 탭바를 배치하여 저장 및 네비게이션 편의성을 높였습니다. 
+  - 하단 화면 영역에 `[홈 | 일기 | 완료 | 요약 | 설정]` 구성의 탭바를 배치하여 저장 및 네비게이션 편의성을 높였습니다.
   - `KeyboardAvoidingView` 외부에 위치시켜 키보드가 활성화되어도 화면 하단에 고정된 상태를 유지하도록 설계되었습니다.
   - 상단 헤더에 있던 중복된 확인(저장) 버튼을 제거하여 UI를 간소화하고 중앙의 '완료' 버튼으로 저장 로직을 일원화했습니다.
   - **Reactive Color Feedback**: 중앙 완료 버튼의 배경색(`backgroundColor`)은 오늘 선택한 기분(`activeMood.color`)에 반응하여 즉시 실시간으로 변경됩니다. 선택된 기분이 없는 경우 글로벌 주간 기분 색상 혹은 기본값을 유지합니다.
@@ -78,9 +91,10 @@
 - **상태 관리**: `useWriteLogic` 훅을 통해 다이어리 내용, 스티커, 사진, 배경, 텍스트 상태를 통합 관리.
 
 ### 3.2. Draggable Engine (Digital Scrapbook)
+
 - **제스처**: `PanResponder`를 기반으로 한 드래그, 회전, 스케일링 지원.
 - **폴라로이드 프레임 & 즉시 첨부**:
-  - 사진(Camera) 탭에서 프레임을 선택하면 빈 프레임이 생성되는 대신, **즉시 갤러리가 열려** 사진을 선택할 수 있습니다. 
+  - 사진(Camera) 탭에서 프레임을 선택하면 빈 프레임이 생성되는 대신, **즉시 갤러리가 열려** 사진을 선택할 수 있습니다.
   - 사진 선택 완료 시 해당 프레임이 적용된 상태로 일기장에 부착됩니다.
 - **롱프레스 시스템**: 400ms 롱프레스 후 드래그 활성화, 드래그 종료 시 선택 상태 진입.
 - **인스타그램 스타일 삭제**: 드래그 중 플로팅 쓰레기통 표시, 드롭 시 영역 판정을 통한 삭제.
@@ -98,8 +112,8 @@
 
 ### 3.4. 요약 및 통계 구출 (Summary Logic)
 
-- **연도 전환 시스템 (Dynamic Year Loading)**: 
-  - `useSummaryLogic`은 `useState`로 현재 선택된 연도(`year`)를 관리합니다. 
+- **연도 전환 시스템 (Dynamic Year Loading)**:
+  - `useSummaryLogic`은 `useState`로 현재 선택된 연도(`year`)를 관리합니다.
   - 헤더의 연도 선택 시 `setYear`를 호출하면, 하위의 모든 데이터 페칭 훅(`useDiariesForYear`, `useYearMoodStats` 등)이 리액트 종속성 배열에 의해 자동으로 리로드(reload)됩니다.
   - 전역 스코프 변수(`SummaryScreenNudged`)를 활용해 세션당 1회만 스크롤 넛지 애니메이션을 실행하여 학습 곡선을 낮춥니다.
 - **차트 처리**: `getYearMonthlyActivities` 쿼리에서 모든 해당 월의 Data를 Reduce 처리.
@@ -108,9 +122,11 @@
 
 ### 3.4. 과금 및 광고사양 (AdContext & Business Policy)
 
-- **제한 정책 (Hard Cap)**: 앱 전체 다이어리 작성 당 스티커는 최대 15장 (성능 및 UX 문제 고려).
-- **Free User 로직**: 기본 스티커 부착 한도 3개. 추가 클릭 시 `SoftAlertModal`이 떠서 +2장 확장 보상형 광고(AdMob Reward) 유도 (15개까지 중첩 가능). 텍스트 폰트는 'basic', 'diary' 폰트 제공.
-- **Premium User 로직**: 한도 즉각 15장으로 기본 연장. 모든 광고 차단 및 파스텔 플라로이드 프레임 사용 가능, 다양한 다이어리 커스텀 텍스트 폰트 무제한 혜택 제공. 프리미엄 인증은 `SettingsContext`를 타고 DB 캐싱.
+- **프리미엄 구독 모델**: ₩5,900 / 1년 연간 구독. 결제일로부터 1년간 모든 프리미엄 혜택 제공.
+- **스티커 팩 로직 한정 운영**: 현재 제공되는 모든 스티커 팩(이모지, 파스텔, 푸드 등)은 정책에 따라 무료(isFree: true)로 제공됩니다. 단, **추후 유료 팩 스티커 추가 가능성**에 대비하여 상점 내 가격 표시 UI, 프리미엄 혜택 증정 판정 조건, 그리고 더미 결제 다이얼로그 호출 로직 등은 제거하지 않고 유지합니다.
+- **제한 정책 (Hard Cap)**: 앱 내 다이어리 페이지당 스티커 및 텍스트 박스는 최대 각 15개로 제한합니다 (성능 및 UX 보호).
+- **Free User 로직**: 기본 스티커 및 텍스트 박스 부착 한도는 페이지당 3개입니다. 한도 도달 시 `SoftAlertModal`이 노출되어 보상형 광고(Reward Ad) 시청을 통해 한도를 +2개씩 확장할 수 있습니다 (최대 15개까지). 텍스트 폰트는 기본 폰트만 제공됩니다.
+- **Premium User 로직**: 한도가 즉시 15개로 상향됩니다. 모든 광고가 제거되며, 파스텔 사진 프레임 및 다양한 커스텀 폰트를 무제한으로 사용할 수 있습니다. 프리미엄 인증 상태는 `SettingsContext`와 로컬 DB를 통해 캐싱됩니다.
 
 ### 3.5. 암호화 백업 로직 (Backup/Restore Logic)
 
@@ -129,17 +145,32 @@
 
 ---
 
-## 4. 확장 인터페이스 및 유지보수
+## 4. 벤토 보드 & 키워드 분석 (Bento Board & Word Frequency Analysis)
 
-...
+### 4.1. 연간 모먼트 벤토 보드 (Annual Bento Board)
 
-### 4.1. 주요 버그 수정 (Major Bug Fixes)
+- **목적**: 1년간의 파편화된 데이터를 세련된 매거진 스타일의 타일 레이아웃(Bento Grid)으로 통합 시각화.
+- **구성 요소**:
+  - **Main Tile**: 올해 가장 많이 언급한 단어 (타이포그래피 강조) + 서브 키워드 칩
+  - **Status Tile**: 연간 총 작성일 수 및 연속 기록 배지 (🔥 스트릭)
+  - **Golden Hour Tile**: 일기를 가장 많이 기록한 시간대 (🌙밤, ☀️오전 등) — `diary.updated_at` 컬럼 활용
+- **데이터 소스**: `useBentoBoard` 훅에서 통합 관리.
+- **위치**: SummaryScreen 기분 분석 페이지 "월별 기분 흐름" 카드와 "자주 쓴 스티커" 카드 사이.
 
-- **곰(SOSO) 캐릭터 렌더링 에러**: `BearCharacter`가 웹용 SVG 태그(`<svg>`, `<path>`)를 사용하여 React Native에서 렌더링되지 않던 문제를 `react-native-svg` 컴포넌트로 교체하고 속성명을 CamelCase로 수정하여 해결함.
-- **기쁨(HAPPY) 개구리**: 입을 크게 벌리고 웃는 형태로 SVG Path를 수정함. 몸체 색상을 차분한 파스텔톤(#B4DCC6)으로, 얼굴 외곽선은 딥 네이비(#283665) 및 두께 5.0으로 조정함. 눈 모양을 둥근 아치형(∩)으로 변경하고 테마 메인 색상을 개구리 피부색과 통일함.
-- **화남(ANGRY) 병아리**: 개구리와의 시각적 일관성을 위해 외곽선 및 라인 아트 색상을 딥 네이비(#283665)로 통일하고, 스케일을 1.05에서 1.2로 확대 조정함.
-- **당황(CONFUSED) 토끼 정렬**: 토끼 몸체가 화면 왼쪽으로 쏠려 보이던 현상을 해결하기 위해 X축 방향으로 10유닛 이동(translate)하여 중앙 정렬을 맞춤.
-- **기분 선택 UI(Mood Selector) 정렬**: 텍스트 높이 편차로 인해 캐릭터가 삐뚤어 보이던 현상을 해결하기 위해 `includeFontPadding: false` 적용 및 `flex-start` 기반 상단 정렬로 오와열을 맞춤.
-- **활동 아이콘(Activity Icons) 전면 재디자인**: `ActivityIcons.js`의 그래픽을 기분 캐릭터들과 동일한 "Doodle Flash" 스타일(딥 네이비 외곽선 #283665, 파스텔 색상, 둥글고 귀여운 쉐입, 굵은 선 두께 4.5)로 전면 재설계함.
-- **곰(SOSO) 캐릭터 위치 조정**: 캐릭터가 전체적으로 상단에 치우쳐 보이던 현상을 해결하기 위해 Y축 방향으로 7유닛 이동(translate)하여 수직 중앙 정렬을 개선함.
-- **도구 패널(Bottom Sheet) 클리핑 이슈 해결**: 하단 도구 패널이 일기 카드(`integratedDiaryCard`) 내부에 위치하여 콘텐츠가 짤리던 문제를 해결하기 위해 컨테이너를 루트 뷰 수준으로 이동하고, `Keyboard.dismiss()` 연동 및 높이 조정을 통해 모든 화면 비율에서 정상 노출되도록 개선함.
+### 4.2. 올해의 키워드 분석 (Word Frequency Analysis)
+
+- **분석 대상**:
+  1. `diary.content` — 입력박스 본문 (멀티페이지 JSON 배열 파싱 지원)
+  2. `diary.texts` — DraggableText 노드의 `text` 필드 (2차원 배열 순회)
+- **분석 로직** (`src/utils/wordAnalyzer.js`):
+  - 이모지 제거 → 특수문자/숫자 제거 → 공백 분리
+  - 한국어 불용어(조사, 접속사, 대명사, 흔한 동사 어미) 2글자 미만 제외
+  - 빈도수 내림차순 정렬 후 상위 10개 추출
+- **성능 최적화 전략**:
+  - **증분 동기화(Incremental Sync)**: `saveDiary()` 호출 시 `InteractionManager.runAfterInteractions`로 백그라운드에서 해당 날짜의 단어 빈도를 `word_stats` 테이블에 즉시 반영. 이를 통해 `word_stats` 테이블이 항상 최신 상태를 유지.
+  - **직접 쿼리(Direct Query)**: 요약 화면 진입 시 전체 일기를 재분석하지 않고, `word_stats` 테이블에서 `SELECT word, SUM(count) ... GROUP BY word ORDER BY total DESC`로 바로 조회하여 빠르게 결과 표시.
+  - **최초 마이그레이션 분석**: `word_stats`가 비어있을 때(최초 1회)만 전체 일기를 순회하며 단어 빈도를 계산하고 저장. 10개 단위로 `setTimeout`을 사용해 UI 스레드 양보.
+  - **복구 시 동시 분석**: `restoreFromData()` 함수에서 일기 INSERT 직후 `analyzeWordsFromDiary()`를 호출하여 `word_stats`도 동일 트랜잭션 내에서 함께 생성. 대량 복구 후 요약 화면에서 전수 분석이 불필요.
+- **연속 기록 일수(Max Streak)**: `getYearMaxStreak(year)` 함수로 해당 연도 일기 날짜를 ASC 정렬 후 연속 일수 최대값 계산.
+
+---

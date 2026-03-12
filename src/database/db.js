@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { analyzeWordsFromDiary } from '../utils/wordAnalyzer';
 
 let db = null;
 let dbReady = false;
@@ -37,6 +38,7 @@ export async function initDB() {
                 CREATE TABLE IF NOT EXISTS activities (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, activity TEXT NOT NULL, title TEXT DEFAULT '', note TEXT DEFAULT '', UNIQUE(date, activity));
                 CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, diary_date TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL, character TEXT DEFAULT 'bear');
                 CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT);
+                CREATE TABLE IF NOT EXISTS word_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, word TEXT NOT NULL, count INTEGER DEFAULT 1, UNIQUE(date, word));
             `.replace(/\s+/g, ' ').trim());
 
             console.log('[DB]: Running migrations...');
@@ -47,7 +49,9 @@ export async function initDB() {
                 "ALTER TABLE diary ADD COLUMN photos TEXT DEFAULT '[]'",
                 "ALTER TABLE diary ADD COLUMN backgrounds TEXT DEFAULT '[]'",
                 "ALTER TABLE diary ADD COLUMN texts TEXT DEFAULT '[]'",
-                "ALTER TABLE comments ADD COLUMN character TEXT DEFAULT 'bear'"
+                "ALTER TABLE comments ADD COLUMN character TEXT DEFAULT 'bear'",
+                "CREATE TABLE IF NOT EXISTS word_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, word TEXT NOT NULL, count INTEGER DEFAULT 1, UNIQUE(date, word))",
+                "ALTER TABLE diary ADD COLUMN updated_at TEXT DEFAULT ''"
             ];
 
             for (const sql of migrations) {
@@ -141,10 +145,12 @@ export async function getSetting(key) {
 // ─── 일기 관련 ───
 
 export async function saveDiary(date, content, mood, stickers = '[]', photos = '[]', backgrounds = '[]', texts = '[]') {
+    const now = new Date().toISOString();
     return enqueueDBTask(async (d) => {
         await d.runAsync(
-            'INSERT OR REPLACE INTO diary (date, content, mood, stickers, photos, backgrounds, texts) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [date, content, mood, stickers, photos, backgrounds, texts]
+            `INSERT OR REPLACE INTO diary (date, content, mood, stickers, photos, backgrounds, texts, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT updated_at FROM diary WHERE date = ? AND updated_at != ''), ?))`,
+            [date, content, mood, stickers, photos, backgrounds, texts, date, now]
         );
     });
 }
@@ -221,14 +227,26 @@ export async function getYearMonthlyStats(year) {
 
 export async function saveActivities(date, activities) {
     return enqueueDBTask(async (d) => {
-        await d.runAsync('DELETE FROM activities WHERE date = ?', [date]);
-        for (const act of activities) {
-            if (act.selected) {
-                await d.runAsync(
-                    'INSERT OR REPLACE INTO activities (date, activity, title, note) VALUES (?, ?, ?, ?)',
-                    [date, act.key, '', '']
-                );
+        if (!Array.isArray(activities)) {
+            console.warn('[DB]: saveActivities called with invalid activities array:', activities);
+            return;
+        }
+
+        try {
+            await d.execAsync('BEGIN TRANSACTION');
+            await d.runAsync('DELETE FROM activities WHERE date = ?', [date]);
+            for (const act of activities) {
+                if (act.selected) {
+                    await d.runAsync(
+                        'INSERT OR REPLACE INTO activities (date, activity, title, note) VALUES (?, ?, ?, ?)',
+                        [date, act.key, act.title || '', act.note || '']
+                    );
+                }
             }
+            await d.execAsync('COMMIT');
+        } catch (e) {
+            await d.execAsync('ROLLBACK');
+            throw e;
         }
     });
 }
@@ -381,6 +399,7 @@ export async function restoreFromData(data) {
             await d.execAsync('DELETE FROM activities');
             await d.execAsync('DELETE FROM comments');
             await d.execAsync('DELETE FROM app_settings');
+            await d.execAsync('DELETE FROM word_stats');
 
             // 2. 데이터 삽입
             const { diary, activities, comments, app_settings } = data.tables;
@@ -390,6 +409,20 @@ export async function restoreFromData(data) {
                     'INSERT INTO diary (id, date, content, mood, stickers, photos, backgrounds, texts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                     [item.id, item.date, item.content, item.mood, item.stickers || '[]', item.photos || '[]', item.backgrounds || '[]', item.texts || '[]']
                 );
+
+                // 🍱 복구 시 word_stats도 함께 생성
+                try {
+                    const wordMap = analyzeWordsFromDiary(item);
+                    const entries = Object.entries(wordMap);
+                    for (const [word, count] of entries) {
+                        await d.runAsync(
+                            'INSERT INTO word_stats (date, word, count) VALUES (?, ?, ?)',
+                            [item.date, word, count]
+                        );
+                    }
+                } catch (e) {
+                    // 단어 분석 실패해도 복구는 계속 진행
+                }
             }
 
             for (const item of activities) {
@@ -437,5 +470,121 @@ export async function deleteAllDiaryData() {
             await d.execAsync('ROLLBACK');
             throw error;
         }
+    });
+}
+
+/**
+ * 🗑️ 특정 날짜의 일기, 활동, 댓글 데이터를 삭제합니다.
+ */
+export async function deleteDiaryByDate(date) {
+    return enqueueDBTask(async (d) => {
+        try {
+            await d.execAsync('BEGIN TRANSACTION');
+            await d.runAsync('DELETE FROM diary WHERE date = ?', [date]);
+            await d.runAsync('DELETE FROM activities WHERE date = ?', [date]);
+            await d.runAsync('DELETE FROM comments WHERE diary_date = ?', [date]);
+            await d.execAsync('COMMIT');
+            return true;
+        } catch (error) {
+            await d.execAsync('ROLLBACK');
+            throw error;
+        }
+    });
+}
+
+// ─── 단어 통계 (Word Stats) ───
+
+/**
+ * 특정 날짜의 단어 빈도를 저장합니다 (증분 동기화).
+ * 기존 해당 날짜 데이터를 삭제 후 새로 삽입합니다.
+ * @param {string} date - 'YYYY-MM-DD'
+ * @param {Object} wordMap - { word: count, ... }
+ */
+export async function saveWordStats(date, wordMap) {
+    return enqueueDBTask(async (d) => {
+        try {
+            await d.execAsync('BEGIN TRANSACTION');
+            await d.runAsync('DELETE FROM word_stats WHERE date = ?', [date]);
+            const entries = Object.entries(wordMap);
+            for (const [word, count] of entries) {
+                await d.runAsync(
+                    'INSERT INTO word_stats (date, word, count) VALUES (?, ?, ?)',
+                    [date, word, count]
+                );
+            }
+            await d.execAsync('COMMIT');
+        } catch (e) {
+            try { await d.execAsync('ROLLBACK'); } catch (_) {}
+            console.warn('[WordStats] saveWordStats failed:', e.message);
+        }
+    });
+}
+
+/**
+ * 특정 연도의 단어 빈도 상위 N개를 조회합니다.
+ * @param {string|number} year
+ * @param {number} limit - 상위 몇 개 (기본 10)
+ */
+export async function getYearWordStats(year, limit = 10) {
+    return enqueueDBTask(async (d) => {
+        return await d.getAllAsync(
+            `SELECT word, SUM(count) as total FROM word_stats WHERE date LIKE ? GROUP BY word ORDER BY total DESC LIMIT ?`,
+            [`${year}%`, limit]
+        );
+    });
+}
+
+/**
+ * 특정 날짜의 단어 통계를 삭제합니다.
+ */
+export async function deleteWordStats(date) {
+    return enqueueDBTask(async (d) => {
+        await d.runAsync('DELETE FROM word_stats WHERE date = ?', [date]);
+    });
+}
+
+/**
+ * 특정 연도의 연속 기록 일수(최대 스트릭)를 계산합니다.
+ * @param {string|number} year
+ * @returns {number} maxStreak
+ */
+export async function getYearMaxStreak(year) {
+    return enqueueDBTask(async (d) => {
+        const rows = await d.getAllAsync(
+            "SELECT date FROM diary WHERE date LIKE ? ORDER BY date ASC",
+            [`${year}%`]
+        );
+        if (!rows || rows.length === 0) return 0;
+
+        let maxStreak = 1;
+        let currentStreak = 1;
+
+        for (let i = 1; i < rows.length; i++) {
+            const prev = new Date(rows[i - 1].date);
+            const curr = new Date(rows[i].date);
+            const diffDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) {
+                currentStreak++;
+                maxStreak = Math.max(maxStreak, currentStreak);
+            } else {
+                currentStreak = 1;
+            }
+        }
+        return maxStreak;
+    });
+}
+
+/**
+ * 특정 연도의 일기 기록 시간들을 조회합니다. (황금 시간대 분석용)
+ * @param {string|number} year
+ * @returns {Array} [{ updated_at }, ...]
+ */
+export async function getYearDiaryTimes(year) {
+    return enqueueDBTask(async (d) => {
+        return await d.getAllAsync(
+            "SELECT updated_at FROM diary WHERE date LIKE ? AND updated_at IS NOT NULL AND updated_at != ''",
+            [`${year}%`]
+        );
     });
 }

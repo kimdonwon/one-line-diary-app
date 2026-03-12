@@ -15,6 +15,7 @@ import { useSummaryLogic, MONTH_NAMES } from './SummaryScreen.logic';
 import { styles, chartConstants } from './SummaryScreen.styles';
 import { MoodActivityCorrelation } from './components/MoodActivityCorrelation';
 import { StickerRanking } from './components/StickerRanking';
+import { BentoBoard } from './components/BentoBoard';
 
 // 💡 세션 내 넛지 애니메이션 실행 여부 추적
 let SummaryScreenNudged = false;
@@ -78,6 +79,7 @@ export function SummaryScreenView({ route, navigation }) {
         year, pageIndex, totalEntries, maxCount, topMoodData, topMoodCount, allMoodStats,
         moodLineData, maxLineValue, activityStats, maxActivityCount,
         maxActivityLineValue, activityLineData, moodActivityCorrelation, stickerStats,
+        bentoData,
         onPageScroll, onMomentumScrollEnd, handleTabPress, handleGoBack, handleMoodPress,
         handleActivityPress, getActivityByKey, setYear
     } = useSummaryLogic(route, navigation, scrollRef);
@@ -246,6 +248,15 @@ export function SummaryScreenView({ route, navigation }) {
                                     <View style={styles.sectionRow}><Text style={styles.sectionTitle}>월별 기분 흐름</Text></View>
                                     {renderMoodLineChart()}
                                 </Card>
+                                <BentoBoard
+                                    topWords={bentoData.topWords}
+                                    maxStreak={bentoData.maxStreak}
+                                    totalEntries={bentoData.totalEntries}
+                                    goldenHour={bentoData.goldenHour}
+                                    activityStats={activityStats}
+                                    isAnalyzing={bentoData.isAnalyzing}
+                                    year={year}
+                                />
                                 <Card style={styles.chartCard}>
                                     <View style={styles.sectionRow}><Text style={styles.sectionTitle}>자주 쓴 스티커</Text></View>
                                     <StickerRanking data={stickerStats} />

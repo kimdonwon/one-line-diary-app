@@ -141,8 +141,6 @@ const AnimatedStickerItem = ({ children, onPress }) => {
     );
 };
 
-// 💡 세션 내 넛지 애니메이션 실행 여부 추적
-let WriteScreenNudged = false;
 
 /**
  * 🎨 화면 렌더링에 필요한 UI 코드만 모아둔 모듈입니다 (Modular UI Developer 준수)
@@ -152,8 +150,12 @@ export function WriteScreenView({ route, navigation }) {
     const scrollRef = useRef(null);
     const pageFlatListRef = useRef(null);
     const bottomSheetScrollRef = useRef(null);
+    const stickerPackScrollRef = useRef(null);
+    const categoryTabScrollRef = useRef(null);
+    const categoryTabRefs = useRef({}); // 각 탭의 위치를 저장하기 위한 ref
+    const isFirstStickerLoad = useRef(true);
     const windowWidth = Dimensions.get('window').width;
-    const [activeCategoryId, setActiveCategoryId] = useState(STICKER_CATEGORIES[0].id);
+    const [activeCategoryId, setActiveCategoryId] = useState('');
     const [pageCardWidth, setPageCardWidth] = useState(0);
     const [photoFrameTab, setPhotoFrameTab] = useState('polaroid'); // 'polaroid' | 'transparent' (탭은 유지하되 UI는 하나)
     const [textColorMode, setTextColorMode] = useState('text'); // 'text' | 'highlight'
@@ -270,6 +272,11 @@ export function WriteScreenView({ route, navigation }) {
         handleClearSelection,
     } = useWriteLogic(route, navigation, scrollRef);
 
+    // 🎨 현재 페이지의 배경색 동기화 (인디케이터 영역 포함)
+    const currentBgId = pageBackgrounds[currentPageIndex] || 'default';
+    const currentBgData = getBackgroundById(currentBgId);
+    const dynamicCanvasColor = currentBgData.backgroundColor;
+
     // 💡 중앙 확인 버튼 색상: 오늘 선택한 기분 색상을 최우선으로, 없으면 주간 기분 색상 적용
     const weeklyMood = useGlobalWeeklyMood();
     const activeColor = activeMood ? activeMood.color : (weeklyMood ? weeklyMood.color : COLORS.soso);
@@ -277,13 +284,46 @@ export function WriteScreenView({ route, navigation }) {
     // ✏️ 텍스트 패널 — 프리셋만 (문구 입력 제거됨, 로직의 nextText* 상태 사용)
 
     // ─── 🚀 바텀시트 페이징 스크롤 자동 동기화 ───
+    // 🚀 스티커팩 페이징 스크롤 동기화
+    useEffect(() => {
+        if (!showStickers) {
+            isFirstStickerLoad.current = true;
+            return;
+        }
+        if (!stickerPackScrollRef.current) return;
+
+        const idx = visibleCategories.findIndex(cat => cat.id === activeCategoryId);
+        if (idx !== -1) {
+            // 처음 서랍이 열릴 때는 애니메이션 없이 위치만 잡고, 이후 전환 시에만 애니메이션 적용
+            stickerPackScrollRef.current.scrollTo({
+                x: idx * (windowWidth - 32),
+                animated: !isFirstStickerLoad.current
+            });
+            isFirstStickerLoad.current = false;
+        }
+    }, [activeCategoryId, showStickers, windowWidth]);
+
     const prevBottomSheetOpen = useRef(false);
     useEffect(() => {
         const isOpen = showStickers || showPhotos || showTexts;
         if (!isOpen) {
+            // 🚀 서랍이 닫힐 때 카테고리 상태와 스크롤 위치 초기화 기록
+            if (prevBottomSheetOpen.current) {
+                setActiveCategoryId('');
+                isFirstStickerLoad.current = true;
+            }
             prevBottomSheetOpen.current = false;
             return;
         }
+
+        // 🚀 스티커 서랍이 처음 열릴 때, 순서상 가장 처음에 있는 카테고리를 즉시 선택
+        if (showStickers && !prevBottomSheetOpen.current && visibleCategories.length > 0) {
+            const firstCatId = visibleCategories[0].id;
+            setActiveCategoryId(firstCatId);
+            // Ref를 통해 즉시 스크롤 위치를 0으로 고정 (상태 업데이트보다 빠름)
+            stickerPackScrollRef.current?.scrollTo({ x: 0, animated: false });
+        }
+
         if (!bottomSheetScrollRef.current) return;
 
         let x = 0;
@@ -320,29 +360,6 @@ export function WriteScreenView({ route, navigation }) {
     }, []);
 
     const insets = useSafeAreaInsets();
-    // 💡 화면 진입 시 페이지를 추가할 수 있음을 알려주는 '넛지' 효과 (세션당 1회)
-    useEffect(() => {
-        if (pageCardWidth > 0 && !WriteScreenNudged) {
-            const timer = setTimeout(() => {
-                if (pageFlatListRef.current) {
-                    // 살짝 왼쪽으로 밀어 (24px) 새 페이지 카드가 보이게 함
-                    pageFlatListRef.current.scrollToOffset({
-                        offset: 24,
-                        animated: true
-                    });
-
-                    setTimeout(() => {
-                        pageFlatListRef.current?.scrollToOffset({
-                            offset: 0,
-                            animated: true
-                        });
-                        WriteScreenNudged = true;
-                    }, 400);
-                }
-            }, 800);
-            return () => clearTimeout(timer);
-        }
-    }, [pageCardWidth]);
 
     // catOrder 순서대로 활성화된 카테고리만 표시
     const orderedCategories = catOrder
@@ -382,268 +399,272 @@ export function WriteScreenView({ route, navigation }) {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                     nestedScrollEnabled={true}
-                    scrollEnabled={!isInteracting}
+                    scrollEnabled={!isDraggingAny}
                 >
 
 
                     {/* ─── 🌈 통합 다이어리 카드 영역 (캔버스 + 하단 메타) ─── */}
-                    <View style={[styles.integratedDiaryCard, isDraggingAny && { overflow: 'visible' }]}>
+                    <View style={[styles.integratedDiaryCard, { backgroundColor: dynamicCanvasColor }, isDraggingAny]}>
                         {/* 멀티페이지 캔버스 영역 (가로 스와이프 + 엣지 풀 추가) */}
                         <View
                             style={[styles.pageContainer, isDraggingAny && { overflow: 'visible' }]}
+                            pointerEvents="box-none"
                             onLayout={(e) => {
                                 const w = e.nativeEvent.layout.width;
                                 if (w > 0) setPageCardWidth(w);
                             }}
                         >
                             {pageCardWidth > 0 && (
-                                <FlatList
-                                    ref={pageFlatListRef}
-                                    data={[...pages, '__ADD_PAGE__']}
-                                    horizontal
-                                    pagingEnabled
-                                    showsHorizontalScrollIndicator={false}
-                                    scrollEnabled={!isInteracting}
-                                    contentContainerStyle={isDraggingAny && { overflow: 'visible' }}
-                                    style={isDraggingAny && { overflow: 'visible' }}
-                                    keyExtractor={(_, idx) => `page-${idx}`}
-                                    onMomentumScrollEnd={(e) => {
-                                        const idx = Math.round(e.nativeEvent.contentOffset.x / pageCardWidth);
-                                        if (idx >= pages.length) {
-                                            // 🧲 엣지 풀 트리거: 마지막 '+' 카드에 도달하면 페이지 자동 추가
-                                            addPage();
-                                            setTimeout(() => {
-                                                pageFlatListRef.current?.scrollToIndex({ index: pages.length, animated: true });
-                                            }, 100);
-                                        } else {
-                                            goToPage(idx);
-                                        }
-                                    }}
-                                    getItemLayout={(_, index) => ({
-                                        length: pageCardWidth,
-                                        offset: pageCardWidth * index,
-                                        index,
-                                    })}
-                                    renderItem={({ item: pageContent, index: pageIdx }) => {
-                                        // ─── 🧲 마지막 '+' 카드 (엣지 풀 트리거) ───
-                                        if (pageContent === '__ADD_PAGE__') {
-                                            return (
-                                                <TouchableOpacity
-                                                    activeOpacity={0.6}
-                                                    onPress={() => {
-                                                        addPage();
-                                                        setTimeout(() => {
-                                                            pageFlatListRef.current?.scrollToIndex({ index: pages.length, animated: true });
-                                                        }, 100);
-                                                    }}
-                                                    style={[styles.inputCard, styles.addPageCard, { width: pageCardWidth }]}
-                                                >
-                                                    <Text style={styles.addPageIcon}>+</Text>
-                                                    <Text style={styles.addPageText}>새 페이지</Text>
-                                                </TouchableOpacity>
-                                            );
-                                        }
-
-                                        const bgData = getBackgroundById(pageBackgrounds[pageIdx] || 'default');
-                                        return (
-                                            <Card style={[styles.inputCard, { width: pageCardWidth, backgroundColor: bgData.backgroundColor }, isDraggingAny && { overflow: 'visible' }]}>
-                                                {/* [층0] 📝 빈 공간 롱탭 전용 배경 (텍스트 생성용) */}
-                                                <Pressable
-                                                    style={StyleSheet.absoluteFill}
-                                                    onPress={handleClearSelection}
-                                                    onLongPress={(e) => {
-                                                        if (pageIdx === currentPageIndex) {
-                                                            const { locationX, locationY } = e.nativeEvent;
-                                                            handleCanvasTap(locationX, locationY);
-                                                        }
-                                                    }}
-                                                    delayLongPress={400}
+                                <>
+                                    {/* ─── 📊 카드 내부 인디케이터 (피드 스타일) 위로 분리 ─── */}
+                                    <View style={[styles.cardIndicatorWrap, { backgroundColor: dynamicCanvasColor }]} pointerEvents="box-none">
+                                        <View style={styles.cardIndicatorDots}>
+                                            {pages.map((_, dotIdx) => (
+                                                <View
+                                                    key={`dot-${dotIdx}`}
+                                                    style={dotIdx === currentPageIndex ? styles.pageDotActive : styles.pageDot}
                                                 />
-                                                {/* [층0.5] 반투명 프레임 사진 시각 레이어 (텍스트 뒤, 터치 불가) */}
-                                                <View
-                                                    style={[StyleSheet.absoluteFill, { zIndex: 1, elevation: 0 }]}
-                                                    pointerEvents="none"
-                                                >
-                                                    {(pagePhotos[pageIdx] || []).filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray').map(photo => {
-                                                        const anim = getPhotoAnimation(photo);
-                                                        return (
-                                                            <DraggablePhoto
-                                                                key={`vis-${photo.id}`}
-                                                                photo={photo}
-                                                                bounds={inputBoxBounds}
-                                                                externalPan={anim.pan}
-                                                                externalRotation={anim.rotation}
-                                                                onDelete={handleDeletePhoto}
-                                                                onDragEnd={handlePhotoDragEnd}
-                                                                onInteractionStart={handleInteractionStart}
-                                                                onInteractionEnd={handleInteractionEnd}
-                                                                onDragMove={handlePhotoDragMove}
-                                                                onDragDrop={handlePhotoDragDrop}
-                                                                onSelect={handleSelect}
-                                                                isSelected={selectedItemId === photo.id}
-                                                            />
-                                                        );
-                                                    })}
-                                                </View>
+                                            ))}
+                                        </View>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                handlePageDeleteTrigger(currentPageIndex, (nextIdx) => {
+                                                    setTimeout(() => {
+                                                        pageFlatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
+                                                    }, 100);
+                                                });
+                                            }}
+                                            activeOpacity={0.6}
+                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            style={styles.cardDeleteBtn}
+                                        >
+                                            <Text style={styles.cardDeleteText}>✕</Text>
+                                        </TouchableOpacity>
+                                    </View>
 
-                                                {/* [층1] 📝 빈 캔버스 안내 레이어 (시각 전용, 터치 불가) */}
-                                                <View
-                                                    style={[StyleSheet.absoluteFill, { zIndex: 2 }]}
-                                                    pointerEvents="none"
-                                                >
-                                                    {(pageTexts[pageIdx] || []).length === 0 && (pagePhotos[pageIdx] || []).length === 0 && (pageStickers[pageIdx] || []).length === 0 && (
-                                                        <View style={styles.canvasGuide}>
+                                    <FlatList
+                                        ref={pageFlatListRef}
+                                        data={[...pages, '__ADD_PAGE__']}
+                                        horizontal
+                                        pagingEnabled={!isDraggingAny}
+                                        showsHorizontalScrollIndicator={false}
+                                        scrollEnabled={!isDraggingAny}
+                                        disableIntervalMomentum={true}   // ✅ 추가 - 한 번에 한 페이지만 이동
+                                        disableScrollViewPanResponder={true}  // ✅ 추가 - PanResponder 충돌 차단
+                                        contentContainerStyle={isDraggingAny && { overflow: 'visible' }}
+                                        style={isDraggingAny && { overflow: 'visible' }}
+                                        keyExtractor={(_, idx) => `page-${idx}`}
+                                        onMomentumScrollEnd={(e) => {
+                                            const idx = Math.round(e.nativeEvent.contentOffset.x / pageCardWidth);
+                                            if (idx >= pages.length) {
+                                                // 🧲 엣지 풀 트리거: 마지막 '+' 카드에 도달하면 페이지 자동 추가
+                                                addPage();
+                                                setTimeout(() => {
+                                                    pageFlatListRef.current?.scrollToIndex({ index: pages.length, animated: true });
+                                                }, 100);
+                                            } else {
+                                                goToPage(idx);
+                                            }
+                                        }}
+                                        getItemLayout={(_, index) => ({
+                                            length: pageCardWidth,
+                                            offset: pageCardWidth * index,
+                                            index,
+                                        })}
+                                        renderItem={({ item: pageContent, index: pageIdx }) => {
+                                            // ─── 🧲 마지막 '+' 카드 (엣지 풀 트리거) ───
+                                            if (pageContent === '__ADD_PAGE__') {
+                                                return (
+                                                    <TouchableOpacity
+                                                        activeOpacity={0.6}
+                                                        onPress={() => {
+                                                            addPage();
+                                                            setTimeout(() => {
+                                                                pageFlatListRef.current?.scrollToIndex({ index: pages.length, animated: true });
+                                                            }, 100);
+                                                        }}
+                                                        style={[styles.inputCard, styles.addPageCard, { width: pageCardWidth }]}
+                                                    >
+                                                        <Text style={styles.addPageIcon}>+</Text>
+                                                        <Text style={styles.addPageText}>새 페이지</Text>
+                                                    </TouchableOpacity>
+                                                );
+                                            }
 
-                                                            <Text style={styles.canvasGuideText}>
-                                                                화면을 꾹 눌러서 일기를 써보세요.
-                                                            </Text>
-                                                        </View>
-                                                    )}
-                                                </View>
-
-                                                {/* [층1.5] 👻 반투명 프레임 사진 터치 레이어 (텍스트 위, 보이지 않음) */}
-                                                <View
-                                                    style={[StyleSheet.absoluteFill, { zIndex: 4 }]}
-                                                    pointerEvents="box-none"
-                                                >
-                                                    {(pagePhotos[pageIdx] || []).filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray').map(photo => {
-                                                        const anim = getPhotoAnimation(photo);
-                                                        return (
-                                                            <DraggablePhoto
-                                                                key={`ghost-${photo.id}`}
-                                                                isGhost={true}
-                                                                photo={photo}
-                                                                bounds={inputBoxBounds}
-                                                                externalPan={anim.pan}
-                                                                externalRotation={anim.rotation}
-                                                                onDelete={handleDeletePhoto}
-                                                                onDragEnd={handlePhotoDragEnd}
-                                                                onInteractionStart={handleInteractionStart}
-                                                                onInteractionEnd={handleInteractionEnd}
-                                                                onDragMove={handlePhotoDragMove}
-                                                                onDragDrop={handlePhotoDragDrop}
-                                                                onSelect={handleSelect}
-                                                                isSelected={selectedItemId === photo.id}
-                                                            />
-                                                        );
-                                                    })}
-                                                </View>
-
-                                                {/* ─── 📊 카드 내부 인디케이터 (피드 스타일) ─── */}
-                                                {pages.length > 1 && (
-                                                    <View style={styles.cardIndicatorWrap} pointerEvents="box-none">
-                                                        <View style={styles.cardIndicatorDots}>
-                                                            {pages.map((_, dotIdx) => (
-                                                                <View
-                                                                    key={`dot-${dotIdx}`}
-                                                                    style={dotIdx === pageIdx ? styles.pageDotActive : styles.pageDot}
-                                                                />
-                                                            ))}
-                                                        </View>
-                                                        <TouchableOpacity
-                                                            onPress={() => {
-                                                                handlePageDeleteTrigger(pageIdx, (nextIdx) => {
-                                                                    setTimeout(() => {
-                                                                        pageFlatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
-                                                                    }, 100);
-                                                                });
-                                                            }}
-                                                            activeOpacity={0.6}
-                                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                                            style={styles.cardDeleteBtn}
-                                                        >
-                                                            <Text style={styles.cardDeleteText}>✕</Text>
-                                                        </TouchableOpacity>
-                                                    </View>
-                                                )}
-
-                                                {/* [층2] 📷 폴라로이드 사진 레이어 (반투명 프레임 제외) */}
-                                                <View
-                                                    style={[StyleSheet.absoluteFill, { zIndex: 5, elevation: 5 }]}
-                                                    pointerEvents="box-none"
-                                                >
-                                                    {(pagePhotos[pageIdx] || []).filter(p => p.frameType !== 'transparent_white' && p.frameType !== 'transparent_gray').map(photo => (
-                                                        <DraggablePhoto
-                                                            key={photo.id}
-                                                            photo={photo}
-                                                            bounds={inputBoxBounds}
-                                                            onDelete={handleDeletePhoto}
-                                                            onDragEnd={handlePhotoDragEnd}
-                                                            onInteractionStart={handleInteractionStart}
-                                                            onInteractionEnd={handleInteractionEnd}
-                                                            onDragMove={handlePhotoDragMove}
-                                                            onDragDrop={handlePhotoDragDrop}
-                                                            onSelect={handleSelect}
-                                                            isSelected={selectedItemId === photo.id}
-                                                        />
-                                                    ))}
-                                                </View>
-
-                                                {/* [층2.5] ✏️ 텍스트 스티커 영역 */}
-                                                <View
-                                                    style={[StyleSheet.absoluteFill, { zIndex: 8, elevation: 8 }]}
-                                                    pointerEvents="box-none"
-                                                >
-                                                    {(pageTexts[pageIdx] || []).map(textNode => (
-                                                        <DraggableText
-                                                            key={`txt-${textNode.id}`}
-                                                            id={textNode.id}
-                                                            text={textNode.text}
-                                                            fontId={textNode.fontId}
-                                                            color={textNode.color}
-                                                            bgColor={textNode.bgColor}
-                                                            initialX={textNode.x}
-                                                            initialY={textNode.y}
-                                                            initialRotation={textNode.rotation}
-                                                            initialScale={textNode.scale}
-                                                            onDelete={handleDeleteText}
-                                                            onDragEnd={handleTextDragEnd}
-                                                            onTextChange={handleUpdateText}
-                                                            onInteractionStart={handleInteractionStart}
-                                                            onInteractionEnd={handleInteractionEnd}
-                                                            onDragMove={handleTextDragMove}
-                                                            onDragDrop={handleTextDragDrop}
-                                                            onSelect={handleSelect}
-                                                            isSelected={selectedItemId === textNode.id}
-                                                            autoFocus={textNode.autoFocus || false}
-                                                        />
-                                                    ))}
-                                                </View>
-
-                                                {/* [층3] 🌟 다꾸 스티커 영역 (최상위) */}
-                                                <View
-                                                    style={[StyleSheet.absoluteFill, { zIndex: 10, elevation: 10 }]}
-                                                    pointerEvents="box-none"
-                                                    onLayout={(e) => {
-                                                        if (pageIdx === currentPageIndex) {
-                                                            const { width, height, x, y } = e.nativeEvent.layout;
-                                                            if (width !== inputBoxBounds.width || height !== inputBoxBounds.height) {
-                                                                setInputBoxBounds({ width, height, x, y });
+                                            const bgData = getBackgroundById(pageBackgrounds[pageIdx] || 'default');
+                                            return (
+                                                <Card style={[styles.inputCard, { width: pageCardWidth, backgroundColor: bgData.backgroundColor }, isDraggingAny && { overflow: 'visible' }]}>
+                                                    {/* [층0] 📝 빈 공간 롱탭 전용 배경 (텍스트 생성용) */}
+                                                    <Pressable
+                                                        style={StyleSheet.absoluteFill}
+                                                        onPress={handleClearSelection}
+                                                        onLongPress={(e) => {
+                                                            if (pageIdx === currentPageIndex) {
+                                                                const { locationX, locationY } = e.nativeEvent;
+                                                                handleCanvasTap(locationX, locationY);
                                                             }
-                                                        }
-                                                    }}
-                                                >
-                                                    {(pageStickers[pageIdx] || []).map(sticker => (
-                                                        <DraggableSticker
-                                                            key={sticker.id}
-                                                            sticker={sticker}
-                                                            bounds={inputBoxBounds}
-                                                            onDelete={handleDeleteSticker}
-                                                            onDragEnd={handleDragEnd}
-                                                            onInteractionStart={handleInteractionStart}
-                                                            onInteractionEnd={handleInteractionEnd}
-                                                            onDragMove={handleStickerDragMove}
-                                                            onDragDrop={handleStickerDragDrop}
-                                                            onSelect={handleSelect}
-                                                            isSelected={selectedItemId === sticker.id}
-                                                        />
-                                                    ))}
-                                                </View>
-                                            </Card>
-                                        );
-                                    }}
-                                />
-                            )}
+                                                        }}
+                                                        delayLongPress={400}
+                                                    />
+                                                    {/* [층0.5] 반투명 프레임 사진 시각 레이어 (텍스트 뒤, 터치 불가) */}
+                                                    <View
+                                                        style={[StyleSheet.absoluteFill, { zIndex: 1, elevation: 0 }]}
+                                                        pointerEvents="none"
+                                                    >
+                                                        {(pagePhotos[pageIdx] || []).filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray').map(photo => {
+                                                            const anim = getPhotoAnimation(photo);
+                                                            return (
+                                                                <DraggablePhoto
+                                                                    key={`vis-${photo.id}`}
+                                                                    photo={photo}
+                                                                    bounds={inputBoxBounds}
+                                                                    externalPan={anim.pan}
+                                                                    externalRotation={anim.rotation}
+                                                                    onDelete={handleDeletePhoto}
+                                                                    onDragEnd={handlePhotoDragEnd}
+                                                                    onInteractionStart={handleInteractionStart}
+                                                                    onInteractionEnd={handleInteractionEnd}
+                                                                    onDragMove={handlePhotoDragMove}
+                                                                    onDragDrop={handlePhotoDragDrop}
+                                                                    onSelect={handleSelect}
+                                                                    isSelected={selectedItemId === photo.id}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </View>
+
+                                                    {/* [층1] 📝 빈 캔버스 안내 레이어 (시각 전용, 터치 불가) */}
+                                                    <View
+                                                        style={[StyleSheet.absoluteFill, { zIndex: 2 }]}
+                                                        pointerEvents="none"
+                                                    >
+                                                        {(pageTexts[pageIdx] || []).length === 0 && (pagePhotos[pageIdx] || []).length === 0 && (pageStickers[pageIdx] || []).length === 0 && (
+                                                            <View style={styles.canvasGuide}>
+
+                                                                <Text style={styles.canvasGuideText}>
+                                                                    화면을 꾹 눌러서 일기를 써보세요.
+                                                                </Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+
+                                                    {/* [층1.5] 👻 반투명 프레임 사진 터치 레이어 (텍스트 위, 보이지 않음) */}
+                                                    <View
+                                                        style={[StyleSheet.absoluteFill, { zIndex: 4 }]}
+                                                        pointerEvents="box-none"
+                                                    >
+                                                        {(pagePhotos[pageIdx] || []).filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray').map(photo => {
+                                                            const anim = getPhotoAnimation(photo);
+                                                            return (
+                                                                <DraggablePhoto
+                                                                    key={`ghost-${photo.id}`}
+                                                                    isGhost={true}
+                                                                    photo={photo}
+                                                                    bounds={inputBoxBounds}
+                                                                    externalPan={anim.pan}
+                                                                    externalRotation={anim.rotation}
+                                                                    onDelete={handleDeletePhoto}
+                                                                    onDragEnd={handlePhotoDragEnd}
+                                                                    onInteractionStart={handleInteractionStart}
+                                                                    onInteractionEnd={handleInteractionEnd}
+                                                                    onDragMove={handlePhotoDragMove}
+                                                                    onDragDrop={handlePhotoDragDrop}
+                                                                    onSelect={handleSelect}
+                                                                    isSelected={selectedItemId === photo.id}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </View>
+
+
+                                                    {/* [층2] 📷 폴라로이드 사진 레이어 (반투명 프레임 제외) */}
+                                                    <View
+                                                        style={[StyleSheet.absoluteFill, { zIndex: 5, elevation: 5 }]}
+                                                        pointerEvents="box-none"
+                                                    >
+                                                        {(pagePhotos[pageIdx] || []).filter(p => p.frameType !== 'transparent_white' && p.frameType !== 'transparent_gray').map(photo => (
+                                                            <DraggablePhoto
+                                                                key={photo.id}
+                                                                photo={photo}
+                                                                bounds={inputBoxBounds}
+                                                                onDelete={handleDeletePhoto}
+                                                                onDragEnd={handlePhotoDragEnd}
+                                                                onInteractionStart={handleInteractionStart}
+                                                                onInteractionEnd={handleInteractionEnd}
+                                                                onDragMove={handlePhotoDragMove}
+                                                                onDragDrop={handlePhotoDragDrop}
+                                                                onSelect={handleSelect}
+                                                                isSelected={selectedItemId === photo.id}
+                                                            />
+                                                        ))}
+                                                    </View>
+
+                                                    {/* [층2.5] ✏️ 텍스트 스티커 영역 */}
+                                                    <View
+                                                        style={[StyleSheet.absoluteFill, { zIndex: 8, elevation: 8 }]}
+                                                        pointerEvents="box-none"
+                                                    >
+                                                        {(pageTexts[pageIdx] || []).map(textNode => (
+                                                            <DraggableText
+                                                                key={`txt-${textNode.id}`}
+                                                                id={textNode.id}
+                                                                text={textNode.text}
+                                                                fontId={textNode.fontId}
+                                                                color={textNode.color}
+                                                                bgColor={textNode.bgColor}
+                                                                initialX={textNode.x}
+                                                                initialY={textNode.y}
+                                                                initialRotation={textNode.rotation}
+                                                                initialScale={textNode.scale}
+                                                                onDelete={handleDeleteText}
+                                                                onDragEnd={handleTextDragEnd}
+                                                                onTextChange={handleUpdateText}
+                                                                onInteractionStart={handleInteractionStart}
+                                                                onInteractionEnd={handleInteractionEnd}
+                                                                onDragMove={handleTextDragMove}
+                                                                onDragDrop={handleTextDragDrop}
+                                                                onSelect={handleSelect}
+                                                                isSelected={selectedItemId === textNode.id}
+                                                                autoFocus={textNode.autoFocus || false}
+                                                                bounds={inputBoxBounds}
+                                                            />
+                                                        ))}
+                                                    </View>
+
+                                                    {/* [층3] 🌟 다꾸 스티커 영역 (최상위) */}
+                                                    <View
+                                                        style={[StyleSheet.absoluteFill, { zIndex: 10, elevation: 10 }]}
+                                                        pointerEvents="box-none"
+                                                        onLayout={(e) => {
+                                                            if (pageIdx === currentPageIndex) {
+                                                                const { width, height, x, y } = e.nativeEvent.layout;
+                                                                if (width !== inputBoxBounds.width || height !== inputBoxBounds.height) {
+                                                                    setInputBoxBounds({ width, height, x, y });
+                                                                }
+                                                            }
+                                                        }}
+                                                    >
+                                                        {(pageStickers[pageIdx] || []).map(sticker => (
+                                                            <DraggableSticker
+                                                                key={sticker.id}
+                                                                sticker={sticker}
+                                                                bounds={inputBoxBounds}
+                                                                onDelete={handleDeleteSticker}
+                                                                onDragEnd={handleDragEnd}
+                                                                onInteractionStart={handleInteractionStart}
+                                                                onInteractionEnd={handleInteractionEnd}
+                                                                onDragMove={handleStickerDragMove}
+                                                                onDragDrop={handleStickerDragDrop}
+                                                                onSelect={handleSelect}
+                                                                isSelected={selectedItemId === sticker.id}
+                                                            />
+                                                        ))}
+                                                    </View>
+                                                </Card>
+                                            );
+                                        }}
+                                    />
+                                </>)}
 
                         </View>
 
@@ -836,27 +857,37 @@ export function WriteScreenView({ route, navigation }) {
                             ref={bottomSheetScrollRef}
                             horizontal
                             pagingEnabled
+                            scrollEnabled={false}
                             showsHorizontalScrollIndicator={false}
                             keyboardShouldPersistTaps="always"
                             contentOffset={{ x: showPhotos ? windowWidth : (showTexts ? windowWidth * 2 : 0), y: 0 }}
-                            onMomentumScrollEnd={(e) => {
-                                const idx = Math.round(e.nativeEvent.contentOffset.x / windowWidth);
-                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                                if (idx === 0) { setShowStickers(true); setShowPhotos(false); setShowTexts(false); }
-                                else if (idx === 1) { setShowStickers(false); setShowPhotos(true); setShowTexts(false); }
-                                else if (idx === 2) { setShowStickers(false); setShowPhotos(false); setShowTexts(true); }
-                            }}
                         >
                             {/* [Page 1] Stickers */}
-                            <View style={{ width: windowWidth, paddingHorizontal: 16 }}>
-                                <View style={styles.stickerBottomSheet}>
+                            <View style={{ width: windowWidth }}>
+                                <View style={[styles.stickerBottomSheet, { paddingHorizontal: 16 }]}>
                                     <View style={styles.stickerBottomSheetHeader}>
-                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryTabBar} keyboardShouldPersistTaps="always">
+                                        <ScrollView
+                                            ref={categoryTabScrollRef}
+                                            horizontal
+                                            showsHorizontalScrollIndicator={false}
+                                            style={styles.categoryTabBar}
+                                            keyboardShouldPersistTaps="always"
+                                        >
                                             {visibleCategories.map((cat) => (
                                                 <TouchableOpacity
                                                     key={cat.id}
+                                                    onLayout={(e) => {
+                                                        categoryTabRefs.current[cat.id] = e.nativeEvent.layout.x;
+                                                    }}
                                                     style={[styles.categoryTab, activeCategoryId === cat.id && styles.categoryTabActive]}
-                                                    onPress={() => setActiveCategoryId(cat.id)}
+                                                    onPress={() => {
+                                                        setActiveCategoryId(cat.id);
+                                                        // 카테고리 탭 자동 스크롤
+                                                        categoryTabScrollRef.current?.scrollTo({
+                                                            x: Math.max(0, categoryTabRefs.current[cat.id] - 40),
+                                                            animated: true
+                                                        });
+                                                    }}
                                                     activeOpacity={0.7}
                                                 >
                                                     <Text style={[styles.categoryTabText, activeCategoryId === cat.id && styles.categoryTabTextActive]}>
@@ -869,20 +900,47 @@ export function WriteScreenView({ route, navigation }) {
                                             <SettingsTabIcon size={16} color="#999" />
                                         </TouchableOpacity>
                                     </View>
-                                    <View style={[styles.stickerRow, { height: 140 }]}>
-                                        {isEmojiCategory
-                                            ? currentStickers.map((emoji, idx) => (
-                                                <AnimatedStickerItem key={`emoji-${idx}`} onPress={() => handleStickerPress(emoji, false)}>
-                                                    <Text style={styles.stickerItemEmoji}>{emoji}</Text>
-                                                </AnimatedStickerItem>
-                                            ))
-                                            : currentStickers.map((item) => (
-                                                <AnimatedStickerItem key={item.key} onPress={() => handleStickerPress(item.key, true)}>
-                                                    <item.Component size={28} />
-                                                </AnimatedStickerItem>
-                                            ))
-                                        }
-                                    </View>
+
+                                    <ScrollView
+                                        ref={stickerPackScrollRef}
+                                        horizontal
+                                        pagingEnabled
+                                        showsHorizontalScrollIndicator={false}
+                                        contentOffset={{ x: 0, y: 0 }} // 🚀 항상 0점에서 시작하도록 강제
+                                        onMomentumScrollEnd={(e) => {
+                                            const idx = Math.round(e.nativeEvent.contentOffset.x / (windowWidth - 32));
+                                            const cat = visibleCategories[idx];
+                                            if (cat && cat.id !== activeCategoryId) {
+                                                setActiveCategoryId(cat.id);
+                                                // 탭 바도 동기화
+                                                categoryTabScrollRef.current?.scrollTo({
+                                                    x: Math.max(0, categoryTabRefs.current[cat.id] - 40),
+                                                    animated: true
+                                                });
+                                            }
+                                        }}
+                                    >
+                                        {visibleCategories.map((cat) => {
+                                            const catStickers = CATEGORIZED_STICKERS[cat.id] ?? [];
+                                            const isEmoji = cat.id === 'emoji';
+                                            return (
+                                                <View key={cat.id} style={[styles.stickerRow, { width: windowWidth - 32, height: 140, flexWrap: 'wrap' }]}>
+                                                    {isEmoji
+                                                        ? catStickers.map((emoji, idx) => (
+                                                            <AnimatedStickerItem key={`emoji-${idx}`} onPress={() => handleStickerPress(emoji, false)}>
+                                                                <Text style={styles.stickerItemEmoji}>{emoji}</Text>
+                                                            </AnimatedStickerItem>
+                                                        ))
+                                                        : catStickers.map((item) => (
+                                                            <AnimatedStickerItem key={item.key} onPress={() => handleStickerPress(item.key, true)}>
+                                                                <item.Component size={28} />
+                                                            </AnimatedStickerItem>
+                                                        ))
+                                                    }
+                                                </View>
+                                            );
+                                        })}
+                                    </ScrollView>
                                 </View>
                             </View>
 

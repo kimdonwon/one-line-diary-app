@@ -616,12 +616,11 @@ export const styles = StyleSheet.create({
     inputCard: {
         backgroundColor: '#FBF8F4', // 종이 질감 느낌의 따뜻한 배경
         height: DIARY_CARD_HEIGHT,
-        borderTopLeftRadius: 12,
-        borderTopRightRadius: 12,
-        borderBottomLeftRadius: 0,
-        borderBottomRightRadius: 0,
+        borderRadius: 0, // 인디케이터와 한몸으로 보이기 위해 라운딩 제거
         padding: 0,
         overflow: 'hidden',
+        borderWidth: 0, // 내부 테두리 제거
+        elevation: 0,
         // 통합 카드 내부에 위치하므로 자체 테두리와 그림자는 제거
     },
     // 📝 탭 투 라이트 캔버스 레이어
@@ -648,7 +647,7 @@ export const styles = StyleSheet.create({
 
     // ─── 멀티페이지 ───
     integratedDiaryCard: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#FBF8F4', // 내부 캔버스와 동일한 배경색으로 변경
         borderRadius: 12,
         borderWidth: 1,
         borderColor: '#E9E9E7',
@@ -692,9 +691,8 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        position: 'relative',
-        zIndex: 8, // 사진(5)보다 위, 스티커(10)보다는 아래
+        paddingVertical: 10,
+        backgroundColor: 'transparent', // 인디케이터 컨테이너 배경을 투명하게 (바깥쪽 integratedDiaryCard에 맞춤)
     },
     cardIndicatorDots: {
         flexDirection: 'row',

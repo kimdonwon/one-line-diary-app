@@ -186,15 +186,14 @@ export function SettingsScreenView({ navigation }) {
                         </View>
                     )}
 
-                    <Text style={styles.premiumPrice}>₩5,000 <Text style={styles.premiumPriceUnit}>(한번 결제로 평생 소장)</Text></Text>
+                    <Text style={styles.premiumPrice}>₩5,900 <Text style={styles.premiumPriceUnit}>(1년 이용권)</Text></Text>
 
                     <View style={styles.premiumBenefits}>
                         <Text style={styles.premiumBenefitItem}>✓ 페이지당 스티커 최대 15개 부착 </Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 페이지당 텍스트 박스 최대 15개 상향 </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 페이지당 사진 최대 5장 첨부 </Text>
-                        <Text style={styles.premiumBenefitItem}>✓ 스티커 서랍장 카테고리 6개 (전원) </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 파스텔 사진 프레임 사용 가능 </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 모든 다이어리 텍스트 폰트 사용 가능 </Text>
-                        <Text style={styles.premiumBenefitItem}>✓ 몽글몽글 파스텔 스티커팩 증정 </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 광고 없는 쾌적한 다이어리 작성</Text>
                     </View>
 
@@ -207,7 +206,7 @@ export function SettingsScreenView({ navigation }) {
                         activeOpacity={0.8}
                     >
                         <Text style={styles.premiumSubscribeText}>
-                            {isPremium ? '프리미엄 혜택 이용 중 ✨' : '프리미엄 평생 소장하기'}
+                            {isPremium ? '프리미엄 혜택 이용 중 ✨' : '프리미엄 1년 구독하기'}
                         </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -217,7 +216,7 @@ export function SettingsScreenView({ navigation }) {
                     >
                         <Text style={styles.restorePurchaseText}>기존 구매 내역 복원하기</Text>
                     </TouchableOpacity>
-                    <Text style={styles.premiumSubText}>한 번 결제하면 추가 청구 없이 영구적으로 이용 가능합니다.</Text>
+                    <Text style={styles.premiumSubText}>결제일로부터 1년간 모든 프리미엄 혜택을 이용하실 수 있습니다.{"\n"}최초 앱 실행 시 14일간 프리미엄 혜택을 미리 체험할 수 있습니다.</Text>
                 </View>
 
                 {/* 데이터 관리 섹션 */}

@@ -11,6 +11,7 @@ import {
     useYearAllActivities
 } from '../../hooks/useDiary';
 import { chartConstants } from './SummaryScreen.styles';
+import { useBentoBoard } from '../../hooks/useBentoBoard';
 
 const MOOD_SCORE = {
     HAPPY: 5,
@@ -46,6 +47,9 @@ export function useSummaryLogic(route, navigation, scrollRef) {
             reloadAllActivities();
         }, [reloadDiaries, reloadStats, reloadMonthly, reloadActivities, reloadMonthlyActivity, reloadAllActivities])
     );
+
+    // ─── 🍱 벤토 보드 데이터 ───
+    const bentoData = useBentoBoard(year, diaries);
 
     // ─── 🔍 1. 기분 x 활동 상관관계 계산 ───
     const moodActivityCorrelation = useMemo(() => {
@@ -196,6 +200,7 @@ export function useSummaryLogic(route, navigation, scrollRef) {
         activityLineData,
         moodActivityCorrelation,
         stickerStats,
+        bentoData,
         onPageScroll,
         onMomentumScrollEnd,
         handleTabPress,

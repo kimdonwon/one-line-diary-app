@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { SOFT_SHADOW } from '../../constants/theme';
+import { SOFT_SHADOW, PHOTO_FRAME_COLORS } from '../../constants/theme';
 
 /**
  * 📷 폴라로이드 사진 전용 스타일 모듈
@@ -20,13 +20,14 @@ export const styles = StyleSheet.create({
     selected: {
         borderColor: 'rgba(232, 213, 204, 0.6)',
         borderStyle: 'dashed',
+        zIndex: 999,
     },
 
     // 폴라로이드 프레임
     polaroidFrame: {
         width: 126,
         height: 144,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: PHOTO_FRAME_COLORS.white,
         borderRadius: 4,
         paddingTop: 8,
         paddingHorizontal: 8,
@@ -44,36 +45,36 @@ export const styles = StyleSheet.create({
         borderColor: 'rgba(200, 190, 180, 0.4)',
     },
     polaroidFrameBlack: {
-        backgroundColor: '#1E1E1E',
+        backgroundColor: PHOTO_FRAME_COLORS.black,
         shadowColor: '#000000',
         borderColor: '#000000',
     },
     polaroidFramePink: {
-        backgroundColor: '#FFEBEF',
+        backgroundColor: PHOTO_FRAME_COLORS.pink,
         borderColor: 'rgba(255, 217, 225, 0.4)',
     },
     polaroidFrameBlue: {
-        backgroundColor: '#EBF4FF',
+        backgroundColor: PHOTO_FRAME_COLORS.blue,
         borderColor: 'rgba(212, 232, 255, 0.4)',
     },
     polaroidFrameMint: {
-        backgroundColor: '#EBFFF0',
+        backgroundColor: PHOTO_FRAME_COLORS.mint,
         borderColor: 'rgba(212, 255, 224, 0.4)',
     },
     polaroidFrameGray: {
-        backgroundColor: '#E0E0E0',
+        backgroundColor: PHOTO_FRAME_COLORS.gray,
         borderColor: 'rgba(180, 180, 180, 0.5)',
         shadowColor: '#999999',
     },
     // ── 반투명 프레임 추가 (일반 폴라로이드와 동일한 크기 및 모양) ──
     polaroidFrameTransparentWhite: {
-        backgroundColor: 'rgba(255, 255, 255, 0.88)',
+        backgroundColor: PHOTO_FRAME_COLORS.transparent_white,
         borderColor: 'rgba(220, 220, 218, 0.5)',
         shadowOpacity: 0.15,
         elevation: 0, // 텍스트 뒤에 위치하도록 elevation 제거
     },
     polaroidFrameTransparentGray: {
-        backgroundColor: 'rgba(200, 200, 198, 0.82)',
+        backgroundColor: PHOTO_FRAME_COLORS.transparent_gray,
         borderColor: 'rgba(180, 180, 178, 0.5)',
         shadowOpacity: 0.15,
         elevation: 0, // 텍스트 뒤에 위치하도록 elevation 제거

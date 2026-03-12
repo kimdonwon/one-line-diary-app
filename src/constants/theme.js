@@ -65,3 +65,15 @@ export const SOFT_SHADOW = {
 
 // 하위 호환: BRUTALISM → SOFT_SHADOW alias
 export const BRUTALISM = SOFT_SHADOW;
+
+// 📸 사진 프레임 공통 색상 (캔버스 기준 통일)
+export const PHOTO_FRAME_COLORS = {
+    white: '#FFFFFF',
+    black: '#1E1E1E',
+    pink: '#FFEBEF',
+    blue: '#EBF4FF',
+    mint: '#EBFFF0',
+    gray: '#E0E0E0',
+    transparent_white: 'rgba(255, 255, 255, 0.88)',
+    transparent_gray: 'rgba(200, 200, 198, 0.82)',
+};

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { getMoodByKey, MOOD_LIST } from '../../constants/mood';
-import { useDiariesForMonth, useMoodStats, useMonthActivityStats } from '../../hooks/useDiary';
+import { useDiariesForMonth, useMoodStats, useMonthActivityStats, deleteDiaryAndActivities } from '../../hooks/useDiary';
 
 // 유틸리티 함수 모음
 export const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
@@ -27,6 +27,9 @@ export function useMainLogic(navigation) {
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth() + 1);
+
+    const [showAlert, setShowAlert] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({});
 
     const yearMonth = formatYearMonth(year, month);
 
@@ -79,6 +82,29 @@ export function useMainLogic(navigation) {
     // 내비게이션 헨들러
     const onDayPress = (day) => {
         navigation.navigate('Write', { date: formatDate(year, month, day) });
+    };
+
+    const onDayLongPress = (day) => {
+        const date = formatDate(year, month, day);
+        const diary = diaryMap[date];
+
+        if (diary) {
+            setAlertConfig({
+                title: '일기 삭제',
+                message: `${month}월 ${day}일의 조각을 비울까요?\n지워진 조각은 다시 주워담을 수 없어요.`,
+                confirmText: '삭제하기',
+                onConfirm: async () => {
+                    await deleteDiaryAndActivities(date);
+                    setShowAlert(false);
+                    reload();
+                    reloadStats();
+                    reloadActivities();
+                },
+                secondaryText: '취소',
+                onSecondaryConfirm: () => setShowAlert(false)
+            });
+            setShowAlert(true);
+        }
     };
 
     const onSummaryPress = () => {
@@ -143,11 +169,12 @@ export function useMainLogic(navigation) {
         year, month,
         diaries, stats, activityStats, diaryMap,
         firstDay, daysInMonth, topMoodData, allMoodStats, maxCount, dailyMoodFlow,
+        showAlert, alertConfig,
 
         // Settings/Check
         isToday,
 
         // Handlers
-        goToPrevMonth, goToNextMonth, onDayPress, onSummaryPress, onTodayWrite, onMoodPress, onActivityPress
+        goToPrevMonth, goToNextMonth, onDayPress, onDayLongPress, onSummaryPress, onTodayWrite, onMoodPress, onActivityPress, setShowAlert
     };
 }

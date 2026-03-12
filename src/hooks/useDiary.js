@@ -2,6 +2,7 @@
 // DB 연동 함수를 래핑, 디자인 정보 없음
 
 import { useState, useEffect, useCallback } from 'react';
+import { DeviceEventEmitter, InteractionManager } from 'react-native';
 import {
     saveDiary as dbSaveDiary,
     getDiary,
@@ -23,9 +24,12 @@ import {
     saveComment as dbSaveComment,
     getComments,
     getAllCommentCounts,
-    deleteComment as dbDeleteComment
+    deleteComment as dbDeleteComment,
+    deleteDiaryByDate,
+    saveWordStats as dbSaveWordStats,
 } from '../database/db';
-import { DeviceEventEmitter } from 'react-native';
+import { analyzeWordsFromDiary } from '../utils/wordAnalyzer';
+
 import { getMoodByKey } from '../constants/mood';
 
 export function useDiaryForDate(date) {
@@ -251,12 +255,33 @@ export function useYearMonthlyActivitiesStats(year) {
 export async function saveDiary(date, content, mood, stickers = '[]', photos = '[]', backgrounds = '[]', texts = '[]') {
     await dbSaveDiary(date, content, mood, stickers, photos, backgrounds, texts);
     DeviceEventEmitter.emit('DIARY_UPDATED');
+
+    // 🍱 증분 동기화: 저장된 일기의 단어 빈도를 word_stats에 반영 (백그라운드)
+    InteractionManager.runAfterInteractions(() => {
+        try {
+            const wordMap = analyzeWordsFromDiary({ content, texts });
+            if (Object.keys(wordMap).length > 0) {
+                dbSaveWordStats(date, wordMap).catch(e =>
+                    console.warn('[WordStats] Incremental sync failed:', e.message)
+                );
+            }
+        } catch (e) {
+            console.warn('[WordStats] Analysis failed:', e.message);
+        }
+    });
 }
 
 export async function saveActivities(date, activities) {
     await dbSaveActivities(date, activities);
     DeviceEventEmitter.emit('DIARY_UPDATED');
     DeviceEventEmitter.emit('ACTIVITIES_SAVED');
+}
+
+export async function deleteDiaryAndActivities(date) {
+    await deleteDiaryByDate(date);
+    DeviceEventEmitter.emit('DIARY_UPDATED');
+    DeviceEventEmitter.emit('ACTIVITIES_SAVED');
+    DeviceEventEmitter.emit('COMMENT_ADDED'); // 댓글도 삭제될 수 있으므로 트리거
 }
 
 export function useMonthActivityStats(yearMonth) {

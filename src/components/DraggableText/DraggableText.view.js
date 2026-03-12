@@ -24,7 +24,7 @@ const FONT_PRESETS_MAP = {
     },
     'bebas': {
         fontFamily: 'BebasNeue_400Regular',
-        fontSize: 18,
+        fontSize: 15,
         letterSpacing: 2,
     },
     'dmsans': {
@@ -78,6 +78,7 @@ export const DraggableText = React.memo(({
     isSelected: externalIsSelected,
     autoFocus = false,
     createdAt,
+    bounds,
 }) => {
     const [isEditing, setIsEditing] = useState(autoFocus);
     const [localText, setLocalText] = useState(text);
@@ -98,6 +99,7 @@ export const DraggableText = React.memo(({
         isEditing,
         onDelete,
         onDragEnd,
+        bounds,
         onTap: (id, wasSelected) => {
             if (wasSelected) {
                 // 이미 선택된 상태에서 다시 탭하면 수정 모드 진입
@@ -128,6 +130,10 @@ export const DraggableText = React.memo(({
         inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
         outputRange: [-80, -48, -34.28, -24, -16, -12, -8, -4.8], // 화면상 -24px 유지하기 위한 역산
     });
+    const dragHandleOffset = scale.interpolate({
+        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [-120, -72, -51.42, -36, -24, -18, -12, -7.2],
+    });
 
     const currentFontStyle = FONT_PRESETS_MAP[fontId] || FONT_PRESETS_MAP['basic'];
 
@@ -150,6 +156,12 @@ export const DraggableText = React.memo(({
         }
     }, [text]);
 
+    // 실시간 상태 업데이트 (편집 상태에서 뒤로가기/저장 터치 시 최신 데이터 유지)
+    const handleChangeText = (val) => {
+        setLocalText(val);
+        onTextChange?.(id, val);
+    };
+
     // 편집 완료 처리
     const handleFinishEditing = () => {
         if (blurTimerRef.current) {
@@ -160,7 +172,8 @@ export const DraggableText = React.memo(({
             const trimmed = localText.trim();
             if (trimmed.length === 0) {
                 onDelete?.(id);
-            } else if (trimmed !== text) {
+            } else if (trimmed !== localText) {
+                setLocalText(trimmed);
                 onTextChange?.(id, trimmed);
             }
         }, 100);
@@ -219,14 +232,15 @@ export const DraggableText = React.memo(({
                 },
                 isSelected && styles.selected,
             ]}
+            pointerEvents={isEditing ? 'box-none' : 'auto'} // 💡 편집 중일 땐 자기 자신(Animated.View)이 터치를 안 삼키도록 함
         >
-            <View style={[styles.textWrapper, { backgroundColor: bgColor }]}>
+            <View style={[styles.textWrapper, { backgroundColor: bgColor }]} pointerEvents={isEditing ? 'box-none' : 'auto'}>
                 {isEditing ? (
                     <TextInput
                         ref={inputRef}
                         style={[styles.textFormat, styles.textInput, currentFontStyle, { color }]}
                         value={localText}
-                        onChangeText={setLocalText}
+                        onChangeText={handleChangeText}
                         multiline
                         autoFocus={autoFocus}
                         onBlur={handleFinishEditing}
@@ -236,6 +250,7 @@ export const DraggableText = React.memo(({
                         scrollEnabled={false}
                         blurOnSubmit={false}
                         maxLength={200}
+                        pointerEvents="auto" // 💡 편집 중일 땐 무조건 터치를 흡수
                     />
                 ) : (
                     <Text style={[styles.textFormat, currentFontStyle, { color }]}>
@@ -263,6 +278,21 @@ export const DraggableText = React.memo(({
                         <EditIcon size={20} color="#8B7E74" />
                     </TouchableOpacity>
                 </Animated.View>
+            )}
+
+            {/* 👆 드래그 막대 핸들 (선택 시 하단 중앙에 표시, 편집 모드 아닐 때만) */}
+            {isSelected && !isEditing && (
+                <Animated.View style={{
+                    position: 'absolute',
+                    bottom: dragHandleOffset,
+                    left: '50%',
+                    marginLeft: -20, // width 40의 절반 무조건 중앙 정렬
+                    width: 40,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: '#8B7E74',
+                    transform: [{ scale: handleScale }]
+                }} />
             )}
 
             {/* 🔄 회전 핸들 (선택 시 우측 하단에 표시) */}

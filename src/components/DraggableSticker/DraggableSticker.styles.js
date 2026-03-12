@@ -20,6 +20,7 @@ export const styles = StyleSheet.create({
         borderColor: 'rgba(232, 213, 204, 0.6)',
         borderRadius: 4,
         borderStyle: 'dashed',
+        zIndex: 999,
     },
     textSticker: {
         fontSize: 26,

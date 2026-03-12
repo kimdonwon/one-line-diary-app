@@ -44,6 +44,7 @@ src/
 │
 ├── hooks/                                 # 여러 화면에서 재사용할 수 있는 도메인 비즈니스 로직
 │   ├── useDiary.js                        # SQLite 등과 연동하여 일기 DB CRUD 로직 처리
+│   ├── useBentoBoard.js                   # 🍱 벤토 보드 데이터 훅 (키워드 분석, 연속 기록, 캐싱)
 │   └── useSearchLogic.js                  # 검색/필터링 조건 상태 및 결과 처리
 │
 ├── database/                              # 로컬 스토리지 또는 외부 API 연동 계층
@@ -62,7 +63,9 @@ src/
 │   ├── SummaryScreen/                     # [통계 분석] 이번 달, 등 기간별 통계
 │   │   ├── components/                    # 요약 화면 전용 UI 컴포넌트
 │   │   │   ├── MoodActivityCorrelation.js # 감정과 활동 간의 상관관계 그래프 UI
-│   │   │   └── StickerRanking.js          # 사용 빈도수가 가장 높은 스티커 랭킹 UI
+│   │   │   ├── StickerRanking.js          # 사용 빈도수가 가장 높은 스티커 랭킹 UI
+│   │   │   ├── BentoBoard.js              # 🍱 연간 모먼트 벤토 보드 뷰 (Bento Grid)
+│   │   │   └── BentoBoard.styles.js       # 벤토 보드 전용 스타일 시트
 │   ├── WriteScreen/                       # [일기 작성] 스티커 다꾸 및 일기 텍스트 작성 에디터
 │   │
 │   └── *각 화면 내 공통 파일 구성 요건 (예시: MainScreen 기준)*
@@ -72,7 +75,8 @@ src/
 │       └── MainScreen.styles.js           # 뷰에서 필요한 StyleSheet 파편화 방지
 │
 └── utils/                                 # 특정 도메인에 종속되지 않은 순수 헬퍼 함수
-    └── backupRestore.js                   # JSON 생성/읽기, 로컬 캐시 등을 통한 백업 및 복원 엔진
+    ├── backupRestore.js                   # JSON 생성/읽기, 로컬 캐시 등을 통한 백업 및 복원 엔진
+    └── wordAnalyzer.js                    # 📝 단어 빈도 분석 유틸 (불용어 사전, 텍스트 수집/분석)
 ```
 
 ---

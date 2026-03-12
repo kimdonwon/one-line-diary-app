@@ -32,6 +32,7 @@ export const styles = StyleSheet.create({
         borderColor: 'rgba(232, 213, 204, 0.6)',
         borderRadius: 4,
         borderStyle: 'dashed',
+        zIndex: 999,
     },
     // ✏️ 수정 버튼 (좌측 하단, 회전 핸들의 대칭 위치)
     editHandle: {

@@ -177,15 +177,15 @@ export function useSettingsLogic() {
         }
 
         setAlertConfig({
-            title: '프리미엄 구매 (더미) 💳',
-            message: '5,000원으로 오늘조각 프리미엄을 평생 소장하시겠습니까? (한 번 결제로 모든 기능 영구 이용)'
+            title: '프리미엄 구독 (더미) 💳',
+            message: '연 5,900원으로 오늘조각 프리미엄을 구독하시겠습니까? (결제일로부터 1년간 모든 기능 이용)'
         });
         setShowAlert(true);
     };
 
     const confirmAlert = async () => {
         const isBuyingPack = alertConfig.title === '스티커 팩 구매 💳';
-        const isBuyingPremium = alertConfig.title === '프리미엄 구매 (더미) 💳';
+        const isBuyingPremium = alertConfig.title === '프리미엄 구독 (더미) 💳';
 
         // 커스텀 onConfirm이 있는 경우 실행
         if (alertConfig.onConfirm) {

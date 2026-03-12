@@ -54,6 +54,10 @@ const DraggablePhoto = React.memo(({
         inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
         outputRange: [-80, -48, -34.28, -24, -16, -12, -8, -4.8],
     });
+    const dragHandleOffset = scale.interpolate({
+        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [-120, -72, -51.42, -36, -24, -18, -12, -7.2],
+    });
 
     const rotateStr = rotation.interpolate({
         inputRange: [-360, 360],
@@ -119,6 +123,21 @@ const DraggablePhoto = React.memo(({
                 )}
                 <View style={styles.polaroidBottom} />
             </View>
+
+            {/* 👆 드래그 막대 핸들 (선택 시 하단 중앙에 표시) */}
+            {isSelected && (
+                <Animated.View style={{
+                    position: 'absolute',
+                    bottom: dragHandleOffset,
+                    left: '50%',
+                    marginLeft: -20, // width 40의 절반 무조건 중앙 정렬
+                    width: 40,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: '#8B7E74',
+                    transform: [{ scale: handleScale }]
+                }} />
+            )}
 
             {/* 🔄 회전 핸들 (선택 시만 표시) */}
             {isSelected && (
