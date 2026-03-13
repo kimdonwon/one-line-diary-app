@@ -271,28 +271,28 @@ function AppContent() {
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-                <StatusBar style="auto" />
-                <NavigationContainer theme={AppTheme}>
-                    <Stack.Navigator
-                        screenOptions={{
-                            headerShown: false,
-                            contentStyle: { backgroundColor: COLORS.background },
-                            animation: 'slide_from_right',
-                        }}
-                    >
-                        <Stack.Screen name="MainTabs" component={MainTabs} />
-                        <Stack.Screen name="Main" component={MainScreen} />
-                        <Stack.Screen
-                            name="Write"
-                            component={WriteScreen}
-                            options={{ animation: 'fade' }}
-                        />
-                        <Stack.Screen name="Summary" component={SummaryScreen} />
-                        <Stack.Screen name="Search" component={SearchScreen} />
-                        <Stack.Screen name="ActivityList" component={ActivityListScreen} />
-                        <Stack.Screen name="MoodList" component={MoodListScreen} />
-                    </Stack.Navigator>
-                </NavigationContainer>
+            <StatusBar style="auto" />
+            <NavigationContainer theme={AppTheme}>
+                <Stack.Navigator
+                    screenOptions={{
+                        headerShown: false,
+                        contentStyle: { backgroundColor: COLORS.background },
+                        animation: 'slide_from_right',
+                    }}
+                >
+                    <Stack.Screen name="MainTabs" component={MainTabs} />
+                    <Stack.Screen name="Main" component={MainScreen} />
+                    <Stack.Screen
+                        name="Write"
+                        component={WriteScreen}
+                        options={{ animation: 'fade' }}
+                    />
+                    <Stack.Screen name="Summary" component={SummaryScreen} />
+                    <Stack.Screen name="Search" component={SearchScreen} />
+                    <Stack.Screen name="ActivityList" component={ActivityListScreen} />
+                    <Stack.Screen name="MoodList" component={MoodListScreen} />
+                </Stack.Navigator>
+            </NavigationContainer>
         </GestureHandlerRootView>
     );
 }

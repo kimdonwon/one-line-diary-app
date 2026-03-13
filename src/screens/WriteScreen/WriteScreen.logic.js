@@ -322,24 +322,49 @@ export function useWriteLogic(route, navigation, scrollRef) {
     }, [selectedMood, activityStates]);
 
     const handleMoodModalDismiss = useCallback(() => {
-        if (modalSnapshot.current && modalSnapshot.current.mood) {
-            // 이전에 선택해둔 기분/활동이 있었으면, 변경 사항을 저장하지 않고 모달 열기 전 스냅샷으로 되돌림
-            setSelectedMood(modalSnapshot.current.mood);
-            setActivityStates(modalSnapshot.current.activities);
+        if (modalSnapshot.current) {
+            const oldMood = modalSnapshot.current.mood;
+            const oldActivities = modalSnapshot.current.activities;
+            const wasNewEntry = oldMood === null;
+
+            // 1. 상태 복구
+            setSelectedMood(oldMood);
+            setActivityStates(oldActivities);
+
+            // 2. 💡 중요: 자동 저장용 Ref를 즉시 업데이트합니다.
+            // goBack()을 호출하면 즉시 beforeRemove 리스너가 실행되는데, 
+            // 이때 리액트 상태 업데이트보다 먼저 최신 데이터를 읽어가기 때문에 수동으로 맞춰줘야 합니다.
+            if (latestData.current) {
+                latestData.current.selectedMood = oldMood;
+                latestData.current.activityStates = oldActivities;
+            }
+
             modalSnapshot.current = null;
             setMoodModalVisible(false);
+
+            if (wasNewEntry) {
+                navigation.goBack();
+            }
         } else {
-            // 아무것도 선택하지 않은 첫 진입 상태에서 모달을 닫으면 뒤로가기
             setMoodModalVisible(false);
-            navigation.goBack();
         }
     }, [navigation]);
 
     const handleMoodModalConfirm = useCallback(() => {
-        // [선택하기]를 눌러 변경 사항을 확정 (스냅샷 파기)
+        // 💡 기분(selectedMood)이 선택되었는지 체크합니다.
+        if (!selectedMood) {
+            // 이미 구현되어 있는 커스텀 알림(setAlertConfig)을 활용하면 편리합니다.
+            setAlertConfig({
+                title: '잠시만요!',
+                message: '오늘 하루를 표현할 기분을\n 선택해 주세요! ✨'
+            });
+            setShowAlert(true);
+            return; // 모달을 닫지 않고 중단
+        }
+        // 기분이 선택되었다면 정상적으로 확정하고 모달 닫기
         modalSnapshot.current = null;
         setMoodModalVisible(false);
-    }, []);
+    }, [selectedMood, setAlertConfig, setShowAlert]); // 의존성 배열에 selectedMood 등 추가 필수
 
     /**
      * 🚪 첫 진입 시 (새 일기인 경우) 기분/활동 팝업 자동 오픈
@@ -1044,7 +1069,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setShowStickers,
         setInputBoxBounds,
         setStickerLimitModalVisible,
-        
+
         // Ad Models
         isTextLimitModalVisible,
         setTextLimitModalVisible,

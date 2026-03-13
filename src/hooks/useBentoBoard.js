@@ -86,14 +86,14 @@ export function useBentoBoard(year, diaries) {
                             if (Object.keys(wordMap).length > 0) {
                                 await saveWordStats(diaries[i].date, wordMap);
                             }
-                        } catch (e) {}
+                        } catch (e) { }
                         if (i % 10 === 9) {
                             await new Promise(r => setTimeout(r, 0));
                         }
                     }
                     try {
                         words = await getYearWordStats(year, 10) || [];
-                    } catch (e) {}
+                    } catch (e) { }
                 }
 
                 const formattedWords = words.map(row => ({
@@ -105,7 +105,7 @@ export function useBentoBoard(year, diaries) {
                 let streak = 0;
                 try {
                     streak = await getYearMaxStreak(year);
-                } catch (e) {}
+                } catch (e) { }
 
                 // 🕐 황금 시간대 분석
                 let goldenHourData = null;
@@ -118,7 +118,7 @@ export function useBentoBoard(year, diaries) {
                                 const d = new Date(row.updated_at);
                                 const h = d.getHours();
                                 hourCounts[h] = (hourCounts[h] || 0) + 1;
-                            } catch (e) {}
+                            } catch (e) { }
                         }
                         let maxHour = 0;
                         let maxCount = 0;

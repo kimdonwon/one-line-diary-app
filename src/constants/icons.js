@@ -307,7 +307,7 @@ export function PageAddIcon({ size = 24, color = "#8B7E74", style }) {
             {/* Document Frame */}
             <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <Path d="M14 2v6h6" />
-            
+
             {/* Plus Symbol */}
             <Line x1="12" y1="12" x2="12" y2="18" strokeWidth="2" />
             <Line x1="9" y1="15" x2="15" y2="15" strokeWidth="2" />

@@ -270,6 +270,11 @@ export function WriteScreenView({ route, navigation }) {
         selectedItemId,
         handleSelect,
         handleClearSelection,
+
+        // 🔮 Mood Modal
+        openMoodModal,
+        handleMoodModalDismiss,
+        handleMoodModalConfirm,
     } = useWriteLogic(route, navigation, scrollRef);
 
     // 🎨 현재 페이지의 배경색 동기화 (인디케이터 영역 포함)
@@ -719,7 +724,7 @@ export function WriteScreenView({ route, navigation }) {
                             {/* 우측 활동 및 기분 아이콘 영역 (모달 트리거) */}
                             <TouchableOpacity
                                 style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginLeft: 16 }}
-                                onPress={() => setMoodModalVisible(true)}
+                                onPress={openMoodModal}
                                 activeOpacity={0.8}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
@@ -1180,8 +1185,9 @@ export function WriteScreenView({ route, navigation }) {
             {/* 🚪 기분/활동 팝업 모달 */}
             <RNModal
                 isVisible={isMoodModalVisible}
-                onBackdropPress={() => setMoodModalVisible(false)}
-                onSwipeComplete={() => setMoodModalVisible(false)}
+                onBackdropPress={handleMoodModalDismiss}
+                onSwipeComplete={handleMoodModalDismiss}
+                onBackButtonPress={handleMoodModalDismiss}
                 swipeDirection="down"
                 style={{ justifyContent: 'flex-end', margin: 0 }}
                 propagateSwipe={true}
@@ -1252,7 +1258,7 @@ export function WriteScreenView({ route, navigation }) {
                                 alignItems: 'center',
                                 ...SOFT_SHADOW.card
                             }}
-                            onPress={() => setMoodModalVisible(false)}
+                            onPress={handleMoodModalConfirm}
                             activeOpacity={0.8}
                         >
                             <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFF' }}>선택하기</Text>
