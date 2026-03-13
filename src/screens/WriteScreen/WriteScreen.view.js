@@ -20,14 +20,28 @@ import { DraggablePhoto } from '../../components/DraggablePhoto';
 import { DraggableText } from '../../components/DraggableText';
 import { BACKGROUNDS, BG_CATEGORIES, getBackgroundById, getBackgroundsByCategory } from '../../constants/backgrounds';
 import {
-    HomeTabIcon,
-    DiaryTabIcon,
-    SummaryTabIcon,
-    SettingsTabIcon,
     CameraIcon,
     StickerIcon,
-    TextIcon
+    TextIcon,
+    SettingsTabIcon
 } from '../../constants/icons';
+import { BottomBar } from '../../components/BottomBar';
+
+// ✅ 저장 확인(V) 아이콘 - 내부용 (텍스트 컬러 선택기 등에서 사용)
+function CheckIcon({ size = 24, color = '#FFFFFF' }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+            <Path
+                d="M5 13l4 4L19 7"
+                fill="none"
+                stroke={color}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </Svg>
+    );
+}
 
 import { useWriteLogic } from './WriteScreen.logic';
 import { styles } from './WriteScreen.styles';
@@ -45,20 +59,7 @@ const TEXT_COLORS = ['#37352F', '#E03E3E', '#0B6E99', '#D9730D', '#0F7B6C', '#F4
 const HIGHLIGHTER_COLORS = ['transparent', 'rgba(255, 226, 221, 0.8)', 'rgba(253, 236, 200, 0.8)', 'rgba(211, 229, 239, 0.8)', 'rgba(219, 237, 219, 0.8)'];
 
 
-function CheckIcon({ size = 24, color = '#FFFFFF' }) {
-    return (
-        <Svg width={size} height={size} viewBox="0 0 24 24">
-            <Path
-                d="M5 13l4 4L19 7"
-                fill="none"
-                stroke={color}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </Svg>
-    );
-}
+// CheckIcon은 이제 공통 BottomBar 내부에서 처리되므로 외부 정의를 삭제했습니다.
 
 /**
  * 🗑️ 프리미엄 쓰레기통 아이콘
@@ -751,50 +752,14 @@ export function WriteScreenView({ route, navigation }) {
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            {/* ─── 🚀 메인 화면 스타일 그대로 가져온 하단 탭바 ─── */}
-            {/* KeyboardAvoidingView 밖으로 빼서 키보드와 상관없이 하단에 고정 */}
-            <View style={[styles.bottomTabBar, { bottom: 16 + insets.bottom }]}>
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })}
-                    style={styles.navTabContainer}
-                    activeOpacity={0.7}
-                >
-                    <HomeTabIcon size={24} color="#999999" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('MainTabs', { screen: 'DiaryTab' })}
-                    style={styles.navTabContainer}
-                    activeOpacity={0.7}
-                >
-                    <DiaryTabIcon size={24} color="#999999" />
-                </TouchableOpacity>
-
-                {/* ✅ 중앙 확인(저장) 버튼 (색바뀌는 로직 포함) */}
-                <View style={styles.navTabContainer}>
-                    <TouchableOpacity
-                        style={[styles.centerCheckButton, { backgroundColor: activeColor }]}
-                        onPress={handleSave}
-                        activeOpacity={0.8}
-                    >
-                        <CheckIcon size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('MainTabs', { screen: 'SummaryTab' })}
-                    style={styles.navTabContainer}
-                    activeOpacity={0.7}
-                >
-                    <SummaryTabIcon size={24} color="#999999" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })}
-                    style={styles.navTabContainer}
-                    activeOpacity={0.7}
-                >
-                    <SettingsTabIcon size={24} color="#999999" />
-                </TouchableOpacity>
-            </View>
+            {/* ─── 🚀 공통 바텀바 적용 (이원화 해소 및 코드 통합) ─── */}
+            <BottomBar
+                mode="action"
+                activeTab="none"
+                navigation={navigation}
+                onCenterPress={handleSave}
+                selectedMoodColor={activeColor}
+            />
             {/* ─── 🚀 닫기용 투명 오버레이 ─── */}
             {(showTexts || showPhotos || showStickers) && !isDraggingAny && (
                 <Pressable
@@ -1004,7 +969,7 @@ export function WriteScreenView({ route, navigation }) {
                                                         return (
                                                             <TouchableOpacity key={`bg-${idx}`} style={[styles.colorBtn, { backgroundColor: displayColor }, isSelected && styles.colorBtnActive]} onPress={() => setNextTextBgColor(color)} activeOpacity={0.8}>
                                                                 {color === 'transparent' && <View style={styles.transparentSlash} />}
-                                                                {isSelected && <View style={styles.checkIconOverlay}><CheckIcon size={20} color={color === 'transparent' ? '#37352F' : '#FFF'} /></View>}
+                                                                {isSelected && <View style={styles.checkIconOverlay}><CheckIcon size={20} color="#37352F" /></View>}
                                                             </TouchableOpacity>
                                                         );
                                                     })}

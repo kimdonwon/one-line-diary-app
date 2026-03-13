@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, TextInput, Animated, TouchableOpacity, Keyboard, Platform } from 'react-native';
+import { View, Text, TextInput, Animated, TouchableOpacity, Keyboard, Platform, PanResponder } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { styles } from './DraggableText.styles';
 import { useDraggableTextLogic } from './DraggableText.logic';
@@ -135,6 +135,18 @@ export const DraggableText = React.memo(({
         outputRange: [-120, -72, -51.42, -36, -24, -18, -12, -7.2],
     });
 
+    // 💡 동적 최대 너비 계산: 캔버스 우측 경계를 넘지 않도록 실시간 줄바꿈 유도
+    const canvasWidth = bounds?.width || 350;
+    const padding = 16;
+    const remainingSpace = pan.x.interpolate({
+        inputRange: [0, canvasWidth],
+        outputRange: [canvasWidth - padding, 0],
+        extrapolate: 'clamp',
+    });
+
+    // 레이아웃상의 maxWidth = 남은 공간 / 현재 스케일
+    const dynamicMaxWidth = Animated.divide(remainingSpace, scale);
+
     const currentFontStyle = FONT_PRESETS_MAP[fontId] || FONT_PRESETS_MAP['basic'];
 
     // autoFocus일 때 선택 상태를 강제로 켜고 포커스 진입
@@ -194,17 +206,30 @@ export const DraggableText = React.memo(({
 
     // ✏️ 수정 버튼 핸들러: 편집 모드 진입
     const handleEditButtonPress = () => {
-        if (isSelected && !isEditing) {
-            setIsEditing(true);
-            if (blurTimerRef.current) {
-                clearTimeout(blurTimerRef.current);
-                blurTimerRef.current = null;
-            }
-            setTimeout(() => {
-                inputRef.current?.focus();
-            }, 50);
+        setIsEditing(true);
+        if (blurTimerRef.current) {
+            clearTimeout(blurTimerRef.current);
+            blurTimerRef.current = null;
         }
+        setTimeout(() => {
+            inputRef.current?.focus();
+        }, 50);
     };
+
+    // ✏️ 수정 버튼 전용 터치 핸들러: 부모의 드래그를 가로채기 위해 PanResponder 사용
+    const editResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onStartShouldSetPanResponderCapture: () => true,
+            onMoveShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponderCapture: () => true, // 👈 움직임도 가로챔
+            onPanResponderTerminationRequest: () => false,  // 👈 💡 절대 뺏기지 않음 (회전 핸들과 동일)
+            onPanResponderRelease: () => {
+                handleEditButtonPress(); // 👈 뗐을 때 실행
+            },
+            onShouldBlockNativeResponder: () => true,
+        })
+    ).current;
 
     return (
         <Animated.View
@@ -219,6 +244,7 @@ export const DraggableText = React.memo(({
                 {
                     left: pan.x,
                     top: pan.y,
+                    maxWidth: dynamicMaxWidth, // 👈 실시간 줄바꿈 적용
                     transform: [
                         {
                             rotate: rotation.interpolate({
@@ -261,7 +287,8 @@ export const DraggableText = React.memo(({
 
             {/* ✏️ 수정 버튼 (선택 시 좌측 하단에 표시, 편집 모드 아닐 때만) */}
             {isSelected && !isEditing && (
-                <Animated.View style={[
+
+                <Animated.View {...editResponder.panHandlers} style={[
                     styles.editHandle,
                     {
                         left: handleOffset,
@@ -269,14 +296,9 @@ export const DraggableText = React.memo(({
                         transform: [{ scale: handleScale }]
                     }
                 ]}>
-                    <TouchableOpacity
-                        onPress={handleEditButtonPress}
-                        activeOpacity={0.7}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}
-                    >
+                    <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
                         <EditIcon size={20} color="#8B7E74" />
-                    </TouchableOpacity>
+                    </View>
                 </Animated.View>
             )}
 

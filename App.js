@@ -36,6 +36,7 @@ import {
     SettingsTabIcon, SelectedSettingsTabIcon
 } from './src/constants/icons';
 import { MoodProvider, useGlobalWeeklyMood } from './src/context/MoodContext';
+import { BottomBar } from './src/components/BottomBar';
 import { LockProvider, useLock } from './src/context/LockContext';
 
 const Stack = createNativeStackNavigator();
@@ -112,94 +113,31 @@ function MainTabs({ navigation }) {
 
     return (
         <Tab.Navigator
+            tabBar={(props) => <BottomBar mode="nav" {...props} />}
             screenOptions={{
                 headerShown: false,
                 tabBarShowLabel: false,
-                tabBarActiveTintColor: activeColor, // 이번주 기분 색상
-                tabBarInactiveTintColor: '#999999', // 노션 비활성 컬러
-                tabBarStyle: {
-                    position: 'absolute',
-                    bottom: 16 + insets.bottom,
-                    left: 20,
-                    right: 20,
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: 16,   // 노션 컨테이너 라운딩
-                    borderWidth: 1,
-                    borderColor: '#E9E9E7', // 노션 테두리 실선
-                    borderTopWidth: 1,
-                    height: 64, // 약간 더 슬림하게
-                    paddingBottom: 0,
-                    elevation: 4,
-                    shadowColor: '#000000',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.05,
-                    shadowRadius: 10,
-                },
             }}
         >
             <Tab.Screen
                 name="HomeTab"
                 component={MainScreen}
-                options={{
-                    tabBarIcon: ({ color, focused }) =>
-                        focused ? <SelectedHomeTabIcon size={24} color={color} /> : <HomeTabIcon size={24} color={color} />
-                }}
             />
             <Tab.Screen
                 name="DiaryTab"
                 component={DiaryFeedScreen}
-                options={{
-                    tabBarIcon: ({ color, focused }) =>
-                        focused ? <SelectedDiaryTabIcon size={24} color={color} /> : <DiaryTabIcon size={24} color={color} />
-                }}
             />
             <Tab.Screen
                 name="WriteTab"
-                component={View} // 가짜 컴포넌트, 터치 이벤트 오버라이드
-                listeners={() => ({
-                    tabPress: (e) => {
-                        e.preventDefault(); // 기본 이동 로직 막기
-                        navigation.navigate('Write');
-                    },
-                })}
-                options={{
-                    tabBarIcon: () => (
-                        <View style={{
-                            width: 56,
-                            height: 56,
-                            borderRadius: 16, // 노션의 스쿼클(Squircle) 스타일
-                            backgroundColor: activeColor, // 이번주 기분 색상으로 복원
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginTop: -20, // 살짝 떠있도록
-                            borderWidth: 3,
-                            borderColor: '#FFFFFF', // 흰색 테두리
-                            shadowColor: '#000000',
-                            shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.15,
-                            shadowRadius: 8,
-                            elevation: 5,
-                        }}>
-                            <PlusButtonIcon size={24} color="#FFFFFF" />
-                        </View>
-                    ),
-                }}
+                component={View} // 가짜 컴포넌트, 터치는 BottomBar에서 처리
             />
             <Tab.Screen
                 name="SummaryTab"
                 component={SummaryScreen}
-                options={{
-                    tabBarIcon: ({ color, focused }) =>
-                        focused ? <SelectedSummaryTabIcon size={24} color={color} /> : <SummaryTabIcon size={24} color={color} />
-                }}
             />
             <Tab.Screen
                 name="SettingsTab"
                 component={SettingsScreen}
-                options={{
-                    tabBarIcon: ({ color, focused }) =>
-                        focused ? <SelectedSettingsTabIcon size={24} color={color} /> : <SettingsTabIcon size={24} color={color} />
-                }}
             />
         </Tab.Navigator>
     );

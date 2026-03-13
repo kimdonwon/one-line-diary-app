@@ -1017,45 +1017,4 @@ export const styles = StyleSheet.create({
         fontWeight: '500',
     },
 
-    // ─── 🚀 하단 탭바 (App.js MainTabs 스타일 복제) ───
-    bottomTabBar: {
-        position: 'absolute',
-        bottom: 16, // + insets.bottom
-        left: 20,
-        right: 20,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,   // 노션 컨테이너 라운딩
-        borderWidth: 1,
-        borderColor: '#E9E9E7', // 노션 테두리 실선
-        borderTopWidth: 1, // App.js와 동일한 상단 보더
-        height: 64, // 약간 더 슬림하게 (App.js 크기와 일치)
-        flexDirection: 'row',
-        alignItems: 'center',
-        elevation: 4,
-        shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-    },
-    navTabContainer: {
-        flex: 1,
-        height: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    centerCheckButton: {
-        width: 56,
-        height: 56,
-        borderRadius: 16, // 노션의 스쿼클(Squircle) 스타일
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: -20, // 살짝 떠있도록
-        borderWidth: 3,
-        borderColor: '#FFFFFF', // 흰색 테두리
-        shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 5,
-    },
 });

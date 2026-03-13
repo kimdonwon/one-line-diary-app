@@ -59,10 +59,17 @@ export function useBentoBoard(year, diaries) {
     const [goldenHour, setGoldenHour] = useState(null); // { label, emoji, period }
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const isRunning = useRef(false);
-
-    // ─── diaries가 로드되면 데이터 조회/분석 ───
+    const lastDataRef = useRef(''); // 👈 추가: 마지막으로 분석한 일기 상태(시그니처) 저장
+    // 2. useEffect 내부에서 체크 (약 64라인부터 시작되는 useEffect)
     useEffect(() => {
         if (!diaries || diaries.length === 0) return;
+        // ─── 🚀 지능형 캐싱 로직 추가 ───
+        // 현재 일기의 [개수 + 마지막 날짜 + 연도]로 고유한 '지문'을 만듭니다.
+        const currentSignature = `${year}_${diaries.length}_${diaries[diaries.length - 1].date}`;
+
+        // 만약 지문이 이전과 똑같다면? (바뀐 게 없으므로 분석 중단!)
+        if (lastDataRef.current === currentSignature) return;
+        // ──────────────────────────────
         if (isRunning.current) return;
         isRunning.current = true;
 
@@ -169,7 +176,8 @@ export function useBentoBoard(year, diaries) {
                 setTopWords(formattedWords);
                 setMaxStreak(streak);
                 setGoldenHour(goldenHourData);
-
+                lastDataRef.current = currentSignature;
+                console.log('[BentoBoard] Analysis complete for signature:', currentSignature);
                 console.log('[BentoBoard] Loaded:', formattedWords.length, 'words, streak:', streak, 'goldenHour:', goldenHourData?.label);
             } catch (e) {
                 console.error('[BentoBoard] Unexpected error:', e);

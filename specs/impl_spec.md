@@ -78,15 +78,20 @@
   - 생성 시 텍스트 패널의 **프리셋 설정**(`nextTextFont`, `nextTextColor`, `nextTextBgColor`)이 자동 적용됨.
   - **글자수 제한**: 각 텍스트 박스 당 최대 **200자**까지 입력을 제한함 (성능 및 디자인 보호).
   - **텍스트 프리셋 UI 개선**: 텍스트 추가 패널에서 문자 색상(TEXT_COLORS)과 하이라이트 색상(HIGHLIGHTER_COLORS) 선택 영역을 각각 독립된 `ScrollView`로 분리하여 조작 편의성을 극대화함.
-- **다꾸 전용 하단 플로팅 탭바 (Floating Tab Bar)**:
-  - 하단 화면 영역에 `[홈 | 일기 | 완료 | 요약 | 설정]` 구성의 탭바를 배치하여 저장 및 네비게이션 편의성을 높였습니다.
-  - `KeyboardAvoidingView` 외부에 위치시켜 키보드가 활성화되어도 화면 하단에 고정된 상태를 유지하도록 설계되었습니다.
-  - 상단 헤더에 있던 중복된 확인(저장) 버튼을 제거하여 UI를 간소화하고 중앙의 '완료' 버튼으로 저장 로직을 일원화했습니다.
-  - **Reactive Color Feedback**: 중앙 완료 버튼의 배경색(`backgroundColor`)은 오늘 선택한 기분(`activeMood.color`)에 반응하여 즉시 실시간으로 변경됩니다. 선택된 기분이 없는 경우 글로벌 주간 기분 색상 혹은 기본값을 유지합니다.
-  - 해당 탭 버튼 클릭 시 저장 로직(`handleSave`)이 실행되거나 각 탭으로 이동하며, 스티커/사진/텍스트 툴은 `integratedDiaryMeta` 영역에서 별도로 호출됩니다.
-  - 해당 탭 버튼을 클릭하면 `stickerBottomSheet` 등의 편집 도구 패널이 호출되며, 패널 내부에서는 **수평 ScrollView(pagingEnabled)**를 통해 각 도구 간의 빠른 전환이 가능합니다. `onMomentumScrollEnd`를 통해 활성 탭 아이콘 상태가 자동으로 동기화됩니다.
-  - **Auto-dismiss**: 편집 도구 패널 외부 영역을 탭하거나, 상단의 닫기(✕) 버튼을 누르면 모든 편집 패널이 즉시 종료됩니다.
-  - **Drag-safety**: 스티커나 사진을 드래그하여 배치하는 중에는 하단 패널의 투명도가 0으로 조절되어 시야를 확보하고 조작 간섭을 차단합니다.
+- **통합 하단 탭바 시스템 (Unified Bottom Bar System) v3.0**:
+  - **아키텍처**: `src/components/BottomBar/` 폴더 내에 UI(`view.js`), 로직(`logic.js`), 스타일(`styles.js`)을 철저히 분리한 모듈형 구조 적용.
+  - **이중 모드 지원 (Mode System)**:
+    - **네비게이션 모드 (`nav`)**: `App.js`의 메인 탭바(`react-navigation`)로 사용. `plus` 아이콘을 통해 작성 화면으로 전환하며, 4개 탭(홈, 일기, 요약, 설정)의 네비게이션 상태를 동기화.
+    - **액션 모드 (`action`)**: `WriteScreen`에서 사용. 중앙 버튼이 `CheckIcon (V)`으로 변경되며, 클릭 시 `handleSave` 로직을 트리거함.
+  - **지능형 컬러 시스템 (Reactive Themeing)**:
+    - 중앙 버튼 및 활성 아이콘 색상은 전역 상태(`useGlobalWeeklyMood`) 또는 현재 화면의 로컬 상태(`selectedMoodColor`)와 실시간 동기화됨.
+  - **디자인 일관성 (Notion Aesthetic)**:
+    - 모든 화면에서 동일한 플로팅 쉘(Floating Shell), 그림자, 스쿼클(Squircle) 버튼 스타일을 공유하여 시각적 파편화를 방지.
+  - **구현 특징**:
+    - `App.js`에서는 `Tab.Navigator`의 커스텀 `tabBar` 속성으로 주입되어 코드 중복을 80% 이상 제거.
+    - `KeyboardAvoidingView` 외부에 위치하여 키보드 활성화 시에도 화면 최하단에 고정 유지.
+    - `useSafeAreaInsets`를 통한 기기별 하단 여백 자동 대응.
+
 - **자동 저장**: 각 요소의 변경(위치, 텍스트, 배경 등) 발생 시 즉시 로컬 DB(SQLite)에 동기화.
 - **상태 관리**: `useWriteLogic` 훅을 통해 다이어리 내용, 스티커, 사진, 배경, 텍스트 상태를 통합 관리.
 

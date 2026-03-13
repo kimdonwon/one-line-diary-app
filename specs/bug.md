@@ -40,3 +40,24 @@
 40: - **해결**: `useDraggable.js`의 캡처 단계에서 이미 선택된 아이템(`effectiveSelected`)인 경우 거리 체크 없이 즉시 `true`를 반환하도록 수정하여 부모 스크롤이 발동될 틈을 주지 않고 제스처를 선점함.
 41: - **참고 스킬**: `Modular UI Developer`
 42: - **파일**: `src/hooks/useDraggable.js`
+## 4. Draggable Text 수정 버튼 터치 오류 해결 (2026-03-13)
+
+- **증상**: Draggable Text가 선택된 상태에서 좌측 하단의 수정(연필) 버튼을 눌러도 반응이 없거나, 버튼을 누르려 할 때 미세한 움직임이 드래그로 오인되어 수정 모드 진입이 불가능한 현상.
+- **원인**: 
+    1. **터치 우선순위 경합**: 부모 컴포넌트의 드래그 로직(`PanResponder`)이 선택 상태에서 더 높은 우선순위를 가져 터치를 가로챔.
+    2. **Closure Trap**: `useRef`로 생성된 핸들러가 구식 상태값(`false`)을 참조하여 조건문에서 걸림.
+- **해결**: 
+    1. **강력한 터치 가로채기**: 수정 버튼 영역에 `onPanResponderTerminationRequest: () => false`가 적용된 전용 `editResponder`를 구축하여 부모의 간섭을 원천 차단(회전 핸들과 동일한 설계).
+    2. **클로저 트랩 제거**: 핸들러 내부의 구식 상태값 체크 조건문을 제거하고, 터치 경로를 `editResponder`로 일원화하여 로직 무결성 확보.
+- **참고 스킬**: `Logic Documenter`, `Modular UI Developer`
+- **파일**: `src/components/DraggableText/DraggableText.view.js`
+## 5. Draggable Text 캔버스 이탈 방지 및 자동 줄바꿈 구현 (2026-03-13)
+
+- **증상**: 텍스트를 캔버스 우측 경계 근처에 두고 긴 텍스트를 입력할 경우, 선택 박스가 캔버스를 뚫고 화면 밖으로 나가는 현상.
+- **원인**: 드래그 시에만 경계 체크 로직이 작동하고, 정지 상태에서 텍스트 입력으로 인한 너비 확장은 실시간으로 제한하지 못함.
+- **해결**: 
+    1. **Dynamic MaxWidth 설계**: `Animated.interpolate`를 사용하여 현재 X 위치(`pan.x`)에 따라 가질 수 있는 잔여 공간을 실시간으로 계산.
+    2. **스케일 보정**: 확대/축소(`scale`) 상태에서도 시각적 경계가 유지되도록 `Animated.divide`를 통해 레이아웃상의 `maxWidth`를 동적으로 조정.
+    3. **UX 개선**: 캔버스 우측 벽에 닿으면 텍스트가 뚫고 나가는 대신 자동으로 아래로 줄바꿈(Wrap)되도록 개선하여 데이터 가독성 확보.
+- **참고 스킬**: `Modular UI Developer`
+- **파일**: `src/components/DraggableText/DraggableText.view.js`
