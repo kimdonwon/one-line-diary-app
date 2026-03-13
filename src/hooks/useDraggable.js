@@ -1,5 +1,31 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
-import { Animated, PanResponder, Keyboard } from 'react-native';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { Animated, PanResponder, Keyboard, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import { RotationHandle } from '../components/RotationHandle';
+
+/**
+ * ✏️ 편집 아이콘 (연필 모양)
+ */
+function EditIcon({ size = 20, color = '#8B7E74' }) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+            <Path
+                d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+                stroke={color}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <Path
+                d="M18.5 2.50023C18.8978 2.1024 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.1024 21.5 2.50023C21.8978 2.89805 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.1024 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z"
+                stroke={color}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </Svg>
+    );
+}
 
 /**
  * ⚙️ 드래그, 회전, 경계(bounds) 등 공통 로직을 처리하는 통합 훅입니다.
@@ -32,6 +58,9 @@ export function useDraggable({
     onSelect,         // (id) 선택되었음을 알림 (중앙 관리용)
     isSelected: externalIsSelected = null, // 외부에서 관리되는 선택 상태
     createdAt,        // 생성 시간 (애니메이션용)
+    scaleMultiplier = 1, // 💡 UI 보정을 위한 내부 스케일 배율 (Text: 1, Sticker: 0.35 등)
+    controlScale = 1, // 💡 크기 회전 버튼 배율 (스티커만)
+    offsetMultiplier = 1, // 👈 크기 회전 버튼 위치 (스티커만)
 }) {
     const isRecent = createdAt && (Date.now() - createdAt < 1000);
     const pan = externalPan || useRef(new Animated.ValueXY({ x: initialX, y: isRecent ? initialY + 300 : initialY })).current;
@@ -47,9 +76,11 @@ export function useDraggable({
     const lastGesture = useRef({ dx: 0, dy: 0 });
 
     //const [mySize, setMySize] = useState(defaultSize);
+    const [mySize, setMySizeState] = useState(defaultSize);
     const mySizeRef = useRef(defaultSize);
     const setMySize = useCallback((size) => {
         mySizeRef.current = size;
+        setMySizeState(size);
     }, []);
     const [isDragging, setIsDragging] = useState(false);
     const [isSelected, setIsSelected] = useState(false);
@@ -98,6 +129,125 @@ export function useDraggable({
     // 롱프레스 상태 관리
     const longPressTimer = useRef(null);
     const isLongPressed = useRef(false);
+
+    // ─── 🚀 공통 UI 보정 로직 통합 ───
+    // 시각적 스케일 (실제 화면에 그려지는 크기 비율)
+    const visualScale = Animated.multiply(combinedScale, scaleMultiplier);
+
+    // 1. 버튼 역보정 스케일: 부모가 커져도 버튼 크기는 일정하게 유지
+    const rawHandleScale = visualScale.interpolate({
+        inputRange: [0.1, 0.2, 0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [10, 5, 3.33, 2, 1.428, 1, 0.666, 0.5, 0.333, 0.2],
+        extrapolate: 'clamp'
+    });
+    const handleScale = Animated.multiply(rawHandleScale, controlScale);
+
+    // 2. 핸들 오프셋 역보정: 항상 테두리 밖 -24px 지점 유지
+    const rawHandleOffset = visualScale.interpolate({
+        inputRange: [0.1, 0.2, 0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [-240, -120, -80, -48, -34.28, -24, -16, -12, -8, -4.8],
+        extrapolate: 'clamp'
+    });
+    const handleOffset = Animated.multiply(rawHandleOffset, offsetMultiplier);
+
+    // 3. 드래그 막대 오프셋: 항상 테두리 하단 -36px 지점 유지
+    const dragHandleOffset = visualScale.interpolate({
+        inputRange: [0.1, 0.2, 0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
+        outputRange: [-360, -180, -120, -72, -51.42, -50, -36, -18, -12, -7.2],
+        extrapolate: 'clamp'
+    });
+
+    // 4. 공통 드래그 핸들 렌더러
+    const renderDragHandle = () => {
+        if (!effectiveSelected || isEditing) return null;
+        return (
+            <Animated.View style={{
+                position: 'absolute',
+                bottom: dragHandleOffset,
+                left: '50%',
+                marginLeft: -13,
+                width: 40,
+                height: 15,
+                borderRadius: 5,
+                backgroundColor: '#8B7E74',
+                transform: [{ scale: rawHandleScale }],
+                zIndex: 1000, // 👈 다른 핸들(999)보다 높게 설정하여 우선순위 확보
+            }} />
+        );
+    };
+
+    // ─── 🕹️ 통합 조작 UI 렌더러 ───
+    const renderControls = ({ containerRef, editOptions = null } = {}) => {
+        if (!effectiveSelected || isEditing) return null;
+
+        return (
+            <>
+                {/* 👆 드래그 막대 핸들 */}
+                {renderDragHandle()}
+
+                {/* 🔄 회전 핸들 */}
+                <RotationHandle
+                    containerRef={containerRef}
+                    currentRotation={currentRotation}
+                    currentScale={currentTransformScale}
+                    onRotateAndScale={handleRotateAndScale}
+                    onRotateEnd={handleRotationEnd}
+                    onInteractionStart={onInteractionStart}
+                    onInteractionEnd={onInteractionEnd}
+                    style={{
+                        position: 'absolute',
+                        right: flipRightOffset,
+                        bottom: handleOffset,
+                        transform: [{ scale: handleScale }]
+                    }}
+                />
+
+                {/* ✏️ 수정 버튼 (옵션이 있을 때만) */}
+                {editOptions && (
+                    <Animated.View
+                        {...(editOptions.panHandlers || {})}
+                        style={{
+                            position: 'absolute',
+                            left: flipLeftOffset,
+                            bottom: handleOffset,
+                            width: 43,
+                            height: 43,
+                            borderRadius: 21.5,
+                            backgroundColor: '#FFFFFF',
+                            borderWidth: 1.2,
+                            borderColor: '#D1C7BD',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 999,
+                            shadowColor: '#8B7E74',
+                            shadowOffset: { width: 0, height: 3 },
+                            shadowOpacity: 0.2,
+                            shadowRadius: 5,
+                            elevation: 6,
+                            transform: [{ scale: handleScale }]
+                        }}
+                    >
+                        <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                            <EditIcon size={20} color="#8B7E74" />
+                        </View>
+                    </Animated.View>
+                )}
+            </>
+        );
+    };
+    // 5. 플립 오프셋: 벽에 가까워지면 핸들을 안쪽으로 밀어 넣어줍니다.
+    const canvasWidth = bounds?.width || 350;
+    const flipLeftOffset = pan.x.interpolate({
+        inputRange: [0, 40],
+        outputRange: [10, -24],
+        extrapolate: 'clamp'
+    });
+
+    const flipRightOffset = pan.x.interpolate({
+        inputRange: [canvasWidth - mySize.width - 40, canvasWidth - mySize.width],
+        outputRange: [-24, 10],
+        extrapolate: 'clamp'
+    });
     const [isLongPressActive, setIsLongPressActive] = useState(false); // UI 반영용
     const hasMoved = useRef(false);
     const LONG_PRESS_DELAY = 400; // 400ms 꾹 누르기
@@ -126,10 +276,15 @@ export function useDraggable({
             onMoveShouldSetPanResponder: (e, gs) => {
                 if (isEditingRef.current) return false;
                 // 💡 이미 선택된 상태라면 미세한 움직임도 즉시 가로챔 (거리를 따지지 않음)
+                // 💡 자식 요소(수정/회전 핸들)가 터치를 먼저 가로챌 수 있도록 캡처 단계에서 false 반환
                 if (effectiveSelectedRef.current) return true;
 
                 const moveDist = Math.sqrt(gs.dx * gs.dx + gs.dy * gs.dy);
                 return false; // 선택 안 된 상태는 롱프레스에서 처리하므로 false
+            },
+            onPanResponderTerminationRequest: (e, gs) => {
+                // 선택된 아이템을 드래그 중일 때는 시스템이나 부모가 터치를 뺏어가지 못하게 합니다.
+                return effectiveSelectedRef.current ? false : true;
             },
             onMoveShouldSetPanResponderCapture: (e, gs) => {
                 if (isEditingRef.current) return false;
@@ -416,5 +571,8 @@ export function useDraggable({
         handleRotateAndScale,
         handleRotationEnd,
         deselect,
+        // UI Helpers
+        visualScale,  // 💡 메인 컨테이너 스케일용으로 남겨둠
+        renderControls, // 👈 보정값들은 모두 이 안에 캡슐화됨!
     };
 }

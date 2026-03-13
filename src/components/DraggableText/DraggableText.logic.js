@@ -20,5 +20,6 @@ export function useDraggableTextLogic({ id, initialX, initialY, initialRotation,
         onSelect,
         isSelected,
         createdAt,
+        scaleMultiplier: 1, // 💡 텍스트는 기본 1:1 배율 사용
     });
 }

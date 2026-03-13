@@ -3,7 +3,6 @@ import { View, Text, Image, Animated, PanResponder, Keyboard } from 'react-nativ
 
 import { useDraggablePhotoLogic } from './DraggablePhoto.logic';
 import { styles } from './DraggablePhoto.styles';
-import { RotationHandle } from '../RotationHandle';
 import { CameraIcon } from '../../constants/icons';
 
 /**
@@ -34,30 +33,20 @@ const DraggablePhoto = React.memo(({
         scale,
         currentTransformScale,
         panResponder,
-        isDragging,
         isSelected,
         isLongPressActive,
         setMySize,
         handleRotateAndScale,
         handleRotationEnd,
+        renderControls
     } = useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, externalPan, externalRotation, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected: externalIsSelected, onTap });
 
     const containerRef = useRef(null);
 
-    // 💡 버튼 역보정: 부모 스케일에 반비례하여 버튼 크기를 일정하게 유지 (1/x 곡선 근사)
-    const handleScale = scale.interpolate({
-        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
-        outputRange: [3.33, 2, 1.428, 1, 0.666, 0.5, 0.333, 0.2],
-    });
 
-    const handleOffset = scale.interpolate({
-        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
-        outputRange: [-80, -48, -34.28, -24, -16, -12, -8, -4.8],
-    });
-    const dragHandleOffset = scale.interpolate({
-        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
-        outputRange: [-120, -72, -51.42, -36, -24, -18, -12, -7.2],
-    });
+
+
+
 
     const rotateStr = rotation.interpolate({
         inputRange: [-360, 360],
@@ -124,38 +113,8 @@ const DraggablePhoto = React.memo(({
                 <View style={styles.polaroidBottom} />
             </View>
 
-            {/* 👆 드래그 막대 핸들 (선택 시 하단 중앙에 표시) */}
-            {isSelected && (
-                <Animated.View style={{
-                    position: 'absolute',
-                    bottom: dragHandleOffset,
-                    left: '50%',
-                    marginLeft: -20, // width 40의 절반 무조건 중앙 정렬
-                    width: 40,
-                    height: 10,
-                    borderRadius: 5,
-                    backgroundColor: '#8B7E74',
-                    transform: [{ scale: handleScale }]
-                }} />
-            )}
-
-            {/* 🔄 회전 핸들 (선택 시만 표시) */}
-            {isSelected && (
-                <RotationHandle
-                    containerRef={containerRef}
-                    currentRotation={currentRotation}
-                    currentScale={currentTransformScale}
-                    onRotateAndScale={handleRotateAndScale}
-                    onRotateEnd={handleRotationEnd}
-                    onInteractionStart={onInteractionStart}
-                    onInteractionEnd={onInteractionEnd}
-                    style={{
-                        right: handleOffset,
-                        bottom: handleOffset,
-                        transform: [{ scale: handleScale }]
-                    }}
-                />
-            )}
+            {/* 🕹️ 통합 조작 UI (드래그 막대, 회전 핸들 포함) */}
+            {renderControls({ containerRef })}
         </Animated.View>
     );
 });

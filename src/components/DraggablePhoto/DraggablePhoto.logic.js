@@ -21,5 +21,6 @@ export function useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, ext
         isSelected,
         onTap,
         createdAt: photo.createdAt,
+        scaleMultiplier: 1, // 💡 사진은 기본 1:1 배율 사용
     });
 }

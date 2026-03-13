@@ -1,9 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, TextInput, Animated, TouchableOpacity, Keyboard, Platform, PanResponder } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { styles } from './DraggableText.styles';
 import { useDraggableTextLogic } from './DraggableText.logic';
-import { RotationHandle } from '../RotationHandle';
 
 // FONT_PRESETS 동일 설정 (WriteScreen과 매칭)
 const FONT_PRESETS_MAP = {
@@ -33,29 +31,7 @@ const FONT_PRESETS_MAP = {
     },
 };
 
-/**
- * ✏️ 편집 아이콘 (연필 모양)
- */
-function EditIcon({ size = 20, color = '#8B7E74' }) {
-    return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-            <Path
-                d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
-                stroke={color}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-            <Path
-                d="M18.5 2.50023C18.8978 2.1024 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.1024 21.5 2.50023C21.8978 2.89805 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.1024 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z"
-                stroke={color}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </Svg>
-    );
-}
+
 
 export const DraggableText = React.memo(({
     id,
@@ -90,7 +66,7 @@ export const DraggableText = React.memo(({
         handleFinishEditing();
     };
 
-    const { pan, rotation, scale, panResponder, isSelected, setIsSelected, isLongPressActive, lastRotation, currentTransformScale, setMySize, handleRotateAndScale, handleRotation, handleRotationEnd } = useDraggableTextLogic({
+    const { pan, rotation, scale, panResponder, isSelected, setIsSelected, isLongPressActive, lastRotation, currentTransformScale, setMySize, mySize, handleRotateAndScale, handleRotation, handleRotationEnd, renderControls } = useDraggableTextLogic({
         id,
         initialX,
         initialY,
@@ -120,20 +96,7 @@ export const DraggableText = React.memo(({
 
     const containerRef = useRef(null);
 
-    // 💡 버튼 역보정: 부모 스케일에 반비례하여 버튼 크기를 일정하게 유지 (1/x 곡선 근사)
-    const handleScale = scale.interpolate({
-        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
-        outputRange: [3.33, 2, 1.428, 1, 0.666, 0.5, 0.333, 0.2],
-    });
 
-    const handleOffset = scale.interpolate({
-        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
-        outputRange: [-80, -48, -34.28, -24, -16, -12, -8, -4.8], // 화면상 -24px 유지하기 위한 역산
-    });
-    const dragHandleOffset = scale.interpolate({
-        inputRange: [0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5],
-        outputRange: [-120, -72, -51.42, -36, -24, -18, -12, -7.2],
-    });
 
     // 💡 동적 최대 너비 계산: 캔버스 우측 경계를 넘지 않도록 실시간 줄바꿈 유도
     const canvasWidth = bounds?.width || 350;
@@ -143,6 +106,7 @@ export const DraggableText = React.memo(({
         outputRange: [canvasWidth - padding, 0],
         extrapolate: 'clamp',
     });
+
 
     // 레이아웃상의 maxWidth = 남은 공간 / 현재 스케일
     const dynamicMaxWidth = Animated.divide(remainingSpace, scale);
@@ -244,7 +208,7 @@ export const DraggableText = React.memo(({
                 {
                     left: pan.x,
                     top: pan.y,
-                    maxWidth: dynamicMaxWidth, // 👈 실시간 줄바꿈 적용
+                    maxWidth: isEditing ? dynamicMaxWidth : canvasWidth, // 👈 실시간 줄바꿈 적용
                     transform: [
                         {
                             rotate: rotation.interpolate({
@@ -285,55 +249,11 @@ export const DraggableText = React.memo(({
                 )}
             </View>
 
-            {/* ✏️ 수정 버튼 (선택 시 좌측 하단에 표시, 편집 모드 아닐 때만) */}
-            {isSelected && !isEditing && (
-
-                <Animated.View {...editResponder.panHandlers} style={[
-                    styles.editHandle,
-                    {
-                        left: handleOffset,
-                        bottom: handleOffset,
-                        transform: [{ scale: handleScale }]
-                    }
-                ]}>
-                    <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                        <EditIcon size={20} color="#8B7E74" />
-                    </View>
-                </Animated.View>
-            )}
-
-            {/* 👆 드래그 막대 핸들 (선택 시 하단 중앙에 표시, 편집 모드 아닐 때만) */}
-            {isSelected && !isEditing && (
-                <Animated.View style={{
-                    position: 'absolute',
-                    bottom: dragHandleOffset,
-                    left: '50%',
-                    marginLeft: -20, // width 40의 절반 무조건 중앙 정렬
-                    width: 40,
-                    height: 10,
-                    borderRadius: 5,
-                    backgroundColor: '#8B7E74',
-                    transform: [{ scale: handleScale }]
-                }} />
-            )}
-
-            {/* 🔄 회전 핸들 (선택 시 우측 하단에 표시) */}
-            {isSelected && (
-                <RotationHandle
-                    containerRef={containerRef}
-                    currentRotation={lastRotation}
-                    currentScale={currentTransformScale}
-                    onRotateAndScale={handleRotateAndScale}
-                    onRotateEnd={handleRotationEnd}
-                    onInteractionStart={onInteractionStart}
-                    onInteractionEnd={onInteractionEnd}
-                    style={{
-                        right: handleOffset,
-                        bottom: handleOffset,
-                        transform: [{ scale: handleScale }]
-                    }}
-                />
-            )}
+            {/* 🕹️ 통합 조작 UI (수정 버튼, 드래그 막대, 회전 핸들 포함) */}
+            {renderControls({
+                containerRef,
+                editOptions: { panHandlers: editResponder.panHandlers }
+            })}
         </Animated.View>
     );
 });
