@@ -64,7 +64,7 @@
   - 스티커, 사진, 텍스트에 공통 적용되는 `useDraggable` 커스텀 훅(`src/hooks/useDraggable.js`) 구현.
   - **롱프레스(400ms) 후에만 드래그 활성화**. 릴리즈 시 선택 상태(isSelected) 진입 → 회전/크기 조절 핸들 표시.
   - **드래그-스크롤 충돌 방지 시스템**:
-    - `onMoveShouldSetPanResponderCapture`를 통해 부모(FlatList)보다 먼저 제스처를 선점하여 네이티브 스크롤 간섭을 차단.
+    - `onMoveShouldSetPanResponderCapture`를 통해 부모(FlatList)보다 먼저 제스처를 선점하여 네이티브 스크롤 간섭을 차단. 특히 **선택된 상태**에서는 거리 체크(`moveDist > 1`) 없이 즉시 이벤트를 캡처하도록 튜닝하여 빠른 드래그 시의 끊김 현상을 해결함. *(v2.4 추가)*
     - 터치 시작(`onPanResponderGrant`) 시점에 즉시 부모 스크롤을 비활성화(`isDraggingAny: true`)하여 "페이지 이동 후 멈춤" 버그 해결.
     - 드래그 중 `pagingEnabled={false}` 연동을 통해 네이티브 페이징 엔진의 강제 개입을 원천 봉쇄.
   - 더블탭 삭제 제거 → 인스타그램 스타일 **쓰레기통 드래그 삭제**로 대체. 드래그 중 화면 하단에 플로팅 쓰레기통 표시, 드래거블을 끌어 넣으면 삭제.

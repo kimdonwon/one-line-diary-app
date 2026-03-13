@@ -540,6 +540,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
         });
     }, [currentPageIndex]);
 
+    /**
+     * [스티커 드래그 종류] 드래그가 끝나면 최종 위치를 상태에 저장합니다.
+     */
     const handleDragEnd = useCallback((id, newX, newY, newRotation, newScale) => {
         setPageStickers(prev => {
             const next = [...prev];
@@ -707,6 +710,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
         });
     }, [currentPageIndex]);
 
+    /**
+     * [사진 드래그 종료] 사진 드래그가 끝나면 최종 위치를 저장합니다.
+     */
     const handlePhotoDragEnd = useCallback((id, newX, newY, newRotation, newScale) => {
         let shouldOpenGallery = false;
 
@@ -833,6 +839,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
         });
     }, [currentPageIndex]);
 
+    /**
+     * [텍스트 드래그 종료] 텍스트 박스 드래그가 끝나면 최종 위치를 저장합니다.
+     */
     const handleTextDragEnd = useCallback((id, newX, newY, newRotation, newScale) => {
         setPageTexts(prev => {
             const next = [...prev];
@@ -947,10 +956,12 @@ export function useWriteLogic(route, navigation, scrollRef) {
      */
     const handleDragMove = useCallback((itemId, pageX, pageY, itemType = 'sticker') => {
         if (!isDraggingAny) {
+            // 드래그가 시작되면 부모 스크롤을 막기 위해 상태를 업데이트합니다.
             setIsDraggingAny(true);
             draggingItemId.current = itemId;
             draggingItemType.current = itemType;
         }
+        // [쓰레기통 판정] 손가락 위치(pageY)가 화면 하단 임계값을 넘으면 쓰레기통 활성화
         setIsOverTrash(pageY > TRASH_ZONE_TOP);
     }, [isDraggingAny, TRASH_ZONE_TOP]);
 
