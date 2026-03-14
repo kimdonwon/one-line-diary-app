@@ -3,7 +3,19 @@ import { View, PanResponder, Keyboard, Animated } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { styles } from './RotationHandle.styles';
 
-export default function RotationHandle({ containerRef, currentRotation, currentScale, onRotate, onRotateAndScale, onRotateEnd, onInteractionStart, onInteractionEnd, style }) {
+export default function RotationHandle({
+    containerRef,
+    currentRotation,
+    currentScale,
+    onRotate,
+    onRotateAndScale,
+    onRotateEnd,
+    onInteractionStart,
+    onInteractionEnd,
+    style,
+    minScale = 0.3, // 👈 추가
+    maxScale = 5.0  // 👈 추가
+}) {
     const startInteraction = useRef({
         cx: 0,
         cy: 0,
@@ -65,8 +77,9 @@ export default function RotationHandle({ containerRef, currentRotation, currentS
                 const scaleRatio = startDist > 0 ? (currentDist / startDist) : 1;
                 let newScale = initialScale * scaleRatio;
 
-                if (newScale < 0.3) newScale = 0.3;
-                if (newScale > 5.0) newScale = 5.0;
+                // 💡 동적 제한 적용
+                if (newScale < minScale) newScale = minScale;
+                if (newScale > maxScale) newScale = maxScale;
 
                 if (onRotateAndScale) {
                     onRotateAndScale(initialRotation + delta, newScale);

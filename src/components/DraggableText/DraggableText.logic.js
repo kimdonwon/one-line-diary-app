@@ -21,5 +21,7 @@ export function useDraggableTextLogic({ id, initialX, initialY, initialRotation,
         isSelected,
         createdAt,
         scaleMultiplier: 1, // 💡 텍스트는 기본 1:1 배율 사용
+        minScale: 0.5,      // 👈 최소 0.5배
+        maxScale: 2.0       // 👈 최대 2.0배
     });
 }

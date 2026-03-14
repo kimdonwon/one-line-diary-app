@@ -4,7 +4,7 @@ export const styles = StyleSheet.create({
     container: {
         position: 'absolute',
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         padding: 8,
         maxWidth: '95%',
         borderWidth: 1.5,
@@ -25,7 +25,7 @@ export const styles = StyleSheet.create({
     textInput: {
         padding: 0,
         margin: 0,
-        minWidth: 120,
+        minWidth: 60,
         textAlignVertical: 'top',
     },
     selected: {

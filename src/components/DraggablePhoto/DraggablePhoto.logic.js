@@ -22,5 +22,7 @@ export function useDraggablePhotoLogic({ photo, bounds, onDelete, onDragEnd, ext
         onTap,
         createdAt: photo.createdAt,
         scaleMultiplier: 1, // 💡 사진은 기본 1:1 배율 사용
+        minScale: 0.7,      // 👈 최소 0.7배
+        maxScale: 1.5,      // 👈 최대 3.5배
     });
 }

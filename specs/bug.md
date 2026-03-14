@@ -61,3 +61,10 @@
     3. **UX 개선**: 캔버스 우측 벽에 닿으면 텍스트가 뚫고 나가는 대신 자동으로 아래로 줄바꿈(Wrap)되도록 개선하여 데이터 가독성 확보.
 - **참고 스킬**: `Modular UI Developer`
 - **파일**: `src/components/DraggableText/DraggableText.view.js`
+## 6. 화면 가장자리 아이템 드래그 시 페이지 밀림 현상 해결 (2026-03-14)
+
+- **증상**: 캔버스 우측 끝에 붙은 요소를 왼쪽으로 드래그할 때, 요소는 가만히 있고 배경 페이지가 먼저 이동하다가 멈추는 현상.
+- **원인**: `FlatList`의 `pagingEnabled`가 켜져 있어 가장자리 가로 드래그 시 네이티브 스크롤러가 JS 로직보다 우선적으로 반응함.
+- **해결**: `useDraggable.js`의 `onMoveShouldSetPanResponderCapture` 단계에서 선택 여부와 관계없이 미세한 움직임(`moveDist > 0.1`)이 감지되면 즉시 `true`를 반환하여 부모의 스크롤을 차단함.
+- **참고 스킬**: `Modular UI Developer`
+- **파일**: `src/hooks/useDraggable.js`

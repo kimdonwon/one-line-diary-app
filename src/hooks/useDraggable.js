@@ -61,6 +61,8 @@ export function useDraggable({
     scaleMultiplier = 1, // 💡 UI 보정을 위한 내부 스케일 배율 (Text: 1, Sticker: 0.35 등)
     controlScale = 1, // 💡 크기 회전 버튼 배율 (스티커만)
     offsetMultiplier = 1, // 👈 크기 회전 버튼 위치 (스티커만)
+    minScale,   // 👈 기본값 제거 (RotationHandle에서 처리)
+    maxScale    // 👈 기본값 제거 (RotationHandle에서 처리)
 }) {
     const isRecent = createdAt && (Date.now() - createdAt < 1000);
     const pan = externalPan || useRef(new Animated.ValueXY({ x: initialX, y: isRecent ? initialY + 300 : initialY })).current;
@@ -194,6 +196,8 @@ export function useDraggable({
                     onRotateEnd={handleRotationEnd}
                     onInteractionStart={onInteractionStart}
                     onInteractionEnd={onInteractionEnd}
+                    minScale={minScale} // 👈 전달
+                    maxScale={maxScale} // 👈 전달
                     style={{
                         position: 'absolute',
                         right: flipRightOffset,
@@ -290,7 +294,9 @@ export function useDraggable({
                 if (isEditingRef.current) return false;
                 const moveDist = Math.sqrt(gs.dx * gs.dx + gs.dy * gs.dy);
                 // 💡 이미 선택된 상태에서 움직임이 감지되면 캡처 단계에서 미리 낚아채어 부모(FlatList)의 스크롤을 원천 차단
-                if (effectiveSelectedRef.current) return true;
+                if (effectiveSelectedRef.current || moveDist > 0.1) {
+                    return true;
+                }
                 return false;
             },
 
