@@ -189,6 +189,7 @@ export const DraggableText = React.memo(({
             onMoveShouldSetPanResponderCapture: () => true, // 👈 움직임도 가로챔
             onPanResponderTerminationRequest: () => false,  // 👈 💡 절대 뺏기지 않음 (회전 핸들과 동일)
             onPanResponderRelease: () => {
+                onInteractionEnd();
                 handleEditButtonPress(); // 👈 뗐을 때 실행
             },
             onShouldBlockNativeResponder: () => true,
@@ -208,7 +209,8 @@ export const DraggableText = React.memo(({
                 {
                     left: pan.x,
                     top: pan.y,
-                    maxWidth: isEditing ? dynamicMaxWidth : canvasWidth, // 👈 실시간 줄바꿈 적용
+                    // maxWidth: isEditing ? dynamicMaxWidth : canvasWidth, // 👈 실시간 줄바꿈 적용
+                    maxWidth: dynamicMaxWidth,
                     transform: [
                         {
                             rotate: rotation.interpolate({
@@ -225,28 +227,27 @@ export const DraggableText = React.memo(({
             pointerEvents={isEditing ? 'box-none' : 'auto'} // 💡 편집 중일 땐 자기 자신(Animated.View)이 터치를 안 삼키도록 함
         >
             <View style={[styles.textWrapper, { backgroundColor: bgColor }]} pointerEvents={isEditing ? 'box-none' : 'auto'}>
-                {isEditing ? (
-                    <TextInput
-                        ref={inputRef}
-                        style={[styles.textFormat, styles.textInput, currentFontStyle, { color }]}
-                        value={localText}
-                        onChangeText={handleChangeText}
-                        multiline
-                        autoFocus={autoFocus}
-                        onBlur={handleFinishEditing}
-                        onEndEditing={handleEndEditingProxy}
-                        placeholder="..."
-                        placeholderTextColor="rgba(0,0,0,0.25)"
-                        scrollEnabled={false}
-                        blurOnSubmit={false}
-                        maxLength={200}
-                        pointerEvents="auto" // 💡 편집 중일 땐 무조건 터치를 흡수
-                    />
-                ) : (
-                    <Text style={[styles.textFormat, currentFontStyle, { color }]}>
-                        {localText || '탭하여 입력...'}
-                    </Text>
-                )}
+                <TextInput
+                    ref={inputRef}
+                    style={[
+                        styles.unifiedText,
+                        currentFontStyle,
+                        { color: (localText || isEditing) ? color : 'rgba(0,0,0,0.25)' }
+                    ]}
+                    value={isEditing ? localText : (localText || '탭하여 입력...')}
+                    onChangeText={handleChangeText}
+                    multiline
+                    editable={isEditing} // 👈 핵심: 편집 모드일 때만 활성화
+                    autoFocus={autoFocus}
+                    onBlur={handleFinishEditing}
+                    onEndEditing={handleEndEditingProxy}
+                    placeholder="..."
+                    placeholderTextColor="rgba(0,0,0,0.25)"
+                    scrollEnabled={false}
+                    blurOnSubmit={false}
+                    maxLength={200}
+                    pointerEvents={isEditing ? 'auto' : 'none'} // 👈 비편집 시 터치 방해 금지
+                />
             </View>
 
             {/* 🕹️ 통합 조작 UI (수정 버튼, 드래그 막대, 회전 핸들 포함) */}

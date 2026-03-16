@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "app-store-screenshots": {
+      "source": "ParthJadhav/app-store-screenshots",
+      "sourceType": "github",
+      "computedHash": "9650499e3fab0a1b7b3f5422497ec93aec1d255b1aa2be148aa2a6af3392212b"
+    }
+  }
+}

@@ -14,18 +14,16 @@ export const styles = StyleSheet.create({
         borderRadius: 8,
         paddingHorizontal: 10,
         paddingVertical: 6,
-        minWidth: 60,
+        // minWidth: 60,
         minHeight: 30,
     },
-    textFormat: {
+    unifiedText: {
         fontSize: 13,
-        includeFontPadding: false,
+        includeFontPadding: false, // 안드로이드 폰트 여백 제거
         lineHeight: 17,
-    },
-    textInput: {
-        padding: 0,
+        padding: 0,                // TextInput의 기본 패딩 제거
         margin: 0,
-        minWidth: 60,
+        // minWidth: 60,
         textAlignVertical: 'top',
     },
     selected: {
