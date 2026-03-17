@@ -279,22 +279,14 @@ export function useDraggable({
             onStartShouldSetPanResponderCapture: () => false, // 💡 자식(TextInput)의 터치를 빼앗지 않음
             onMoveShouldSetPanResponder: (e, gs) => {
                 if (isEditingRef.current) return false;
-                // 💡 이미 선택된 상태라면 미세한 움직임도 즉시 가로챔 (거리를 따지지 않음)
-                // 💡 자식 요소(수정/회전 핸들)가 터치를 먼저 가로챌 수 있도록 캡처 단계에서 false 반환
+                // 💡 이미 선택된 상태라면 미세한 움직임도 즉시 가로챔
                 if (effectiveSelectedRef.current) return true;
-
-                const moveDist = Math.sqrt(gs.dx * gs.dx + gs.dy * gs.dy);
-                return false; // 선택 안 된 상태는 롱프레스에서 처리하므로 false
-            },
-            onPanResponderTerminationRequest: (e, gs) => {
-                // 선택된 아이템을 드래그 중일 때는 시스템이나 부모가 터치를 뺏어가지 못하게 합니다.
-                return effectiveSelectedRef.current ? false : true;
+                return false; // 선택 안 된 상태는 롱프레스에서 처리
             },
             onMoveShouldSetPanResponderCapture: (e, gs) => {
                 if (isEditingRef.current) return false;
-                const moveDist = Math.sqrt(gs.dx * gs.dx + gs.dy * gs.dy);
-                // 💡 이미 선택된 상태에서 움직임이 감지되면 캡처 단계에서 미리 낚아채어 부모(FlatList)의 스크롤을 원천 차단
-                if (effectiveSelectedRef.current || moveDist > 0.1) {
+                // 💡 선택 상태에서만 캡처 (비선택 상태에서는 FlatList 스크롤을 방해하지 않음)
+                if (effectiveSelectedRef.current) {
                     return true;
                 }
                 return false;
@@ -525,8 +517,10 @@ export function useDraggable({
                     useNativeDriver: false
                 }).start();
             },
-            // 💡 중요: 드래그 중에는 다른 컴포넌트(스크롤뷰 등)에게 제스처 주도권을 뺏기지 않도록 함
-            onPanResponderTerminationRequest: () => false,
+            // 💡 선택/드래그 상태에서만 제스처 독점, 그 외에는 다른 컴포넌트(FlatList 등)에 양보
+            onPanResponderTerminationRequest: () => {
+                return effectiveSelectedRef.current ? false : true;
+            },
             onShouldBlockNativeResponder: () => true,
         })
     ).current;

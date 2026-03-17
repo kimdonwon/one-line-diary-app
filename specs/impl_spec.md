@@ -53,7 +53,11 @@
     - *참고: 개별 지정이 없을 경우 RotationHandle의 기본값(0.3~5.0)이 최종 적용됨.*
 - **제스처 제어**:
   - 400ms 롱프레스 후 드래그 활성화.
-  - 선택 상태이거나 미세한 움직임(`0.1px`) 감지 시 캡처 단계에서 즉시 제스처를 선점하여 부모(FlatList)의 페이징 스크롤을 원천 차단.
+  - 선택 상태에서만 캡처 단계(`onMoveShouldSetPanResponderCapture`)에서 제스처를 선점하여 부모(FlatList)의 페이징 스크롤을 차단. 비선택 상태에서는 FlatList 스크롤을 방해하지 않음.
+  - FlatList의 `scrollEnabled`/`pagingEnabled`를 아이템 선택 시 `false`로 전환하여 네이티브 레벨에서도 스크롤을 원천 차단.
+- **DraggableText 최적화**:
+  - TextInput을 Uncontrolled 모드(`defaultValue`)로 운용하여 한글 IME 조합 중 리렌더링 제거.
+  - 텍스트 값은 `useRef`로 실시간 추적, 편집 종료 시에만 표시용 state(`displayText`) 동기화.
 
 ---
 

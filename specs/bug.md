@@ -68,3 +68,29 @@
 - **해결**: `useDraggable.js`의 `onMoveShouldSetPanResponderCapture` 단계에서 선택 여부와 관계없이 미세한 움직임(`moveDist > 0.1`)이 감지되면 즉시 `true`를 반환하여 부모의 스크롤을 차단함.
 - **참고 스킬**: `Modular UI Developer`
 - **파일**: `src/hooks/useDraggable.js`
+
+## 7. 한글 텍스트 입력 튐 현상 (Layout Flickering) 해결 (2026-03-17)
+
+- **증상**: 한글 입력 시, 특히 첫 글자나 짧은 문장을 입력할 때 텍스트가 순간적으로 앞으로 튀었다가 제자리로 돌아오는 시각적 글리치 발생.
+- **원인**: `TextInput`을 Controlled 모드(`value` prop)로 사용하여 `onChangeText`마다 `useState`를 통한 리렌더링이 발생. 한글 IME 조합 중 매 프레임마다 컴포넌트 전체가 리렌더링되면서 `dynamicMaxWidth`(Animated.divide) 연산과 `transform` 스타일이 재평가되어 레이아웃 프레임과 충돌.
+- **해결**:
+    1. `TextInput`을 **Uncontrolled 모드**(value → defaultValue)로 전환하여 IME 조합 중 리렌더링 원인을 제거.
+    2. 텍스트 값을 `useRef`(`localTextRef`)로 관리하여 타이핑 중 React 리렌더링 사이클을 완전히 우회.
+    3. 표시용 상태(`displayText`)는 편집 종료 시에만 동기화하여 비편집 모드에서의 표시에 사용.
+    4. `inputKey` state를 통해 `defaultValue` 갱신이 필요할 때 key를 변경하여 강제 리마운트.
+- **참고 스킬**: `Modular UI Developer`, `Logic Documenter`
+- **파일**: `src/components/DraggableText/DraggableText.view.js`
+
+## 8. 드래거블 요소 선택 상태에서 좌우 스와이프 시 캔버스 밀림 현상 해결 (2026-03-17)
+
+- **증상**: 드래거블 요소(텍스트, 사진 등)를 선택한 상태에서 빠르게 좌우로 스와이프하면, 요소가 드래그되는 대신 전체 캔버스 화면이 살짝 옆으로 밀리면서 중간에 멈춤.
+- **원인**:
+    1. **무차별 캡처**: `useDraggable.js`의 `onMoveShouldSetPanResponderCapture`에서 `moveDist > 0.1` 조건으로 선택 안 된 상태에서도 모든 움직임을 캡처하려 해, FlatList의 네이티브 스크롤러와 동시에 제스처를 점유하여 교착 상태 발생.
+    2. **중복 정의**: `onPanResponderTerminationRequest`가 두 번 정의되어 나중 것(항상 `false`)이 덮어씌워지면서 모든 상황에서 제스처를 독점.
+    3. **FlatList 비차단**: 선택된 아이템이 있어도 FlatList의 `scrollEnabled`/`pagingEnabled`가 `true`로 유지되어 네이티브 스크롤이 JS PanResponder보다 먼저 발동.
+- **해결**:
+    1. `onMoveShouldSetPanResponderCapture`에서 선택 상태에서만 캡처하도록 수정 (비선택 상태의 `moveDist > 0.1` 조건 제거).
+    2. 중복 `onPanResponderTerminationRequest`를 제거하고, 선택/드래그 상태 기반의 조건부 반환으로 통합.
+    3. `WriteScreen.view.js`에서 FlatList의 `scrollEnabled`와 `pagingEnabled`를 `!isDraggingAny && !selectedItemId` 조건으로 변경하여 아이템 선택 시 페이지 스크롤을 원천 차단.
+- **참고 스킬**: `Modular UI Developer`, `Logic Documenter`
+- **파일**: `src/hooks/useDraggable.js`, `src/screens/WriteScreen/WriteScreen.view.js`

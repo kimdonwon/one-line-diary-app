@@ -452,11 +452,11 @@ export function WriteScreenView({ route, navigation }) {
                                         ref={pageFlatListRef}
                                         data={[...pages, '__ADD_PAGE__']}
                                         horizontal
-                                        pagingEnabled={!isDraggingAny}
+                                        pagingEnabled={!isDraggingAny && !selectedItemId}
                                         showsHorizontalScrollIndicator={false}
-                                        scrollEnabled={!isDraggingAny}
-                                        disableIntervalMomentum={true}   // ✅ 추가 - 한 번에 한 페이지만 이동
-                                        disableScrollViewPanResponder={true}  // ✅ 추가 - PanResponder 충돌 차단
+                                        scrollEnabled={!isDraggingAny && !selectedItemId}
+                                        disableIntervalMomentum={true}
+                                        disableScrollViewPanResponder={true}
                                         contentContainerStyle={isDraggingAny && { overflow: 'visible' }}
                                         style={isDraggingAny && { overflow: 'visible' }}
                                         keyExtractor={(_, idx) => `page-${idx}`}

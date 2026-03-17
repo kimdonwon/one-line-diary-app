@@ -57,10 +57,12 @@ export const DraggableText = React.memo(({
     bounds,
 }) => {
     const [isEditing, setIsEditing] = useState(autoFocus);
-    const [localText, setLocalText] = useState(text);
+    const [displayText, setDisplayText] = useState(text); // 표시 전용 (편집 종료 시에만 업데이트)
+    const localTextRef = useRef(text); // 실시간 값 (리렌더링 없이 추적)
     const inputRef = useRef(null);
     const isNewlyCreated = useRef(autoFocus);
     const blurTimerRef = useRef(null);
+    const [inputKey, setInputKey] = useState(0); // defaultValue 갱신용 키
 
     const handleEndEditingProxy = () => {
         handleFinishEditing();
@@ -128,13 +130,15 @@ export const DraggableText = React.memo(({
     // 외부에서 text prop이 바뀌면 동기화
     useEffect(() => {
         if (!isEditing) {
-            setLocalText(text);
+            localTextRef.current = text;
+            setDisplayText(text);
+            setInputKey(k => k + 1); // defaultValue 갱신을 위해 key 변경
         }
     }, [text]);
 
-    // 실시간 상태 업데이트 (편집 상태에서 뒤로가기/저장 터치 시 최신 데이터 유지)
+    // 실시간 텍스트 업데이트 (ref만 갱신 → 리렌더링 없음 → IME 튐 방지)
     const handleChangeText = (val) => {
-        setLocalText(val);
+        localTextRef.current = val;
         onTextChange?.(id, val);
     };
 
@@ -145,12 +149,17 @@ export const DraggableText = React.memo(({
         }
         blurTimerRef.current = setTimeout(() => {
             setIsEditing(false);
-            const trimmed = localText.trim();
+            const currentText = localTextRef.current;
+            const trimmed = currentText.trim();
             if (trimmed.length === 0) {
                 onDelete?.(id);
-            } else if (trimmed !== localText) {
-                setLocalText(trimmed);
-                onTextChange?.(id, trimmed);
+            } else {
+                localTextRef.current = trimmed;
+                setDisplayText(trimmed); // 표시용 state 업데이트
+                setInputKey(k => k + 1);
+                if (trimmed !== currentText) {
+                    onTextChange?.(id, trimmed);
+                }
             }
         }, 100);
     };
@@ -228,16 +237,17 @@ export const DraggableText = React.memo(({
         >
             <View style={[styles.textWrapper, { backgroundColor: bgColor }]} pointerEvents={isEditing ? 'box-none' : 'auto'}>
                 <TextInput
+                    key={`input-${inputKey}`}
                     ref={inputRef}
                     style={[
                         styles.unifiedText,
                         currentFontStyle,
-                        { color: (localText || isEditing) ? color : 'rgba(0,0,0,0.25)' }
+                        { color: (displayText || isEditing) ? color : 'rgba(0,0,0,0.25)' }
                     ]}
-                    value={isEditing ? localText : (localText || '탭하여 입력...')}
+                    defaultValue={isEditing ? localTextRef.current : (displayText || '탭하여 입력...')}
                     onChangeText={handleChangeText}
                     multiline
-                    editable={isEditing} // 👈 핵심: 편집 모드일 때만 활성화
+                    editable={isEditing}
                     autoFocus={autoFocus}
                     onBlur={handleFinishEditing}
                     onEndEditing={handleEndEditingProxy}
@@ -246,7 +256,7 @@ export const DraggableText = React.memo(({
                     scrollEnabled={false}
                     blurOnSubmit={false}
                     maxLength={200}
-                    pointerEvents={isEditing ? 'auto' : 'none'} // 👈 비편집 시 터치 방해 금지
+                    pointerEvents={isEditing ? 'auto' : 'none'}
                 />
             </View>
 
