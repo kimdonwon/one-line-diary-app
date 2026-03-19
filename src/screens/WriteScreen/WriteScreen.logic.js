@@ -8,6 +8,7 @@ import { BACKGROUNDS, BG_CATEGORIES, getBackgroundById } from '../../constants/b
 import { useDiaryForDate, useActivitiesForDate, saveDiary, saveActivities } from '../../hooks/useDiary';
 import { getSetting, saveSetting } from '../../database/db';
 import { usePremium } from '../../hooks/usePremium';
+import { SYSTEM_LIMITS } from '../../constants/limits';
 
 /**
  * ⚙️ 작성(Write) 화면의 모든 비즈니스 로직과 폼 상태 관리를 담당하는 커스텀 훅입니다.
@@ -34,7 +35,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
     // ─── 멀티페이지 상태 ───
     // pages: 각 페이지의 content 문자열 배열
     // pageStickers: 각 페이지의 스티커 배열 (2차원 배열)
-    const MAX_PAGES = 5;
+    const MAX_PAGES = SYSTEM_LIMITS.MAX_PAGES;
     const [pages, setPages] = useState(['']);
     const [pageStickers, setPageStickers] = useState([[]]);
     const [pagePhotos, setPagePhotos] = useState([[]]); // 📷 페이지별 사진 배열
@@ -44,8 +45,8 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const [pageBackgrounds, setPageBackgrounds] = useState(['default']); // 🎨 페이지별 배경지 ID
     const [showBackgrounds, setShowBackgrounds] = useState(false); // 배경지 서랍 열림 상태
     const [currentPageIndex, setCurrentPageIndex] = useState(0);
-    const MAX_PHOTOS_PER_PAGE = isPremium ? 5 : 1; // 프리미엄 5장, 무료 1장
-    const MAX_TEXTS_PER_PAGE = isPremium ? 15 : 3; // ✏️ 프리미엄 15개, 무료 3개
+    const MAX_PHOTOS_PER_PAGE = isPremium ? SYSTEM_LIMITS.PREMIUM_TIER.MAX_PHOTOS : SYSTEM_LIMITS.FREE_TIER.MAX_PHOTOS;
+    const MAX_TEXTS_PER_PAGE = isPremium ? SYSTEM_LIMITS.PREMIUM_TIER.MAX_TEXTS : SYSTEM_LIMITS.FREE_TIER.MAX_TEXTS;
 
     // 스티커 서랍 관리 상태
     const defaultCats = STICKER_PACK_DATA.filter(p => p.isDefault).map(p => p.catId);
@@ -479,9 +480,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
      * @param {boolean} isGraphic - 그래픽 스티커 여부 판별 플래그
      */
     const handleStickerPress = (stickerId, isGraphic = false) => {
-        const baseLimit = isPremium ? 15 : 3;
-        // 🚫 페이지당 최대 15개까지만 허용 (광고 보너스 포함)
-        const pageLimit = Math.min(baseLimit + adBonusStickers, 15);
+        const baseLimit = isPremium ? SYSTEM_LIMITS.PREMIUM_TIER.MAX_STICKERS : SYSTEM_LIMITS.FREE_TIER.MAX_STICKERS;
+        // 🚫 페이지당 최대 개수까지만 허용 (광고 보너스 포함)
+        const pageLimit = Math.min(baseLimit + adBonusStickers, SYSTEM_LIMITS.PREMIUM_TIER.MAX_STICKERS);
 
         // 🚨 현재 페이지의 스티커 개수 체크 (페이지당 제한)
         const currentPageStickers = pageStickers[currentPageIndex]?.length || 0;
@@ -519,7 +520,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
         // [수정] 현재 상태에 맞춰 스마트하게 한도 증설
         // 이미 소프트 패스로 인해 한도가 늘어난 것처럼 보일 수 있으므로, 
         // '실제 붙은 개수'와 '현재 이론적 제한' 중 큰 값에 +2를 해줍니다.
-        const baseLimit = 3;
+        const baseLimit = SYSTEM_LIMITS.FREE_TIER.MAX_STICKERS;
         const currentPageStickers = pageStickers[currentPageIndex]?.length || 0;
         const currentEffectiveLimit = Math.max(baseLimit + adBonusStickers, currentPageStickers);
 
@@ -541,7 +542,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
      */
     const handleAdRewardForText = () => {
         // 실제로는 여기서 광고 SDK 호출
-        const baseLimit = 3;
+        const baseLimit = SYSTEM_LIMITS.FREE_TIER.MAX_TEXTS;
         const currentPageTexts = pageTexts[currentPageIndex]?.length || 0;
         const currentEffectiveLimit = Math.max(baseLimit + adBonusTexts, currentPageTexts);
 
@@ -776,8 +777,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
         // 🚨 텍스트 개수 제한 체크
         const currentTexts = pageTexts[currentPageIndex] || [];
-        const baseTextLimit = isPremium ? 15 : 3;
-        const currentEffectiveTextLimit = Math.min(baseTextLimit + adBonusTexts, 15);
+        const currentEffectiveTextLimit = Math.min(MAX_TEXTS_PER_PAGE + adBonusTexts, SYSTEM_LIMITS.PREMIUM_TIER.MAX_TEXTS);
         if (currentTexts.length >= currentEffectiveTextLimit) {
             setTextLimitModalVisible(true);
             return;
@@ -789,7 +789,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
         const newText = {
             id: Date.now().toString() + Math.random().toString(36).substring(7),
-            text: textValue.substring(0, 200),
+            text: textValue.substring(0, SYSTEM_LIMITS.MAX_TEXT_LENGTH),
             fontId,
             color,
             bgColor,
@@ -816,8 +816,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
         // 🚨 텍스트 개수 제한 체크
         const currentTexts = pageTexts[currentPageIndex] || [];
-        const baseTextLimit = isPremium ? 15 : 3;
-        const currentEffectiveTextLimit = Math.min(baseTextLimit + adBonusTexts, 15);
+        const currentEffectiveTextLimit = Math.min(MAX_TEXTS_PER_PAGE + adBonusTexts, SYSTEM_LIMITS.PREMIUM_TIER.MAX_TEXTS);
         if (currentTexts.length >= currentEffectiveTextLimit) {
             setTextLimitModalVisible(true);
             return;
@@ -1075,6 +1074,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setTextLimitModalVisible,
         handleAdReward,
         handleAdRewardForText,
+        adBonusTexts,
 
         // ✏️ Text state
         pageTexts,

@@ -16,32 +16,32 @@ const THEME = {
 
 const SCREENSHOTS = [
   {
-    src: "/screenshots/Screenshot_20260315_142704_Expo Go.jpg",
+    src: "/screenshots/다이어리꾸미기.jpg",
     label: "자유로운 꾸미기",
-    headline: "나만의 색깔로<br />다이어리를 꾸며보세요",
+    headline: "나만의 색깔로<br />다이어리 꾸미기",
   },
   {
-    src: "/screenshots/Screenshot_20260315_142933_Expo Go.jpg",
+    src: "/screenshots/키워드.jpg",
     label: "요약 페이지",
-    headline: "한 눈에 보는<br />나의 하루 키워드",
+    headline: "한 눈에 보는<br />나의 한 해 키워드",
   },
   {
-    src: "/screenshots/Screenshot_20260315_142943_Expo Go.jpg",
+    src: "/screenshots/활동.jpg",
     label: "활동 분석",
     headline: "어떤 활동을 하며<br />시간을 보냈나요?",
   },
   {
-    src: "/screenshots/Screenshot_20260315_142950_Expo Go.jpg",
+    src: "/screenshots/귀여운이모지.jpg",
     label: "귀여운 이모지",
     headline: "감정을 담은<br />귀여운 캐릭터들",
   },
   {
-    src: "/screenshots/Screenshot_20260315_142954_Expo Go.jpg",
+    src: "/screenshots/하루하루의기록들.jpg",
     label: "간편한 기록",
-    headline: "오늘을 한 줄로<br />가볍게 기록하세요",
+    headline: "내 조각들을<br />한 눈에 확인하세요",
   },
   {
-    src: "/screenshots/Screenshot_20260315_143000_Expo Go.jpg",
+    src: "/screenshots/활동2.jpg",
     label: "성장 기록",
     headline: "하루하루 쌓여가는<br />나만의 성장 일지",
   },
@@ -57,18 +57,28 @@ const SC_H = (1990 / MK_H) * 100;
 const SC_RX = (126 / 918) * 100;
 const SC_RY = (126 / 1990) * 100;
 
-function Phone({ src, className = "", style = {} }: { src: string; className?: string; style?: React.CSSProperties }) {
+function Phone({ src, className = "", style = {}, isDarkBg = false }: { src: string; className?: string; style?: React.CSSProperties; isDarkBg?: boolean }) {
   return (
     <div className={`relative ${className}`} style={{ aspectRatio: `${MK_W}/${MK_H}`, ...style }}>
-      <img src="/mockup.png" alt="" className="block w-full h-full" draggable={false} />
+      <img
+        src="/mockup.png"
+        alt=""
+        className="block w-full h-full relative z-10"
+        style={{
+          mixBlendMode: isDarkBg ? "normal" : "multiply", // Still cleans edges on light BG
+          filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.3))"
+        }}
+        draggable={false}
+      />
       <div
-        className="absolute z-10 overflow-hidden"
+        className="absolute z-20 overflow-hidden" // Increased Z to stay ON TOP
         style={{
           left: `${SC_L}%`,
           top: `${SC_T}%`,
           width: `${SC_W}%`,
           height: `${SC_H}%`,
           borderRadius: `${SC_RX}% / ${SC_RY}%`,
+          backgroundColor: "#000",
         }}
       >
         <img src={src} alt="" className="block w-full h-full object-cover object-top" draggable={false} />
@@ -85,7 +95,7 @@ function Slide({
 }: {
   index: number;
   data: (typeof SCREENSHOTS)[0];
-  canvasRef: React.RefObject<HTMLDivElement | null>;
+  canvasRef: React.Ref<HTMLDivElement>;
 }) {
   const isOdd = index % 2 !== 0;
   const W = CANVAS_W;
@@ -99,40 +109,40 @@ function Slide({
         height: CANVAS_H,
         backgroundColor: isOdd ? THEME.fg : THEME.bg,
         color: isOdd ? THEME.bg : THEME.fg,
-        fontFamily: "Inter, sans-serif", // Fallback to Inter
+        fontFamily: "Inter, sans-serif",
       }}
     >
       {/* Background Decor */}
       <div
-        className="absolute w-[150%] h-[50%] blur-[120px] opacity-20"
+        className="absolute w-[180%] h-[60%] blur-[160px] opacity-25"
         style={{
           background: `radial-gradient(circle, ${THEME.accent} 0%, transparent 70%)`,
-          top: "-10%",
-          left: "-25%",
+          top: "-15%",
+          left: isOdd ? "10%" : "-40%",
         }}
       />
 
-      <div className="relative z-10 w-full pt-[180px] px-[120px] text-center">
+      <div className="relative z-10 w-full pt-[280px] px-[120px] text-center">
         <p
-          className="uppercase tracking-[0.2em] mb-8"
-          style={{ fontSize: W * 0.028, color: isOdd ? THEME.accent : THEME.muted, fontWeight: 600 }}
+          className="uppercase tracking-[0.25em] mb-8"
+          style={{ fontSize: W * 0.03, color: isOdd ? THEME.accent : THEME.muted, fontWeight: 700 }}
         >
           {data.label}
         </p>
         <h1
-          className="leading-[1.1] font-bold"
-          style={{ fontSize: W * 0.095 }}
+          className="leading-[1.15] font-bold"
+          style={{ fontSize: W * 0.090 }}
           dangerouslySetInnerHTML={{ __html: data.headline }}
         />
       </div>
 
-      <div className="absolute bottom-[-100px] w-full flex justify-center">
+      <div className="absolute bottom-[40px] w-full flex justify-center">
         <Phone
           src={data.src}
+          isDarkBg={isOdd}
           style={{
-            width: "86%",
-            transform: `translateY(10%) rotate(${isOdd ? "-3deg" : "3deg"})`,
-            boxShadow: "0 50px 100px -20px rgba(0,0,0,0.3)",
+            width: "78%",
+            transform: `rotate(${isOdd ? "-3.5deg" : "3.5deg"})`,
           }}
         />
       </div>
@@ -157,7 +167,7 @@ export default function ScreenshotsPage() {
         el.setAttribute("style", originalStyle + "; position: absolute; left: 0; top: 0; z-index: 9999;");
 
         const opts = { width: CANVAS_W, height: CANVAS_H, pixelRatio: 1, cacheBust: true };
-        
+
         // Double-call trick for fonts/images
         await toPng(el, opts);
         const dataUrl = await toPng(el, opts);
@@ -211,11 +221,11 @@ export default function ScreenshotsPage() {
                 <Slide
                   index={i}
                   data={data}
-                  canvasRef={(el) => (slideRefs.current[i] = el)}
+                  canvasRef={(el: HTMLDivElement | null) => (slideRefs.current[i] = el)}
                 />
               </div>
-              <div 
-                style={{ height: (CANVAS_H * (400 / CANVAS_W)) }} 
+              <div
+                style={{ height: (CANVAS_H * (400 / CANVAS_W)) }}
                 className="w-full pointer-events-none"
               />
             </div>

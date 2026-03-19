@@ -2,6 +2,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, TextInput, Animated, TouchableOpacity, Keyboard, Platform, PanResponder } from 'react-native';
 import { styles } from './DraggableText.styles';
 import { useDraggableTextLogic } from './DraggableText.logic';
+import { SYSTEM_LIMITS } from '../../constants/limits';
+
 
 // FONT_PRESETS 동일 설정 (WriteScreen과 매칭)
 const FONT_PRESETS_MAP = {
@@ -255,7 +257,7 @@ export const DraggableText = React.memo(({
                     placeholderTextColor="rgba(0,0,0,0.25)"
                     scrollEnabled={false}
                     blurOnSubmit={false}
-                    maxLength={200}
+                    maxLength={SYSTEM_LIMITS.MAX_TEXT_LENGTH}
                     pointerEvents={isEditing ? 'auto' : 'none'}
                 />
             </View>

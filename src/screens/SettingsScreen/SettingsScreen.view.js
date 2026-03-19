@@ -3,6 +3,7 @@ import { Header, Card, SoftAlertModal } from '../../components';
 import { CATEGORIZED_STICKERS, STICKER_CATEGORIES, STICKER_PACK_DATA } from '../../constants/stickers';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { COLORS } from '../../constants/theme';
+import { SYSTEM_LIMITS } from '../../constants/limits';
 import { PinSetupModal } from '../../components/PinSetupModal';
 
 import { useSettingsLogic } from './SettingsScreen.logic';
@@ -189,9 +190,9 @@ export function SettingsScreenView({ navigation }) {
                     <Text style={styles.premiumPrice}>₩5,900 <Text style={styles.premiumPriceUnit}>(1년 이용권)</Text></Text>
 
                     <View style={styles.premiumBenefits}>
-                        <Text style={styles.premiumBenefitItem}>✓ 페이지당 스티커 최대 15개 부착 </Text>
-                        <Text style={styles.premiumBenefitItem}>✓ 페이지당 텍스트 박스 최대 15개 상향 </Text>
-                        <Text style={styles.premiumBenefitItem}>✓ 페이지당 사진 최대 5장 첨부 </Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 페이지당 스티커 최대 {SYSTEM_LIMITS.PREMIUM_TIER.MAX_STICKERS}개 부착 </Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 페이지당 텍스트 박스 최대 {SYSTEM_LIMITS.PREMIUM_TIER.MAX_TEXTS}개 상향 </Text>
+                        <Text style={styles.premiumBenefitItem}>✓ 페이지당 사진 최대 {SYSTEM_LIMITS.PREMIUM_TIER.MAX_PHOTOS}장 첨부 </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 파스텔 사진 프레임 사용 가능 </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 모든 다이어리 텍스트 폰트 사용 가능 </Text>
                         <Text style={styles.premiumBenefitItem}>✓ 광고 없는 쾌적한 다이어리 작성</Text>

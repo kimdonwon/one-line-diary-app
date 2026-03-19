@@ -12,6 +12,7 @@ import { COLORS, SOFT_SHADOW } from '../../constants/theme';
 import { Card, MoodCard, SoftAlertModal, Header } from '../../components';
 import { MOOD_LIST } from '../../constants/mood';
 import { ACTIVITIES } from '../../constants/activities';
+import { SYSTEM_LIMITS } from '../../constants/limits';
 import { STICKER_CATEGORIES, CATEGORIZED_STICKERS } from '../../constants/stickers';
 import { ActivityIcon } from '../../constants/ActivityIcons';
 import { MoodCharacter } from '../../constants/MoodCharacters';
@@ -190,6 +191,11 @@ export function WriteScreenView({ route, navigation }) {
         setShowStickers,
         setInputBoxBounds,
         setStickerLimitModalVisible,
+        
+        isTextLimitModalVisible,
+        setTextLimitModalVisible,
+        adBonusTexts,
+        handleAdRewardForText,
 
         // ✏️ Text
         pageTexts,
@@ -1123,19 +1129,39 @@ export function WriteScreenView({ route, navigation }) {
                 title="스티커 제한 안내 🧸"
                 message={(() => {
                     const currentPageStickers = pageStickers[currentPageIndex]?.length || 0;
-                    const baseLimit = 3 + adBonusStickers;
+                    const baseLimit = SYSTEM_LIMITS.FREE_TIER.MAX_STICKERS + adBonusStickers;
                     const effectiveLimit = Math.max(baseLimit, currentPageStickers);
 
-                    if (isPremium || effectiveLimit >= 15) {
-                        return `이 페이지에 스티커는 최대 15개까지만 붙일 수 있어요! (현재 ${currentPageStickers}개 부착) ✨`;
+                    if (isPremium || effectiveLimit >= SYSTEM_LIMITS.PREMIUM_TIER.MAX_STICKERS) {
+                        return `이 페이지에 스티커는 최대 ${SYSTEM_LIMITS.PREMIUM_TIER.MAX_STICKERS}개까지만 붙일 수 있어요! (현재 ${currentPageStickers}개 부착) ✨`;
                     }
                     return `무료 버전에서는 이 페이지에 스티커를 ${effectiveLimit}개까지만 붙일 수 있어요! (현재 ${currentPageStickers}개 부착)`;
                 })()}
                 onConfirm={() => setStickerLimitModalVisible(false)}
-                secondaryText={(!isPremium && (3 + adBonusStickers) < 15) ? "광고 보고 2개 더 붙이기 📺" : null}
+                secondaryText={(!isPremium && (SYSTEM_LIMITS.FREE_TIER.MAX_STICKERS + adBonusStickers) < SYSTEM_LIMITS.PREMIUM_TIER.MAX_STICKERS) ? "광고 보고 2개 더 붙이기 📺" : null}
                 onSecondaryConfirm={handleAdReward}
             />
-            {/* 🛑 알림 모달 */}
+
+            {/* 🛑 텍스트 박스 제한 알림 모달 */}
+            <SoftAlertModal
+                isVisible={isTextLimitModalVisible}
+                title="텍스트 박스 제한 안내 ✏️"
+                message={(() => {
+                    const currentPageTexts = pageTexts[currentPageIndex]?.length || 0;
+                    const baseLimit = SYSTEM_LIMITS.FREE_TIER.MAX_TEXTS + adBonusTexts;
+                    const effectiveLimit = Math.max(baseLimit, currentPageTexts);
+
+                    if (isPremium || effectiveLimit >= SYSTEM_LIMITS.PREMIUM_TIER.MAX_TEXTS) {
+                        return `이 페이지에 텍스트 박스는 최대 ${SYSTEM_LIMITS.PREMIUM_TIER.MAX_TEXTS}개까지만 넣을 수 있어요! (현재 ${currentPageTexts}개 부착) ✨`;
+                    }
+                    return `무료 버전에서는 이 페이지에 텍스트 박스를 ${effectiveLimit}개까지만 넣을 수 있어요! (현재 ${currentPageTexts}개 부착)`;
+                })()}
+                onConfirm={() => setTextLimitModalVisible(false)}
+                secondaryText={(!isPremium && (SYSTEM_LIMITS.FREE_TIER.MAX_TEXTS + adBonusTexts) < SYSTEM_LIMITS.PREMIUM_TIER.MAX_TEXTS) ? "광고 보고 2개 더 붙이기 📺" : null}
+                onSecondaryConfirm={handleAdRewardForText}
+            />
+
+            {/* 🛑 공통 알림 모달 */}
             <SoftAlertModal
                 isVisible={showAlert}
                 title={alertConfig.title}

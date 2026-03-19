@@ -1,6 +1,6 @@
-# 오늘조각 (Diary App) 모듈형 프로젝트 구조 명세서
+# 📔 오늘조각 (Diary App) 모듈형 프로젝트 구조 명세서
 
-본 프로젝트는 **Modular UI Developer** 스킬을 기반으로 한 최적화된 소규모/중규모 계층형 구조(디자인-로직 응집형)를 따릅니다. 각 화면 내부에서 역할(View, Logic, Styles)을 철저히 분리하여 유지보수성과 생산성을 극대화합니다.
+본 프로젝트는 **Modular UI Developer** 스킬을 기반으로 한 최적화된 계층형 구조(디자인-로직 응집형)를 따릅니다. 각 화면과 핵심 컴포넌트 내부에서 역할(View, Logic, Styles)을 철저히 분리하여 유지보수성과 생산성을 극대화합니다.
 
 ---
 
@@ -8,95 +8,98 @@
 
 ```text
 src/
-├── components/                            # 공통 UI 및 기능 컴포넌트 (Shared)
-│   ├── DraggableSticker/                  # (복합 컴포넌트) 스티커 드래그 앤 드롭
-│   │   ├── index.js                       # 컴포넌트 진입점
-│   │   ├── DraggableSticker.view.js       # UI 렌더링 및 레이아웃
-│   │   ├── DraggableSticker.logic.js      # 드래그 제스처 및 상태 관리 로직
-│   │   └── DraggableSticker.styles.js     # 스티커 전용 스타일 지정
-│   ├── PinSetupModal/                     # PIN 번호 설정 모달 컴포넌트
-│   │   ├── index.js
-│   │   └── PinSetupModal.js               
-│   ├── ComboShakeWrapper.js               # 연속 작성 시 콤보 쉐이크 애니메이션 래퍼
-│   ├── ConfettiEffect.js                  # 축하/이벤트 시 파티클(폭죽) 애니메이션 효과
-│   ├── DiaryEntryCard.js                  # 일기 목록의 개별 항목(Card) 공통 렌더링 UI
-│   ├── SearchLayer.js                     # 검색 창 및 검색 결과 오버레이 레이어
-│   └── index.js                           # 재사용 가능한 원자(Atomic) 단위 UI 내보내기 (Button, Card 등)
+├── components/                            # 🧩 공통 및 복합 UI 컴포넌트 (Shared)
+│   ├── BottomBar/                         # 작성 화면 하단 툴바 (이모지, 사진, 텍스트 도구)
+│   ├── DraggablePhoto/                    # 📸 사진 드래그/회전/크기 조절 컴포넌트
+│   ├── DraggableSticker/                  # ✨ 스티커 드래그/회전/크기 조절 컴포넌트
+│   ├── DraggableText/                     # ✍️ 텍스트 입력 및 드래그 컴포넌트
+│   ├── RotationHandle/                    # 🔄 드래그 요소의 회전/스케일 제어 핸들
+│   ├── NotionTabBar/                      # 노션 스타일의 하단 탭 내비게이션
+│   ├── PinSetupModal/                     # PIN 번호 설정 모달
+│   ├── ComboShakeWrapper.js               # 연속 기록 시 콤보 쉐이크 애니메이션
+│   ├── ConfettiEffect.js                  # 축하/이벤트 시 파티클 애니메이션
+│   ├── DiaryEntryCard.js                  # 일기 목록 아이템 공통 카드 UI
+│   ├── SearchLayer.js                     # 검색 오버레이 레이어
+│   └── index.js                           # 재사용 가능한 UI 원자 단위 내보내기
 │
-├── constants/                             # 앱 전역 설정, 테마, 정적 자산 및 목업 데이터
-│   ├── theme.js                           # 색상(COLORS), 폰트(FONTS), 그림자(SOFT_SHADOW), 간격 등 토큰
-│   ├── icons.js                           # 화면 상단/하단 내비게이션에 쓰이는 SVG/웹/이미지 아이콘 집합
-│   ├── mood.js                            # 감정(Mood) 상태 데이터 포맷 및 헬퍼 함수
-│   ├── MoodCharacters.js                  # 감정에 따른 캐릭터 에셋 매핑
-│   ├── activities.js                      # 활동(Activity) 데이터 목록 상수
-│   ├── ActivityIcons.js                   # 특정 활동과 매핑되는 고유 아이콘 
+├── constants/                             # ⚙️ 전역 설정, 테마 및 정적 데이터
+│   ├── theme.js                           # 색상(COLORS), 폰트, 그림자 등 디자인 토큰
+│   ├── mood.js                            # 감정(Mood) 상태 데이터 및 헬퍼
+│   ├── MoodCharacters.js                  # 감정별 캐릭터 에셋 매핑
+│   ├── activities.js / ActivityIcons.js   # 활동(Activity) 데이터 및 아이콘 매핑
 │   ├── stickers.js                        # 모든 스티커 메타데이터 진입점
-│   ├── DoodleStickers.js                  # 두들(Doodle) 테마 스티커 목록
-│   ├── FaceStickers.js                    # 얼굴/표정 테마 스티커 목록
-│   ├── FoodStickers.js                    # 음식 테마 스티커 목록
-│   ├── MZLineStickers.js                  # MZ 라인 테마 스티커 목록
-│   ├── PastelStickers.js                  # 파스텔 테마 스티커 목록
-│   └── ItStickers.js                      # 아이티 테마 스티커 목록
+│   └── *Stickers.js                       # 카테고리별 스티커 (Doodle, Face, Food, It, MZ, Pastel 등)
 │
-├── context/                               # 전역 상태를 파편화 없이 관리하는 React Context
+├── context/                               # 🌐 전역 상태 관리 (React Context)
 │   ├── LockContext.js                     # 앱 잠금(PIN) 상태 전역 관리
-│   └── MoodContext.js                     # 감정 테마 전역 상태 관리
+│   └── MoodContext.js                     # 감정 테마 및 전역 색상 관리
 │
-├── hooks/                                 # 여러 화면에서 재사용할 수 있는 도메인 비즈니스 로직
-│   ├── useDiary.js                        # SQLite 등과 연동하여 일기 DB CRUD 로직 처리
-│   ├── useBentoBoard.js                   # 🍱 벤토 보드 데이터 훅 (키워드 분석, 연속 기록, 캐싱)
-│   └── useSearchLogic.js                  # 검색/필터링 조건 상태 및 결과 처리
+├── hooks/                                 # ⚓️ 도메인 비즈니스 로직 (Custom Hooks)
+│   ├── useDraggable.js                    # 🛠 드래그 엔진 핵심 (회전, 스케일, 보정 로직)
+│   ├── useDiary.js                        # SQLite 연동 일기 CRUD 로직
+│   ├── useBentoBoard.js                   # 🍱 벤토 보드 통계 및 데이터 처리
+│   ├── useSearchLogic.js                  # 검색/필터링 조건 및 결과 처리
+│   └── usePremium.js                      # 인앱 결제 및 프리미엄 상태 관리
 │
-├── database/                              # 로컬 스토리지 또는 외부 API 연동 계층
-│   └── db.js                              # SQLite 로컬 DB 테이블 생성, 버전 관리 및 마이그레이션 적용
+├── database/                              # 🗄 로컬 데이터 계층
+│   └── db.js                              # SQLite 초기화, WAL 모드 설정, 트랜잭션 관리
 │
-├── screens/                               # 화면별 캡슐화된 코드 (화면 각각이 하나의 온전한 모듈)
-│   ├── ActivityListScreen/                # [활동 목록] 단위 컴포넌트 폴더
-│   ├── CalendarScreen/                    # [달력 조회] 달력을 통한 일별 감정 조회
-│   ├── DiaryFeedScreen/                   # [일기 피드] 피드 형태의 무한 스크롤 또는 전체 리스트 조회
-│   ├── LockScreen/                        # [잠금 화면] PIN 번호 검증을 위한 보호막 화면
-│   ├── MainScreen/                        # [메인 홈] 일기 작성 시작 및 당일 기록 요약 대시보드
-│   ├── MoodListScreen/                    # [감정별 조회] 특정 감정이 기록된 일기만 모아보기
-│   ├── ProfileScreen/                     # [프로필 정보] 사용자 통계 및 개인 공간 세팅
-│   ├── SearchScreen/                      # [검색 화면] 키워드 기반 상세 기록 탐색
-│   ├── SettingsScreen/                    # [설정 화면] 데이터 백업/복구 및 기능 토글 설정
-│   ├── SummaryScreen/                     # [통계 분석] 이번 달, 등 기간별 통계
-│   │   ├── components/                    # 요약 화면 전용 UI 컴포넌트
-│   │   │   ├── MoodActivityCorrelation.js # 감정과 활동 간의 상관관계 그래프 UI
-│   │   │   ├── StickerRanking.js          # 사용 빈도수가 가장 높은 스티커 랭킹 UI
-│   │   │   ├── BentoBoard.js              # 🍱 연간 모먼트 벤토 보드 뷰 (Bento Grid)
-│   │   │   └── BentoBoard.styles.js       # 벤토 보드 전용 스타일 시트
-│   ├── WriteScreen/                       # [일기 작성] 스티커 다꾸 및 일기 텍스트 작성 에디터
-│   │
-│   └── *각 화면 내 공통 파일 구성 요건 (예시: MainScreen 기준)*
-│       ├── index.js                       # 화면을 외부로 노출하는 라우팅 진입점
-│       ├── MainScreen.view.js             # 화면의 시각적인 레이아웃(JSX/UI 컴포넌트 결합)
-│       ├── MainScreen.logic.js            # 데이터 패칭, 이벤트 반응, 상태 등 추상화된 비즈니스 훅
-│       └── MainScreen.styles.js           # 뷰에서 필요한 StyleSheet 파편화 방지
+├── screens/                               # 📱 화면별 독립 모듈 (Encapsulated Modules)
+│   ├── ActivityListScreen/                # 활동 기록 목록 및 추가
+│   ├── CalendarScreen/                    # 달력 기반 감정/기록 조회
+│   ├── DiaryFeedScreen/                   # 전체 일기 피드 리스트
+│   ├── LockScreen / LoginScreen/          # 보안 및 인증 화면
+│   ├── MainScreen/                        # 메인 홈 대시보드
+│   ├── MoodListScreen/                    # 특정 감정별 일기 모아보기
+│   ├── ProfileScreen/                     # 사용자 설정 및 통계 요약
+│   ├── SearchScreen/                      # 키워드 기반 기록 탐색
+│   ├── SettingsScreen/                    # 백업/복구 및 앱 환경 설정
+│   ├── SummaryScreen/                     # 상세 통계 및 🍱 벤토 보드
+│   └── WriteScreen/                       # 🎨 일기 작성 및 다꾸 에디터
 │
-└── utils/                                 # 특정 도메인에 종속되지 않은 순수 헬퍼 함수
-    ├── backupRestore.js                   # JSON 생성/읽기, 로컬 캐시 등을 통한 백업 및 복원 엔진
-    └── wordAnalyzer.js                    # 📝 단어 빈도 분석 유틸 (불용어 사전, 텍스트 수집/분석)
+└── utils/                                 # 🛠 순수 헬퍼 및 유틸리티
+    ├── backupRestore.js                   # 데이터 + 사진 패키징 백업/복원 엔진
+    └── wordAnalyzer.js                    # 📝 Hermes 호환 단어 빈도 분석 유틸
 ```
 
 ---
 
-## 🛠 핵심 원칙 (Core Principles)
+## 🏗 화면/컴포넌트 내부 구조 (Modular UI)
 
-### 1. **디자인(View)과 로직(Logic)의 완전한 분리**
+각 화면과 복합 컴포넌트는 반드시 아래 4개 파일로 구성되어 역할이 분리됩니다.
 
-- 각 화면 모듈은 반드시 `view.js`와 `logic.js`로 분리하여 관리합니다.
-- `view.js`는 `logic.js` 훅을 호출하여 반환받은 데이터와 함수(Event Handler)만으로 뷰를 렌더링하며, **안에서 복잡한 상태나 데이터를 조작하지 않습니다.** UI 수정이나 레이아웃 변경 시에는 `view.js`와 `styles.js`만 확인합니다.
+| 파일명 | 역할 | 설명 |
+|:--- |:--- |:--- |
+| **index.js** | 진입점 (Entry) | 외부 노출을 위한 최상위 파일 (주로 Navigator에서 참조) |
+| **.logic.js** | 로직 (Logic) | `useState`, `useEffect`, 이벤트 핸들러 등 모든 상태 로직 캡슐화 |
+| **.view.js** | 뷰 (View) | 순수 UI 렌더링. Logic 훅에서 받은 데이터와 함수만 사용하여 레이아웃 구성 |
+| **.styles.js** | 스타일 (Styles) | 디자인 요소(StyleSheet)를 분리하여 View 가독성 확보 |
 
-### 2. **기능 중심 모듈화 (Encapsulation)**
+---
 
-- 한 화면 내에서만 쓰이는 특징적이고 복잡한 하위 컴포넌트는 글로벌 `src/components/`가 아닌 해당 기능 단위 화면(예: `SummaryScreen/components/`)에 두어 응집도를 높입니다.
-- 관련된 코드는 흩어지지 않고 같은 폴더 안에 머물러야 합니다.
+## ⚙️ 프로젝트 주요 설정 파일
 
-### 3. **중앙화된 상수 (Constants First)**
+- **app.json**: Expo 앱 메타데이터 (이름, 아이콘, 스플래시, 플랫폼별 설정).
+- **eas.json**: Expo Application Services 빌드 및 배포 설정.
+- **metro.config.js**: React Native용 번들러(Metro) 커스텀 설정.
+- **package.json**: 의존성 라이브러리 및 스크립트 관리.
+- **tsconfig.json**: TypeScript 설정 (JS 파일이더라도 타입 체크/힌트용으로 존재).
 
-- 아이콘 모양, 스티커 세트, 색상값, 패딩 치수는 하드코딩(_매직 넘버/매직 스트링_)하지 않고 반드시 `src/constants/` 내 모듈을 사용함으로써 앱 전반적인 스킨 변경(예: 다크 모드 등)이나 규칙 개편을 한 곳에서 통제합니다.
+---
 
-### 4. **단일 진입점 전략 (Index Export)**
+## 🎨 자산 관리 (Assets)
 
-- 외부 모듈에서 폴더 내의 컴포넌트/화면을 임포트할 땐 `import Screen from './Screen'`처럼 `index.js`를 거치게 만들어, 내부 구조가 어떻게 바뀌든 외부 연결(App.js 등의 Navigators)이 깨지지 않는 깔끔함을 유지합니다.
+- **assets/characters/**: 감정 상태를 표현하는 캐릭터 이미지 에셋.
+- **assets/app-screenshots/**: 앱 스토어 등록을 위한 마케팅 스크린샷.
+- **assets/icon.png / splash.png**: 앱 아이콘 및 실행 시 스플래시 이미지.
+
+---
+
+## 🛠 핵심 설계 원칙
+
+1. **Strict Separation**: View는 로직을 모르고, Logic은 UI 구조를 모릅니다. 오직 인터페이스(Props/Returns)로만 대화합니다.
+2. **Atomic to Composite**: `src/components/index.js`에서 작은 단위(Atomic)를 제공하고, 각 화면은 이를 조합하여 복합(Composite) 기능을 구성합니다.
+3. **Single Source of Truth**: 모든 상수(색상, 치수, 텍스트)는 `src/constants/`를 통해서만 관리되어 일관성을 유지합니다.
+
+---
+*Last Updated: 2026-03-18*
