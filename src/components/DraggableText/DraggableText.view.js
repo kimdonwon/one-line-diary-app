@@ -64,7 +64,6 @@ export const DraggableText = React.memo(({
     const inputRef = useRef(null);
     const isNewlyCreated = useRef(autoFocus);
     const blurTimerRef = useRef(null);
-    const [inputKey, setInputKey] = useState(0); // defaultValue 갱신용 키
 
     const handleEndEditingProxy = () => {
         handleFinishEditing();
@@ -134,7 +133,9 @@ export const DraggableText = React.memo(({
         if (!isEditing) {
             localTextRef.current = text;
             setDisplayText(text);
-            setInputKey(k => k + 1); // defaultValue 갱신을 위해 key 변경
+            if (inputRef.current) {
+                inputRef.current.setNativeProps({ text });
+            }
         }
     }, [text]);
 
@@ -158,7 +159,9 @@ export const DraggableText = React.memo(({
             } else {
                 localTextRef.current = trimmed;
                 setDisplayText(trimmed); // 표시용 state 업데이트
-                setInputKey(k => k + 1);
+                if (inputRef.current) {
+                    inputRef.current.setNativeProps({ text: trimmed });
+                }
                 if (trimmed !== currentText) {
                     onTextChange?.(id, trimmed);
                 }
@@ -220,8 +223,8 @@ export const DraggableText = React.memo(({
                 {
                     left: pan.x,
                     top: pan.y,
-                    // maxWidth: isEditing ? dynamicMaxWidth : canvasWidth, // 👈 실시간 줄바꿈 적용
                     maxWidth: dynamicMaxWidth,
+                    minWidth: isEditing ? dynamicMaxWidth : undefined, // 💡 핵심: 편집 중 상자 너비를 최대치로 강제 고정 (Yoga 버그 차단)
                     transform: [
                         {
                             rotate: rotation.interpolate({
@@ -237,23 +240,22 @@ export const DraggableText = React.memo(({
             ]}
             pointerEvents={isEditing ? 'box-none' : 'auto'} // 💡 편집 중일 땐 자기 자신(Animated.View)이 터치를 안 삼키도록 함
         >
-            <View style={[styles.textWrapper, { backgroundColor: bgColor }]} pointerEvents={isEditing ? 'box-none' : 'auto'}>
+            <View style={[styles.textWrapper, { backgroundColor: bgColor, width: isEditing ? '100%' : 'auto' }]} pointerEvents={isEditing ? 'box-none' : 'auto'}>
                 <TextInput
-                    key={`input-${inputKey}`}
                     ref={inputRef}
                     style={[
                         styles.unifiedText,
                         currentFontStyle,
-                        { color: (displayText || isEditing) ? color : 'rgba(0,0,0,0.25)' }
+                        { color: color, width: isEditing ? '100%' : 'auto' } // 💡 입력창 내부 너비도 100%로 고정하여 단어 크기 변화에 무반응하도록 처리
                     ]}
-                    defaultValue={isEditing ? localTextRef.current : (displayText || '탭하여 입력...')}
+                    defaultValue={localTextRef.current}
                     onChangeText={handleChangeText}
                     multiline
                     editable={isEditing}
                     autoFocus={autoFocus}
                     onBlur={handleFinishEditing}
                     onEndEditing={handleEndEditingProxy}
-                    placeholder="..."
+                    placeholder="탭하여 입력..."
                     placeholderTextColor="rgba(0,0,0,0.25)"
                     scrollEnabled={false}
                     blurOnSubmit={false}
