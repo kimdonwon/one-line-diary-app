@@ -31,6 +31,16 @@ export const FONTS = {
     calendarHeader: { fontSize: 13, fontWeight: '700', color: '#9E8E82', textTransform: 'uppercase' },
 };
 
+// 📝 일기장 폰트 프리셋 (쓰기 및 피드 공통 사양 - Single Source of Truth)
+export const FONT_PRESETS_MAP = {
+    'basic': { fontFamily: 'GowunDodum_400Regular' },
+    'diary': { fontFamily: 'NanumMyeongjo_400Regular', lineHeight: 20 },
+    'hand': { fontFamily: 'SingleDay_400Regular', fontSize: 15 },
+    'y2k': { fontFamily: 'NanumPenScript_400Regular', fontSize: 17 },
+    'bebas': { fontFamily: 'BebasNeue_400Regular', fontSize: 15, letterSpacing: 2 },
+    'dmsans': { fontFamily: 'DMSans_400Regular', fontSize: 12 },
+};
+
 export const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
 
 export const RADIUS = { sm: 12, md: 18, lg: 24, full: 999 };

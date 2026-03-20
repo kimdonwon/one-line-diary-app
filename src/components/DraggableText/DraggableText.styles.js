@@ -14,7 +14,7 @@ export const styles = StyleSheet.create({
         borderRadius: 8,
         paddingHorizontal: 10,
         paddingVertical: 6,
-        // minWidth: 60,
+        minWidth: 20,
         minHeight: 30,
     },
     unifiedText: {
@@ -23,7 +23,7 @@ export const styles = StyleSheet.create({
         lineHeight: 17,
         padding: 0,                // TextInput의 기본 패딩 제거
         margin: 0,
-        // minWidth: 60,
+        minWidth: 20,
         textAlignVertical: 'top',
     },
     selected: {

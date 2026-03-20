@@ -3,7 +3,7 @@ import { View, Text, Image, Animated, PanResponder, Keyboard } from 'react-nativ
 
 import { useDraggablePhotoLogic } from './DraggablePhoto.logic';
 import { styles } from './DraggablePhoto.styles';
-import { CameraIcon } from '../../constants/icons';
+import { BasePhoto } from '../canvasElements/BasePhoto';
 
 /**
  * 📷 폴라로이드 감성의 드래그 가능한 사진 컴포넌트
@@ -77,47 +77,8 @@ const DraggablePhoto = React.memo(({
             ]}
             {...panResponder.panHandlers}
         >
-            <View
-                style={[
-                    styles.polaroidFrame,
-                    photo.frameType === 'black' && styles.polaroidFrameBlack,
-                    photo.frameType === 'pink' && styles.polaroidFramePink,
-                    photo.frameType === 'blue' && styles.polaroidFrameBlue,
-                    photo.frameType === 'mint' && styles.polaroidFrameMint,
-                    photo.frameType === 'gray' && styles.polaroidFrameGray,
-                    photo.frameType === 'mocha' && styles.polaroidFrameMocha,
-                    photo.frameType === 'lavender' && styles.polaroidFrameLavender,
-                    photo.frameType === 'lime' && styles.polaroidFrameLime,
-                    photo.frameType === 'vintage_cream' && styles.polaroidFrameVintageCream,
-                    photo.frameType === 'soda_blue' && styles.polaroidFrameSodaBlue,
-                    photo.frameType === 'butter_yellow' && styles.polaroidFrameButterYellow,
-                    photo.frameType === 'transparent_white' && styles.polaroidFrameTransparentWhite,
-                    photo.frameType === 'transparent_gray' && styles.polaroidFrameTransparentGray,
-                    isGhost && { opacity: 0, elevation: 0 },
-                ]}
-            >
-                {photo.uri ? (
-                    <Image
-                        source={{ uri: photo.uri }}
-                        style={[
-                            styles.polaroidImage,
-                            (photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray') && styles.transparentImage,
-                            (photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray') && isSelected && styles.transparentImageSelected,
-                        ]}
-                        resizeMode="cover"
-                    />
-                ) : (
-                    <View style={[
-                        styles.polaroidImage,
-                        styles.placeholderContainer,
-                        (photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray') && styles.transparentImage
-                    ]}>
-                        <CameraIcon size={28} color="#C4C4C4" />
-                        <Text style={styles.placeholderText}>사진 선택</Text>
-                    </View>
-                )}
-                <View style={styles.polaroidBottom} />
-            </View>
+            {/* 📷 순수 시각 레이어 (BasePhoto) */}
+            <BasePhoto photo={photo} isGhost={isGhost} isSelected={isSelected} />
 
             {/* 🕹️ 통합 조작 UI (드래그 막대, 회전 핸들 포함) */}
             {renderControls({ containerRef })}

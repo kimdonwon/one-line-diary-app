@@ -9,6 +9,9 @@ import Modal from "react-native-modal";
 import { ComboShakeWrapper } from "./ComboShakeWrapper";
 export { ComboShakeWrapper };
 export * from './DraggableText'; // ✏️ 추가
+import { BasePhoto } from './canvasElements/BasePhoto';
+import { BaseSticker } from './canvasElements/BaseSticker';
+import { BaseText } from './canvasElements/BaseText';
 
 // ─── Custom Soft Alert Modal ───
 export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmText = "확인", secondaryText, onSecondaryConfirm, onClose }) {
@@ -59,17 +62,6 @@ export function SoftAlertModal({ isVisible, title, message, onConfirm, confirmTe
 export function StaticSticker({ sticker, bounds }) {
   if (!sticker) return null;
 
-  // 스티커 렌더링 (WriteScreen의 DraggableSticker와 동일한 사이즈 적용)
-  const renderContent = () => {
-    if (sticker.isGraphic) {
-      const GraphicComponent = getStickerComponent(sticker.type);
-      if (GraphicComponent) {
-        return <GraphicComponent size={100} />;
-      }
-    }
-    return <Text style={{ fontSize: 80, lineHeight: 90 }}>{sticker.type}</Text>;
-  };
-
   return (
     <View style={{
       position: 'absolute',
@@ -83,9 +75,7 @@ export function StaticSticker({ sticker, bounds }) {
       ],
       transformOrigin: ['0%', '0%', 0]
     }}>
-      <View style={{ width: 100, height: 100, alignItems: 'center', justifyContent: 'center' }}>
-        {renderContent()}
-      </View>
+      <BaseSticker sticker={sticker} />
     </View>
   );
 }
@@ -95,56 +85,21 @@ export function StaticPhoto({ photo }) {
   if (!photo) return null;
 
   const isTransparent = photo.frameType === 'transparent_white' || photo.frameType === 'transparent_gray';
-  const isBlackFrame = photo.frameType === 'black';
-
-  // 폴라로이드 프레임 렌더링 (일반 + 반투명 동일 구조)
-  const bgColor = PHOTO_FRAME_COLORS[photo.frameType] || PHOTO_FRAME_COLORS.white;
-  const borderColor = isTransparent
-    ? (photo.frameType === 'transparent_gray' ? 'rgba(180, 180, 178, 0.5)' : 'rgba(220, 220, 218, 0.5)')
-    : (isBlackFrame ? 'rgba(255, 255, 255, 0.1)' : 'rgba(200, 190, 180, 0.4)');
 
   return (
     <View style={{
       position: 'absolute',
       left: photo.x,
       top: photo.y,
-      padding: 2,
-      zIndex: isTransparent ? 1 : 2, // 반투명은 스티커/텍스트보다 아래에 배치
+      padding: 2, // DraggablePhoto 패딩 보정
+      zIndex: isTransparent ? 1 : 2, // 반투명은 일반 사진 아래로
       transform: [
         { rotate: `${photo.rotation || 0}deg` },
         { scale: photo.scale || 1 }
       ],
       transformOrigin: ['0%', '0%', 0]
     }}>
-      <View style={{
-        width: 126,
-        height: 144, // 일반 프레임과 동일한 하단 여백 구조
-        backgroundColor: bgColor,
-        borderRadius: 4,
-        paddingTop: 8,
-        paddingHorizontal: 8,
-        paddingBottom: 20, // 하단 넉넉한 여백
-        shadowColor: isBlackFrame ? '#000000' : '#8B7E74',
-        shadowOffset: { width: 1, height: 3 },
-        shadowOpacity: isTransparent ? 0.15 : (isBlackFrame ? 0.35 : 0.25),
-        shadowRadius: isTransparent ? 4 : 6,
-        elevation: isTransparent ? 0 : 4, // 텍스트 위로 튀어나오는 현상 방지용 elevation 0
-        borderWidth: 0.5,
-        borderColor: borderColor,
-      }}>
-        <Image
-          source={{ uri: photo.uri }}
-          style={{
-            width: 110,
-            height: 110,
-            borderRadius: 2,
-            backgroundColor: isBlackFrame ? '#000000' : '#F0ECE8',
-            opacity: isTransparent ? 0.35 : 1, // 반투명 프레임은 사진도 연하게 처리
-          }}
-          resizeMode="cover"
-        />
-        <View style={{ height: 16 }} />
-      </View>
+      <BasePhoto photo={photo} />
     </View>
   );
 }
@@ -152,16 +107,6 @@ export function StaticPhoto({ photo }) {
 // ─── Static Text (View Only) ───
 export function StaticText({ textNode }) {
   if (!textNode || !textNode.text) return null;
-
-  const fontSpecs = {
-    'basic': { fontFamily: 'GowunDodum_400Regular' },
-    'diary': { fontFamily: 'NanumMyeongjo_400Regular', lineHeight: 20 },
-    'hand': { fontFamily: 'SingleDay_400Regular', fontSize: 15 },
-    'y2k': { fontFamily: 'NanumPenScript_400Regular', fontSize: 17 },
-  };
-
-  const spec = fontSpecs[textNode.fontId] || fontSpecs['basic'];
-  const isTransparent = textNode.bgColor === 'transparent';
 
   return (
     <View style={{
@@ -177,27 +122,8 @@ export function StaticText({ textNode }) {
       ],
       transformOrigin: ['0%', '0%', 0]
     }}>
-      <View style={{
-        backgroundColor: isTransparent ? 'transparent' : (textNode.bgColor || 'transparent'),
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        minWidth: 60,
-        minHeight: 30,
-        justifyContent: 'center',
-      }}>
-        <Text style={[
-          {
-            fontSize: spec.fontSize || 13,
-            lineHeight: spec.lineHeight || 17,
-            includeFontPadding: false,
-            color: textNode.color || '#37352F',
-            fontFamily: spec.fontFamily,
-          }
-        ]}>
-          {textNode.text}
-        </Text>
-      </View>
+      {/* 🎨 순수 시각 레이어 (BaseText) */}
+      <BaseText textNode={textNode} />
     </View>
   );
 }

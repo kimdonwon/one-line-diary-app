@@ -3,35 +3,7 @@ import { View, Text, TextInput, Animated, TouchableOpacity, Keyboard, Platform, 
 import { styles } from './DraggableText.styles';
 import { useDraggableTextLogic } from './DraggableText.logic';
 import { SYSTEM_LIMITS } from '../../constants/limits';
-
-
-// FONT_PRESETS 동일 설정 (WriteScreen과 매칭)
-const FONT_PRESETS_MAP = {
-    'basic': {
-        fontFamily: 'GowunDodum_400Regular',
-    },
-    'diary': {
-        fontFamily: 'NanumMyeongjo_400Regular',
-        lineHeight: 20,
-    },
-    'hand': {
-        fontFamily: 'SingleDay_400Regular',
-        fontSize: 15,
-    },
-    'y2k': {
-        fontFamily: 'NanumPenScript_400Regular',
-        fontSize: 17,
-    },
-    'bebas': {
-        fontFamily: 'BebasNeue_400Regular',
-        fontSize: 15,
-        letterSpacing: 2,
-    },
-    'dmsans': {
-        fontFamily: 'DMSans_400Regular',
-        fontSize: 12,
-    },
-};
+import { BaseText, getTextStyle } from '../canvasElements/BaseText';
 
 
 
@@ -114,7 +86,7 @@ export const DraggableText = React.memo(({
     // 레이아웃상의 maxWidth = 남은 공간 / 현재 스케일
     const dynamicMaxWidth = Animated.divide(remainingSpace, scale);
 
-    const currentFontStyle = FONT_PRESETS_MAP[fontId] || FONT_PRESETS_MAP['basic'];
+    const currentFontStyle = getTextStyle(fontId, color);
 
     // autoFocus일 때 선택 상태를 강제로 켜고 포커스 진입
     useEffect(() => {
@@ -240,13 +212,13 @@ export const DraggableText = React.memo(({
             ]}
             pointerEvents={isEditing ? 'box-none' : 'auto'} // 💡 편집 중일 땐 자기 자신(Animated.View)이 터치를 안 삼키도록 함
         >
-            <View style={[styles.textWrapper, { backgroundColor: bgColor, width: isEditing ? '100%' : 'auto' }]} pointerEvents={isEditing ? 'box-none' : 'auto'}>
+            <BaseText textNode={{ fontId, color, bgColor }} style={{ width: isEditing ? '100%' : 'auto' }}>
                 <TextInput
                     ref={inputRef}
                     style={[
                         styles.unifiedText,
                         currentFontStyle,
-                        { color: color, width: isEditing ? '100%' : 'auto' } // 💡 입력창 내부 너비도 100%로 고정하여 단어 크기 변화에 무반응하도록 처리
+                        { width: isEditing ? '100%' : 'auto' }
                     ]}
                     defaultValue={localTextRef.current}
                     onChangeText={handleChangeText}
@@ -262,7 +234,7 @@ export const DraggableText = React.memo(({
                     maxLength={SYSTEM_LIMITS.MAX_TEXT_LENGTH}
                     pointerEvents={isEditing ? 'auto' : 'none'}
                 />
-            </View>
+            </BaseText>
 
             {/* 🕹️ 통합 조작 UI (수정 버튼, 드래그 막대, 회전 핸들 포함) */}
             {renderControls({

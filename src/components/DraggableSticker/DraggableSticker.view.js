@@ -4,13 +4,14 @@ import { getStickerComponent } from '../../constants/stickers';
 
 import { useDraggableLogic } from './DraggableSticker.logic';
 import { styles } from './DraggableSticker.styles';
+import { BaseSticker } from '../canvasElements/BaseSticker';
 
 
 /**
  * 🎨 스티커 렌더링에만 초점을 맞춘 화면 분리 모듈입니다.
  * 핀치 회전 + 회전 핸들 지원
  */
-export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onDragEnd, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected: externalIsSelected }) => {
+export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onDragEnd, onInteractionStart, onInteractionEnd, onDragMove, onDragDrop, onSelect, isSelected: externalIsSelected, isGhost = false }) => {
     const {
         pan,
         rotation,
@@ -32,15 +33,7 @@ export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onD
 
     const containerRef = useRef(null);
 
-    const renderContent = () => {
-        if (sticker.isGraphic) {
-            const GraphicComponent = getStickerComponent(sticker.type);
-            if (GraphicComponent) {
-                return <GraphicComponent size={100} />;
-            }
-        }
-        return <Text style={[styles.textSticker, { fontSize: 80, lineHeight: 90 }]} selectable={false}>{sticker.type}</Text>;
-    };
+
 
     const rotateStr = rotation.interpolate({
         inputRange: [-360, 360],
@@ -78,8 +71,9 @@ export const DraggableStickerView = React.memo(({ sticker, bounds, onDelete, onD
             ]}
             {...panResponder.panHandlers}
         >
+            {/* 🎨 순수 시각 레이어 (BaseSticker) */}
             <View pointerEvents="none" style={{ width: 100, height: 100, alignItems: 'center', justifyContent: 'center' }}>
-                {renderContent()}
+                <BaseSticker sticker={sticker} isGhost={isGhost} />
             </View>
 
             {/* 🕹️ 통합 조작 UI (드래그 막대, 회전 핸들 포함) */}

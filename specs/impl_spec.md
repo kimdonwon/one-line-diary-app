@@ -62,6 +62,22 @@
 - **DraggableText 최적화**:
   - `TextInput`을 Uncontrolled 모드로 운용하여 한글 IME 조합 중 리렌더링 제거.
   - 텍스트 값은 `useRef`로 추적, 편집 종료 시에만 state 동기화.
+  - 편집 중 `minWidth: dynamicMaxWidth`를 강제 적용하여 Yoga 레이아웃 재계산으로 인한 커서 점프 차단.
+
+### 3.2 캔버스 요소 아키텍처 (Source of Truth 단일화)
+
+모든 캔버스 요소는 **"뷰의 Source of Truth는 하나로 합치고, 통제/이벤트 로직만 이원화한다"** 원칙을 따릅니다.
+
+| 요소 | Base (순수 시각) | Draggable (편집 캔버스) | Static (피드 뷰) |
+|:---|:---|:---|:---|
+| **스티커** | `canvasElements/BaseSticker.js` | `DraggableSticker.view.js` → `<BaseSticker>` | `StaticSticker` → `<BaseSticker>` |
+| **사진** | `canvasElements/BasePhoto.js` | `DraggablePhoto.view.js` → `<BasePhoto>` | `StaticPhoto` → `<BasePhoto>` |
+| **텍스트** | `canvasElements/BaseText.js` | `DraggableText.view.js` → `<BaseText>` | `StaticText` → `<BaseText>` |
+
+- **Base 컴포넌트**: `pointerEvents="none"` 수준의 순수 시각 렌더러. 로직/이벤트 없음.
+- **Draggable 컴포넌트**: Base를 감싸고 `useDraggable` 훅으로 드래그/회전/스케일 로직을 주입.
+- **Static 컴포넌트**: Base를 감싸고 고정 좌표/회전/스케일만 적용. 로직 없음.
+- **`getTextStyle(fontId, color)`**: 텍스트 전용 폰트 스타일 헬퍼. `BaseText.js`에서 export하여 `DraggableText`와 `StaticText` 모두에서 동일한 폰트 렌더링 보장.
 
 ---
 
