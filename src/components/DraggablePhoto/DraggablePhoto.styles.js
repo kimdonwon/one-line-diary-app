@@ -66,6 +66,30 @@ export const styles = StyleSheet.create({
         borderColor: 'rgba(180, 180, 180, 0.5)',
         shadowColor: '#999999',
     },
+    polaroidFrameMocha: {
+        backgroundColor: PHOTO_FRAME_COLORS.mocha,
+        borderColor: 'rgba(120, 80, 60, 0.4)',
+    },
+    polaroidFrameLavender: {
+        backgroundColor: PHOTO_FRAME_COLORS.lavender,
+        borderColor: 'rgba(180, 140, 220, 0.4)',
+    },
+    polaroidFrameLime: {
+        backgroundColor: PHOTO_FRAME_COLORS.lime,
+        borderColor: 'rgba(160, 200, 80, 0.4)',
+    },
+    polaroidFrameVintageCream: {
+        backgroundColor: PHOTO_FRAME_COLORS.vintage_cream,
+        borderColor: 'rgba(220, 210, 180, 0.4)',
+    },
+    polaroidFrameSodaBlue: {
+        backgroundColor: PHOTO_FRAME_COLORS.soda_blue,
+        borderColor: 'rgba(160, 200, 240, 0.4)',
+    },
+    polaroidFrameButterYellow: {
+        backgroundColor: PHOTO_FRAME_COLORS.butter_yellow,
+        borderColor: 'rgba(230, 200, 50, 0.4)',
+    },
     // ── 반투명 프레임 추가 (일반 폴라로이드와 동일한 크기 및 모양) ──
     polaroidFrameTransparentWhite: {
         backgroundColor: PHOTO_FRAME_COLORS.transparent_white,

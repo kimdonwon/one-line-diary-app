@@ -76,4 +76,10 @@ export const PHOTO_FRAME_COLORS = {
     gray: '#E0E0E0',
     transparent_white: 'rgba(255, 255, 255, 0.88)',
     transparent_gray: 'rgba(200, 200, 198, 0.82)',
+    mocha: '#A47864',
+    lavender: '#D8B4FE',
+    lime: '#BEF264',
+    vintage_cream: '#FEFCE8',
+    soda_blue: '#BAE6FD',
+    butter_yellow: '#FEF08A',
 };

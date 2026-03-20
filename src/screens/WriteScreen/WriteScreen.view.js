@@ -930,7 +930,7 @@ export function WriteScreenView({ route, navigation }) {
                                             </TouchableOpacity>
                                         </View>
                                     </View>
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoFrameContainer}>
+                                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.photoFrameContainer}>
                                         <TouchableOpacity style={styles.frameOptionBtn} onPress={() => handleAddPhoto('white')} activeOpacity={0.7}>
                                             <View style={[styles.framePreview, styles.framePreviewWhite]}><View style={styles.frameInnerPhoto} /></View>
                                         </TouchableOpacity>
@@ -948,6 +948,24 @@ export function WriteScreenView({ route, navigation }) {
                                         </TouchableOpacity>
                                         <TouchableOpacity style={styles.frameOptionBtn} onPress={() => isPremium ? handleAddPhoto('mint') : Alert.alert('프리미엄 전용 💎', '파스텔 프레임은 프리미엄 회원만 사용할 수 있어요.')} activeOpacity={0.7}>
                                             <View style={[styles.framePreview, styles.framePreviewMint, !isPremium && { opacity: 0.8 }]}><View style={styles.frameInnerPhoto} />{!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}</View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => isPremium ? handleAddPhoto('mocha') : Alert.alert('프리미엄 전용 💎', '모카 무스 프레임은 프리미엄 회원만 사용할 수 있어요.')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewMocha, !isPremium && { opacity: 0.8 }]}><View style={styles.frameInnerPhoto} />{!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}</View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => isPremium ? handleAddPhoto('lavender') : Alert.alert('프리미엄 전용 💎', '라벤더 팝 프레임은 프리미엄 회원만 사용할 수 있어요.')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewLavender, !isPremium && { opacity: 0.8 }]}><View style={styles.frameInnerPhoto} />{!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}</View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => isPremium ? handleAddPhoto('lime') : Alert.alert('프리미엄 전용 💎', '라임 크림 프레임은 프리미엄 회원만 사용할 수 있어요.')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewLime, !isPremium && { opacity: 0.8 }]}><View style={styles.frameInnerPhoto} />{!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}</View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => isPremium ? handleAddPhoto('vintage_cream') : Alert.alert('프리미엄 전용 💎', '빈티지 크림 프레임은 프리미엄 회원만 사용할 수 있어요.')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewVintageCream, !isPremium && { opacity: 0.8 }]}><View style={styles.frameInnerPhoto} />{!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}</View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => isPremium ? handleAddPhoto('soda_blue') : Alert.alert('프리미엄 전용 💎', '소다 블루 프레임은 프리미엄 회원만 사용할 수 있어요.')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewSodaBlue, !isPremium && { opacity: 0.8 }]}><View style={styles.frameInnerPhoto} />{!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}</View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={styles.frameOptionBtn} onPress={() => isPremium ? handleAddPhoto('butter_yellow') : Alert.alert('프리미엄 전용 💎', '버터 옐로우 프레임은 프리미엄 회원만 사용할 수 있어요.')} activeOpacity={0.7}>
+                                            <View style={[styles.framePreview, styles.framePreviewButterYellow, !isPremium && { opacity: 0.8 }]}><View style={styles.frameInnerPhoto} />{!isPremium && <View style={styles.premiumTag}><Text style={{ fontSize: 8 }}>✨</Text></View>}</View>
                                         </TouchableOpacity>
                                     </ScrollView>
                                 </View>

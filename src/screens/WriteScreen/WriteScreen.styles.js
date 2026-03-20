@@ -118,6 +118,7 @@ export const styles = StyleSheet.create({
     // ─── 📷 사진 프레임 선택 바텀시트 영역 (MZ 폴꾸 테마) ───
     photoFrameContainer: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         justifyContent: 'flex-start',
         gap: 12,
         paddingVertical: 6, // 12 -> 6 으로 컨테이너 상하 패딩 축소
@@ -167,6 +168,30 @@ export const styles = StyleSheet.create({
     framePreviewGray: {
         backgroundColor: '#E5E5E5',
         borderColor: '#D1D1D1',
+    },
+    framePreviewMocha: {
+        backgroundColor: '#A47864',
+        borderColor: 'rgba(120, 80, 60, 0.4)',
+    },
+    framePreviewLavender: {
+        backgroundColor: '#D8B4FE',
+        borderColor: 'rgba(180, 140, 220, 0.4)',
+    },
+    framePreviewLime: {
+        backgroundColor: '#BEF264',
+        borderColor: 'rgba(160, 200, 80, 0.4)',
+    },
+    framePreviewVintageCream: {
+        backgroundColor: '#FEFCE8',
+        borderColor: 'rgba(220, 210, 180, 0.4)',
+    },
+    framePreviewSodaBlue: {
+        backgroundColor: '#BAE6FD',
+        borderColor: 'rgba(160, 200, 240, 0.4)',
+    },
+    framePreviewButterYellow: {
+        backgroundColor: '#FEF08A',
+        borderColor: 'rgba(230, 200, 50, 0.4)',
     },
     // ── 반투명 프레임 프리뷰 ──
     framePreviewTransparentWhite: {
@@ -884,26 +909,26 @@ export const styles = StyleSheet.create({
     },
     colorScrollWrap: {
         borderRadius: 8,
-        paddingVertical: 6, // 10 -> 6 으로 압축
+        paddingVertical: 4, // 6 -> 4 압축
         paddingHorizontal: 0,
-        marginBottom: 8, // 16 -> 8 로 폰트 그리드와의 간격 축소
+        marginBottom: 4, // 8 -> 4 로 폰트 그리드와의 간격 축소
     },
     colorScrollContent: {
         alignItems: 'flex-start',
     },
     colorRowsContainer: {
         flexDirection: 'column',
-        gap: 10, // 14 -> 10 으로 두 줄 사이 간격 축소
+        gap: 6, // 10 -> 6 으로 줄임
     },
     colorRow: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     colorBtn: {
-        width: 38,
-        height: 38,
-        borderRadius: 19,
-        marginRight: 10,
+        width: 32, // 38 -> 32
+        height: 32, // 38 -> 32
+        borderRadius: 16,
+        marginRight: 8,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
@@ -941,11 +966,11 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
-        rowGap: 8,
+        rowGap: 6, // 8 -> 6
     },
     fontGridItem: {
         width: '32%', // 3열 배치
-        aspectRatio: 1.8, // 살짝 더 직사각형
+        aspectRatio: 2.2, // 1.8 -> 2.2 로 직사각형 형태를 주어 세로 높이를 더 줄임
         borderRadius: 6, // 각진 노션 스타일
         justifyContent: 'center',
         alignItems: 'center',
@@ -960,12 +985,11 @@ export const styles = StyleSheet.create({
     },
     fontGridItemText: {
         color: '#111827',
-        fontSize: 15,
+        fontSize: 14, // 15 -> 14로 약간 축소해서 버튼 안에 텍스트가 잘 맞게 함
         textAlign: 'center',
     },
     fontGridItemTextActive: {
         color: '#111827',
-        fontWeight: 'bold',
     },
 
     // ─── 🗑️ 인스타그램 스타일 다크 펄스 쓰레기통 ───
