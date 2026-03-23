@@ -24,7 +24,14 @@
       "expo-asset",
       "expo-sqlite",
       "expo-mail-composer",
-      "expo-font"
+      "expo-font",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-1781835804890106~9205277146",
+          "iosAppId": "ca-app-pub-1781835804890106~9205277146"
+        }
+      ]
     ],
     "extra": {
       "eas": {

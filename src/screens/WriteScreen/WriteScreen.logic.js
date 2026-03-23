@@ -9,6 +9,8 @@ import { useDiaryForDate, useActivitiesForDate, saveDiary, saveActivities } from
 import { getSetting, saveSetting } from '../../database/db';
 import { usePremium } from '../../hooks/usePremium';
 import { SYSTEM_LIMITS } from '../../constants/limits';
+import { RewardedAd, RewardedAdEventType, AdEventType } from 'react-native-google-mobile-ads';
+import { ADMOB_IDS } from '../../constants/ads';
 
 /**
  * ⚙️ 작성(Write) 화면의 모든 비즈니스 로직과 폼 상태 관리를 담당하는 커스텀 훅입니다.
@@ -75,6 +77,85 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const [showAlert, setShowAlert] = useState(false);
     const [alertConfig, setAlertConfig] = useState({ title: '', message: '' });
     const [isInteracting, setIsInteracting] = useState(false); // 스티커 등 조작 중인지 여부 (스크롤 방지용)
+
+    // 📺 광고 상태 관리
+    const [isAdLoaded, setIsAdLoaded] = useState(false);
+    const rewardedAdRef = useRef(null);
+    const rewardTypeRef = useRef(null); // 'sticker' | 'text'
+    // 상태 접근을 위한 ref
+    const stateRef = useRef({ currentPageIndex, adBonusStickers, adBonusTexts, pageStickers, pageTexts });
+    useEffect(() => {
+        stateRef.current = { currentPageIndex, adBonusStickers, adBonusTexts, pageStickers, pageTexts };
+    }, [currentPageIndex, adBonusStickers, adBonusTexts, pageStickers, pageTexts]);
+
+    useEffect(() => {
+        if (isPremium) return;
+
+        let isMounted = true;
+
+        try {
+            const ad = RewardedAd.createForAdRequest(ADMOB_IDS.REWARDED, {
+                requestNonPersonalizedAdsOnly: true,
+            });
+
+            const unsubscribeLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+                if (isMounted) setIsAdLoaded(true);
+            });
+
+            const unsubscribeEarned = ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
+                if (!isMounted) return;
+                const state = stateRef.current;
+
+                if (rewardTypeRef.current === 'sticker') {
+                    const baseLimit = SYSTEM_LIMITS.FREE_TIER.MAX_STICKERS;
+                    const currentPageStickers = state.pageStickers[state.currentPageIndex]?.length || 0;
+                    const currentEffectiveLimit = Math.max(baseLimit + state.adBonusStickers, currentPageStickers);
+                    const nextBonus = (currentEffectiveLimit + 2) - baseLimit;
+
+                    setAdBonusStickers(nextBonus);
+                    setStickerLimitModalVisible(false);
+                    setAlertConfig({
+                        title: '보상 완료 🎁',
+                        message: `스티커 한도가 추가되어 최대 ${baseLimit + nextBonus}개까지 붙일 수 있어요! ✨`
+                    });
+                    setTimeout(() => setShowAlert(true), 500);
+
+                } else if (rewardTypeRef.current === 'text') {
+                    const baseLimit = SYSTEM_LIMITS.FREE_TIER.MAX_TEXTS;
+                    const currentPageTexts = state.pageTexts[state.currentPageIndex]?.length || 0;
+                    const currentEffectiveLimit = Math.max(baseLimit + state.adBonusTexts, currentPageTexts);
+                    const nextBonus = (currentEffectiveLimit + 2) - baseLimit;
+
+                    setAdBonusTexts(nextBonus);
+                    setTextLimitModalVisible(false);
+                    setAlertConfig({
+                        title: '보상 완료 🎁',
+                        message: `텍스트 박스 한도가 추가되어 최대 ${baseLimit + nextBonus}개까지 넣을 수 있어요! ✨`
+                    });
+                    setTimeout(() => setShowAlert(true), 500);
+                }
+            });
+
+            const unsubscribeClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
+                if (isMounted) {
+                    setIsAdLoaded(false);
+                    ad.load(); // Load next ad
+                }
+            });
+
+            ad.load();
+            rewardedAdRef.current = ad;
+
+            return () => {
+                isMounted = false;
+                unsubscribeLoaded();
+                unsubscribeEarned();
+                unsubscribeClosed();
+            };
+        } catch (error) {
+            console.error('Failed to init AdMob:', error);
+        }
+    }, [isPremium]);
 
     // 💭 오늘의 기분 및 활동 모달 팝업 상태 (첫 화면 진입 시)
     const [isMoodModalVisible, setMoodModalVisible] = useState(false);
@@ -515,47 +596,36 @@ export function useWriteLogic(route, navigation, scrollRef) {
     };
 
     const handleAdReward = () => {
-        // 실제로는 여기서 광고 SDK 호출
+        if (isPremium) return;
 
-        // [수정] 현재 상태에 맞춰 스마트하게 한도 증설
-        // 이미 소프트 패스로 인해 한도가 늘어난 것처럼 보일 수 있으므로, 
-        // '실제 붙은 개수'와 '현재 이론적 제한' 중 큰 값에 +2를 해줍니다.
-        const baseLimit = SYSTEM_LIMITS.FREE_TIER.MAX_STICKERS;
-        const currentPageStickers = pageStickers[currentPageIndex]?.length || 0;
-        const currentEffectiveLimit = Math.max(baseLimit + adBonusStickers, currentPageStickers);
-
-        // 새로운 보너스 = (새로운 목표 한도) - (기본 한도)
-        const nextBonus = (currentEffectiveLimit + 2) - baseLimit;
-
-        setAdBonusStickers(nextBonus);
-        setStickerLimitModalVisible(false);
-
-        setAlertConfig({
-            title: '광고 보상 🎁',
-            message: `보너스 스티커가 추가되어 이제 최대 ${baseLimit + nextBonus}개까지 붙일 수 있어요! ✨`
-        });
-        setTimeout(() => setShowAlert(true), 500);
+        if (rewardedAdRef.current && isAdLoaded) {
+            rewardTypeRef.current = 'sticker';
+            rewardedAdRef.current.show();
+        } else {
+            setAlertConfig({
+                title: '광고 준비 중 ⏳',
+                message: '아직 광고가 준비되지 않았어요.\n잠시 후 다시 시도해 주세요.'
+            });
+            setShowAlert(true);
+        }
     };
 
     /**
      * 📺 텍스트 서랍 & 캔버스 탭용 광고 보상 핸들러
      */
     const handleAdRewardForText = () => {
-        // 실제로는 여기서 광고 SDK 호출
-        const baseLimit = SYSTEM_LIMITS.FREE_TIER.MAX_TEXTS;
-        const currentPageTexts = pageTexts[currentPageIndex]?.length || 0;
-        const currentEffectiveLimit = Math.max(baseLimit + adBonusTexts, currentPageTexts);
+        if (isPremium) return;
 
-        const nextBonus = (currentEffectiveLimit + 2) - baseLimit;
-
-        setAdBonusTexts(nextBonus);
-        setTextLimitModalVisible(false);
-
-        setAlertConfig({
-            title: '광고 보상 🎁',
-            message: `보너스 텍스트 박스가 추가되어 이제 최대 ${baseLimit + nextBonus}개까지 넣을 수 있어요! ✨`
-        });
-        setTimeout(() => setShowAlert(true), 500);
+        if (rewardedAdRef.current && isAdLoaded) {
+            rewardTypeRef.current = 'text';
+            rewardedAdRef.current.show();
+        } else {
+            setAlertConfig({
+                title: '광고 준비 중 ⏳',
+                message: '아직 광고가 준비되지 않았어요.\n잠시 후 다시 시도해 주세요.'
+            });
+            setShowAlert(true);
+        }
     };
 
     const handleDeleteSticker = useCallback((id) => {

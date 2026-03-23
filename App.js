@@ -14,6 +14,7 @@ import { DMSans_400Regular } from '@expo-google-fonts/dm-sans';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import mobileAds from 'react-native-google-mobile-ads';
 
 import { initDB } from './src/database/db';
 import MainScreen from './src/screens/MainScreen';
@@ -159,6 +160,7 @@ export default function App() {
     useEffect(() => {
         async function setup() {
             try {
+                await mobileAds().initialize();
                 await initDB();
                 setDbReady(true);
             } catch (e) {

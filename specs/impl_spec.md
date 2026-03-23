@@ -129,6 +129,20 @@
 ### 5.3 앱 출시 관련 (Release)
 
 - **개발자 도구 자동 숨김**: `__DEV__` 글로벌 변수를 사용하여 개발(Debug) 환경에서만 테스트 메뉴(데이터 초기화, 프리미엄 토글 등)가 노출되도록 구성. 릴리즈 빌드(Production)에서는 해당 UI 코드가 자동으로 렌더링에서 제외되어 사용자 노출 차단.
+- **인앱 결제(IAP) 시스템 연동 (`react-native-iap`)**:
+  - `src/constants/iap.js` 상수 파일을 생성하여 `Product Manager` 스킬의 명명 규칙에 부합하는 결제 상품 식별자(`com.team.today_piece.premium_yearly`)를 전역 상수(`PREMIUM_SKUS`)로 분리 관리함으로써 확장성을 확보함.
+  - `SettingsScreen.logic.js`에서 앱 실행 시점(`useEffect`)에 `RNIap.initConnection()` 및 영수증 리스너를 마운트함.
+  - 프리미엄 구독 로직은 구글 플레이 및 앱스토어의 `requestSubscription` 트랜잭션으로, 복원 로직은 `getAvailablePurchases` 영수증 검증으로 완전하게 처리됨.
+
+### 5.4 AdMob Integration (광고 연동)
+- **모듈**: `react-native-google-mobile-ads`
+- **Configuration (환경 변수)**:
+  - **App ID**: `app.json`을 통해 네이티브(Android/iOS) 전역 환경으로 주입 (`ca-app-pub-1781835804890106~9205277146`).
+  - **Ad Units**: `src/constants/ads.js`에서 보상형 광고(Rewarded Ad) 단위 ID 중앙 관리 (`ca-app-pub-1781835804890106/5632162943`). 개발 환경(`__DEV__`)에서는 계정 보호를 위해 강제로 `TestIds.REWARDED`를 사용.
+- **Usage (`WriteScreen.logic.js`)**:
+  - 스티커 및 텍스트 박스 한도 초과 시, `rewardTypeRef`('sticker' | 'text')에 따라 동적으로 광고 보상(Reward)을 지급.
+  - 이벤트를 리스닝하여 `EARNED_REWARD`가 트리거되었을 때 스마트하게 한도(+2)를 증설함.
+  - 프리미엄 구독자는 해당 광고 로딩 로직 전체가 무시되어 최적화된 퍼포먼스를 제공함.
 
 ---
 *Last Updated: 2026-03-23*

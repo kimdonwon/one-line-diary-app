@@ -6,8 +6,10 @@ import { STICKER_PACK_DATA, STICKER_CATEGORIES } from '../../constants/stickers'
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as BackupRestore from '../../utils/backupRestore';
 import { restoreFromData } from '../../database/db';
-import { Alert, DevSettings } from 'react-native';
+import { Alert, DevSettings, Platform } from 'react-native';
 import { usePremium } from '../../hooks/usePremium';
+import * as RNIap from 'react-native-iap';
+import { PREMIUM_SKUS } from '../../constants/iap';
 
 /**
  * ⚙️ 설정 화면용 비즈니스 로직 훅입니다.
@@ -27,6 +29,54 @@ export function useSettingsLogic() {
 
     // 구매된 스티커 팩 상태
     const [purchasedPacks, setPurchasedPacks] = useState([]);
+
+    useEffect(() => {
+        let purchaseUpdateSubscription;
+        let purchaseErrorSubscription;
+
+        const initIap = async () => {
+            try {
+                await RNIap.initConnection();
+// RNIap v14+ 에서는 flushFailedPurchasesCachedAsPendingAndroid 가 라이브러리에서 제거되었습니다. 
+// 최신 버전은 이를 내부적으로 처리하거나 호출할 필요가 없습니다.
+
+                purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(async (purchase) => {
+                    const receipt = purchase.transactionReceipt;
+                    if (receipt) {
+                        try {
+                            await RNIap.finishTransaction({ purchase, isConsumable: false });
+                            await saveSetting('isPremium', 'true');
+                            Alert.alert('결제 성공 ✨', '오늘조각 프리미엄 구독이 완료되었습니다!');
+                        } catch (err) {
+                            console.warn("finishTransaction error", err);
+                        }
+                    }
+                });
+
+                purchaseErrorSubscription = RNIap.purchaseErrorListener((error) => {
+                    console.log('Purchase error', error);
+                    // 사용자가 직접 결제를 취소한 경우 알림 생략
+                    if (error.code !== 'E_USER_CANCELLED') {
+                        setAlertConfig({
+                            title: '결제 오류 😥',
+                            message: '진행 중 문제가 발생했습니다. 다시 시도해주세요.\n(코드: ' + error.code + ')'
+                        });
+                        setShowAlert(true);
+                    }
+                });
+            } catch (err) {
+                console.warn(err.code, err.message);
+            }
+        };
+
+        initIap();
+
+        return () => {
+            if (purchaseUpdateSubscription) purchaseUpdateSubscription.remove();
+            if (purchaseErrorSubscription) purchaseErrorSubscription.remove();
+            RNIap.endConnection();
+        };
+    }, []);
 
     useEffect(() => {
         loadPremiumStatus();
@@ -165,8 +215,8 @@ export function useSettingsLogic() {
         Alert.alert('알림', '프리미엄 상태가 변경되었습니다. 앱을 재실행해 주세요.');
     };
 
-    // 프리미엄 결제 버튼 클릭 (더미)
-    const handlePremiumPress = () => {
+    // 프리미엄 결제 버튼 클릭 (실제 결제 호출)
+    const handlePremiumPress = async () => {
         if (isPremium) {
             setAlertConfig({
                 title: '이미 프리미엄 회원이에요! ✨',
@@ -176,16 +226,21 @@ export function useSettingsLogic() {
             return;
         }
 
-        setAlertConfig({
-            title: '프리미엄 구독 (더미) 💳',
-            message: '연 5,900원으로 오늘조각 프리미엄을 구독하시겠습니까? (결제일로부터 1년간 모든 기능 이용)'
-        });
-        setShowAlert(true);
+        try {
+            const subscriptions = await RNIap.getSubscriptions({ skus: PREMIUM_SKUS });
+            if (subscriptions && subscriptions.length > 0) {
+                await RNIap.requestSubscription({ sku: PREMIUM_SKUS[0] });
+            } else {
+                Alert.alert('안내', '스토어에서 상품 정보를 가져오지 못했습니다. 네트워크 상태를 확인해주세요.');
+            }
+        } catch (err) {
+            console.warn(err.code, err.message);
+            Alert.alert('결제 오류', '스토어에 연결할 수 없거나 결제를 진행할 수 없습니다.');
+        }
     };
 
     const confirmAlert = async () => {
         const isBuyingPack = alertConfig.title === '스티커 팩 구매 💳';
-        const isBuyingPremium = alertConfig.title === '프리미엄 구독 (더미) 💳';
 
         // 커스텀 onConfirm이 있는 경우 실행
         if (alertConfig.onConfirm) {
@@ -202,11 +257,6 @@ export function useSettingsLogic() {
                 await confirmBuyPack(selectedPack.catId, selectedPack.title);
             }
             return;
-        }
-
-        // 프리미엄 결제 모달을 통한 명시적 확인 시에만 프리미엄이 되도록 조건을 엄격하게 체크
-        if (isBuyingPremium && !isPremium) {
-            await togglePremium();
         }
     };
 
@@ -234,7 +284,7 @@ export function useSettingsLogic() {
 
             setAlertConfig({
                 title: '초기화 완료! ♻️',
-                message: '프리미엄 상태 및 스티커 구매 내역이 모두 초기화되었습니다. 변경사항을 반영하려면 앱을 재실행해 주세요.'
+                message: '프리미엄 상태 및 스티커 구매 내역이 모두 초기화되었습니다.'
             });
             setShowAlert(true);
         } catch (e) {
@@ -254,7 +304,7 @@ export function useSettingsLogic() {
 
             Alert.alert(
                 '무료 버전 전환 완료 ⬇️',
-                '무료 버전으로 전환되었습니다. 변경사항을 반영하려면 앱을 재실행해 주세요.'
+                '무료 버전으로 전환되었습니다.'
             );
         } catch (e) {
             console.log('Failed to force free version:', e);
@@ -316,35 +366,29 @@ export function useSettingsLogic() {
         }
     };
 
-    // 구매 내역 복원 (더미 로직)
+    // 구매 내역 복원 (스토어 연동)
     const handleRestorePurchases = async () => {
         try {
-            // 실제 구현 시에는 이 부분에서 인앱 결제 라이브러리의 restore 기능을 호출합니다.
-            // 여기서는 2초 뒤에 성공하는 더미 로직으로 구현합니다.
             setAlertConfig({
                 title: '구매 내역 확인 중... 🔎',
                 message: 'Apple/Google 계정에서 과거 구매 내역을 찾는 중입니다.'
             });
             setShowAlert(true);
 
-            setTimeout(async () => {
-                // 더미 데이터 복원 (무조건 성공 가정)
+            const purchases = await RNIap.getAvailablePurchases();
+            const hasPremium = purchases.some(p => PREMIUM_SKUS.includes(p.productId));
+
+            setShowAlert(false);
+
+            if (hasPremium) {
                 await saveSetting('isPremium', 'true');
-                setIsPremium(true);
-
-                // 모든 유료 팩을 구매한 것으로 처리 예시 (테스트용)
-                const paidPacks = STICKER_PACK_DATA.filter(p => !p.isFree).map(p => p.catId);
-                await saveSetting('purchasedPacks', JSON.stringify(paidPacks));
-                setPurchasedPacks(paidPacks);
-
-                setAlertConfig({
-                    title: '구매 내역 복원 완료! ✨',
-                    message: '과거에 구매하신 프리미엄 혜택과 스티커 팩이 모두 복구되었습니다.'
-                });
-                setShowAlert(true);
-            }, 2000);
-
+                Alert.alert('복원 완료! ✨', '과거에 구매하신 프리미엄 혜택 내역이 복구되었습니다.');
+            } else {
+                Alert.alert('안내', '구독 중인 내역을 찾을 수 없습니다. 결제하신 스토어 계정이 맞는지 다시 확인해주세요.');
+            }
         } catch (error) {
+            setShowAlert(false);
+            console.warn(error);
             Alert.alert('복원 실패', '스토어 인증에 실패했습니다.');
         }
     };
