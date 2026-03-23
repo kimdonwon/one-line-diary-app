@@ -46,27 +46,35 @@ import {
     ItVr, ItMonitor
 } from './ItStickers';
 
+import {
+    SqNormal, SqSleepy, SqAngry, SqCool, SqVomit, SqLaugh, SqCry,
+    SqKnight, SqFire, SqNerd, SqHuh, SqWalk, SqShrug, SqWink, SqScream,
+    SqSilly, SqLove, SqShock
+} from './SquareStickers';
+
 // ─── 카테고리 탭 정의 ───────────────────────────────────────
 export const STICKER_CATEGORIES = [
-    { id: 'emoji', label: '이모지' },
     { id: 'legacy', label: '기본' },
+    { id: 'emoji', label: '이모지' },
     { id: 'pastel', label: '파스텔' },
     { id: 'food', label: '푸드' },
     { id: 'mzline', label: '라인' },
     { id: 'people', label: '피플' },
     { id: 'it', label: '아이티' },
     { id: 'roundface', label: '동글' },
+    { id: 'square', label: '네모' },
 ];
 
 export const STICKER_PACK_DATA = [
-    { id: 'pack1', title: '기본 다꾸 이모지 팩', desc: '다양한 감정 표현', icon: '🐾', isFree: true, isDefault: true, catId: 'emoji' },
-    { id: 'pack2', title: '기본 캐릭터 팩', desc: '오늘조각 시그니처', icon: '✨', isFree: true, isDefault: true, catId: 'legacy' },
-    { id: 'pack3', title: '몽글몽글 파스텔 팩', desc: '몽글몽글한 손그림 느낌', icon: '🎨', isFree: true, isDefault: false, catId: 'pastel' },
-    { id: 'pack4', title: '냠냠 먹방 팩', desc: '커피, 마라탕, 탕후루까지!', icon: '🍡', isFree: true, isDefault: false, catId: 'food', tagLabel: '푸드' },
-    { id: 'pack5', title: '삐뚤빼뚤 라인 팩', desc: '대충 그린 꾸안꾸 갬성', icon: '〰️', isFree: true, isDefault: false, catId: 'mzline', tagLabel: '라인' },
+    { id: 'pack1', title: '기본 캐릭터 팩', desc: '오늘조각 시그니처', icon: '✨', isFree: true, isDefault: true, catId: 'legacy' },
+    { id: 'pack2', title: '기본 다꾸 이모지 팩', desc: '다양한 감정 표현', icon: '🐾', isFree: true, isDefault: true, catId: 'emoji' },
+    { id: 'pack3', title: '몽글몽글 파스텔 팩', desc: '몽글몽글한 손그림 느낌', icon: '🎨', isFree: true, isDefault: true, catId: 'pastel' },
+    { id: 'pack4', title: '냠냠 먹방 팩', desc: '커피, 마라탕, 탕후루까지!', icon: '🍡', isFree: true, isDefault: true, catId: 'food', tagLabel: '푸드' },
+    { id: 'pack5', title: '삐뚤빼뚤 라인 팩', desc: '대충 그린 꾸안꾸 갬성', icon: '〰️', isFree: true, isDefault: true, catId: 'mzline', tagLabel: '라인' },
     { id: 'pack7', title: '오밀조밀 동네 친구들', desc: '귀엽고 다양한 얼굴 모음!', icon: '👦', isFree: true, isDefault: false, catId: 'people', tagLabel: '피플' },
     { id: 'pack8', title: '아이티 스티커팩', desc: '컴퓨터, 카메라, IT소품 가득!', icon: '🎁', isFree: true, isDefault: false, catId: 'it', tagLabel: '아이티' },
     { id: 'pack9', title: '동글뱅이 얼굴 팩', desc: '낙서처럼 동글동글 귀여운', icon: '🎨', isFree: true, isDefault: false, catId: 'roundface', tagLabel: '동글' },
+    { id: 'pack10', title: '네모왕국 팩', desc: '바보귀여운 네모 마시멜로들', icon: '◻️', isFree: true, isDefault: false, catId: 'square', tagLabel: '네모' },
 ];
 
 // ─── 카테고리별 스티커 모음 ────────────────────────────────
@@ -223,6 +231,28 @@ export const CATEGORIZED_STICKERS = {
         { key: 'rf_blu_ws', label: '파랑빅스마일', Component: RfBlueWideSmile },
         { key: 'rf_yel_dot', label: '노랑점', Component: RfYellowDot },
         { key: 'rf_purp_ss', label: '보라작은미소', Component: RfPurpleSmallSmile },
+    ],
+
+    /** ◻️ 네모 — 네모 모양 마시멜로 낙서들 (Doodle Flash Style) */
+    square: [
+        { key: 'sq_norm', label: '기본네모', Component: SqNormal },
+        { key: 'sq_sleep', label: '졸음네모', Component: SqSleepy },
+        { key: 'sq_angry', label: '분노네모', Component: SqAngry },
+        { key: 'sq_cool', label: '멋쟁이네모', Component: SqCool },
+        { key: 'sq_vomit', label: '구토네모', Component: SqVomit },
+        { key: 'sq_laugh', label: '폭소네모', Component: SqLaugh },
+        { key: 'sq_cry', label: '오열네모', Component: SqCry },
+        { key: 'sq_knight', label: '기사네모', Component: SqKnight },
+        { key: 'sq_fire', label: '불뿜네모', Component: SqFire },
+        { key: 'sq_nerd', label: '공부네모', Component: SqNerd },
+        { key: 'sq_huh', label: '어리둥절네모', Component: SqHuh },
+        { key: 'sq_walk', label: '산책네모', Component: SqWalk },
+        { key: 'sq_shrug', label: '으쓱네모', Component: SqShrug },
+        { key: 'sq_wink', label: '윙크네모', Component: SqWink },
+        { key: 'sq_scream', label: '비명네모', Component: SqScream },
+        { key: 'sq_silly', label: '메롱네모', Component: SqSilly },
+        { key: 'sq_love', label: '하트네모', Component: SqLove },
+        { key: 'sq_shock', label: '기절네모', Component: SqShock },
     ],
 };
 

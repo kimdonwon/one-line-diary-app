@@ -79,6 +79,17 @@
 - **Static 컴포넌트**: Base를 감싸고 고정 좌표/회전/스케일만 적용. 로직 없음.
 - **`getTextStyle(fontId, color)`**: 텍스트 전용 폰트 스타일 헬퍼. `BaseText.js`에서 export하여 `DraggableText`와 `StaticText` 모두에서 동일한 폰트 렌더링 보장.
 
+### 3.3 스티커 카테고리 상태 유지 (Context Preservation)
+
+스티커 서랍을 닫고 다시 열었을 때 사용자의 작업 흐름을 유지하기 위해 마지막으로 선택된 카테고리를 보존합니다.
+
+- **상태 관리**: `activeCategoryId`를 서랍 폐쇄 시에도 유지 (초기화 로직 제거)
+- **무결성 검증**: 서랍 재오픈 혹은 **탭 전환(Sticker/Photo/Text) 시**, 기억된 ID가 `visibleCategories`에 포함되어 있는지 확인 후 폴백 처리
+- **시각적 동기화**:
+  - `prevShowStickers` Ref를 활용하여 스티커 탭 진입 시점을 정밀 감지
+  - 서랍 오픈 및 탭 전환 즉시 애니메이션 없이(`animated: false`) 해당 팩 목록으로 스크롤 동기화 수행
+  - 상단 카테고리 탭바 아이콘이 화면 중앙 근처에 오도록 레이아웃 좌표 기반 자동 스크롤 연동
+
 ---
 
 ## 4. UI/UX 시스템 섹션
@@ -101,7 +112,7 @@
 ### 4.3 폴라로이드 사진 프레임 시스템
 
 - **프레임 종류 확장**: 기본 색상 및 파스텔톤에 이어 빈티지한 감성의 프리미엄 프레임 6종(모카 무스, 라벤더 팝, 라임 크림, 빈티지 크림, 소다 블루, 버터 옐로우) 추가 지원.
-- **디자인/로직 분리 (Modular UI Developer 적용)**: 
+- **디자인/로직 분리 (Modular UI Developer 적용)**:
   - 색상 데이터는 `constants/theme.js`에서 전역 상수로 관리.
   - 프레임 UI 속성은 `DraggablePhoto.styles.js` 및 `WriteScreen.styles.js`에서 각 상태 파생 스타일로만 캡슐화되어 렌더링. 비즈니스 로직 수정 없이 프레임 확장 처리 가능.
 
@@ -135,6 +146,7 @@
   - 프리미엄 구독 로직은 구글 플레이 및 앱스토어의 `requestSubscription` 트랜잭션으로, 복원 로직은 `getAvailablePurchases` 영수증 검증으로 완전하게 처리됨.
 
 ### 5.4 AdMob Integration (광고 연동)
+
 - **모듈**: `react-native-google-mobile-ads`
 - **Configuration (환경 변수)**:
   - **App ID**: `app.json`을 통해 네이티브(Android/iOS) 전역 환경으로 주입 (`ca-app-pub-1781835804890106~9205277146`).
