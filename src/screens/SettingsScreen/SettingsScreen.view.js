@@ -246,34 +246,36 @@ export function SettingsScreenView({ navigation }) {
                     </TouchableOpacity>
                 </Card>
 
-                {/* 개발자 도구 (테스트용) */}
-                <View style={styles.devSection}>
-                    <Text style={styles.sectionHeader}>개발자 도구 (테스트)</Text>
+                {/* 개발자 도구 (테스트용) - 빌드 환경에 따른 자동 제거 */}
+                {__DEV__ && (
+                    <View style={styles.devSection}>
+                        <Text style={styles.sectionHeader}>개발자 도구 (테스트)</Text>
 
-                    <TouchableOpacity
-                        style={[styles.dangerButton, { backgroundColor: '#F0F0F0', borderColor: '#DDD', borderWidth: 1 }]}
-                        onPress={forceFreeVersion}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={[styles.dangerButtonText, { color: '#666' }]}>무료버전 이용하기 (체험판 종료) ⬇️</Text>
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.dangerButton, { backgroundColor: '#F0F0F0', borderColor: '#DDD', borderWidth: 1 }]}
+                            onPress={forceFreeVersion}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={[styles.dangerButtonText, { color: '#666' }]}>무료버전 이용하기 (체험판 종료) ⬇️</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[styles.dangerButton, { marginTop: 10 }]}
-                        onPress={resetPurchases}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={styles.dangerButtonText}>결제 및 프리미엄 내역 초기화 ♻️</Text>
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.dangerButton, { marginTop: 10 }]}
+                            onPress={resetPurchases}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.dangerButtonText}>결제 및 프리미엄 내역 초기화 ♻️</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[styles.dangerButton, { marginTop: 10 }]}
-                        onPress={resetDiaryData}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={styles.dangerButtonText}>모든 일기 기록 삭제 🗑️</Text>
-                    </TouchableOpacity>
-                </View>
+                        <TouchableOpacity
+                            style={[styles.dangerButton, { marginTop: 10 }]}
+                            onPress={resetDiaryData}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.dangerButtonText}>모든 일기 기록 삭제 🗑️</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 <View style={styles.footer}>
                     <Text style={styles.versionText}>오늘조각 v1.0.0</Text>
