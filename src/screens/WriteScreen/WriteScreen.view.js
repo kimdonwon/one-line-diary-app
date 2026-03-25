@@ -316,25 +316,43 @@ export function WriteScreenView({ route, navigation }) {
     }, [activeCategoryId, showStickers, windowWidth]);
 
     const prevBottomSheetOpen = useRef(false);
+    const prevShowStickers = useRef(false); // 💡 스티커 탭 전환 감지용 Ref 추가
+
     useEffect(() => {
         const isOpen = showStickers || showPhotos || showTexts;
         if (!isOpen) {
-            // 🚀 서랍이 닫힐 때 카테고리 상태와 스크롤 위치 초기화 기록
+            // 🚀 서랍이 닫힐 때 스크롤 플래그만 초기화 (카테고리 ID는 유지하여 마지막 상태 기억)
             if (prevBottomSheetOpen.current) {
-                setActiveCategoryId('');
-                isFirstStickerLoad.current = true;
+                // setActiveCategoryId(''); // 30년차 팁: 사용자 Context를 유지하기 위해 ID 초기화 제거
+                isFirstStickerLoad.current = true; 
             }
             prevBottomSheetOpen.current = false;
             return;
         }
 
-        // 🚀 스티커 서랍이 처음 열릴 때, 순서상 가장 처음에 있는 카테고리를 즉시 선택
-        if (showStickers && !prevBottomSheetOpen.current && visibleCategories.length > 0) {
-            const firstCatId = visibleCategories[0].id;
-            setActiveCategoryId(firstCatId);
-            // Ref를 통해 즉시 스크롤 위치를 0으로 고정 (상태 업데이트보다 빠름)
-            stickerPackScrollRef.current?.scrollTo({ x: 0, animated: false });
+        // 🚀 스티커 서랍/탭이 활성화된 경우 처리
+        if (showStickers && visibleCategories.length > 0) {
+            // 💡 데이터 무결성 체크: 기억된 ID가 여전히 유효한지 검증 (다른 탭에서 넘어올 때도 매번 체크)
+            const isValid = visibleCategories.some(cat => cat.id === activeCategoryId);
+            const targetCatId = isValid ? (activeCategoryId || visibleCategories[0].id) : visibleCategories[0].id;
+            
+            if (activeCategoryId !== targetCatId) {
+                setActiveCategoryId(targetCatId);
+            }
+            
+            // 💡 스티커 탭으로 '처음' 진입하거나 전환된 순간에만 스크롤 동기화 수행
+            if (!prevShowStickers.current) {
+                setTimeout(() => {
+                    if (categoryTabRefs.current[targetCatId] !== undefined) {
+                        categoryTabScrollRef.current?.scrollTo({
+                            x: Math.max(0, categoryTabRefs.current[targetCatId] - 40),
+                            animated: false
+                        });
+                    }
+                }, 60);
+            }
         }
+        prevShowStickers.current = showStickers;
 
         if (!bottomSheetScrollRef.current) return;
 
@@ -342,10 +360,9 @@ export function WriteScreenView({ route, navigation }) {
         if (showPhotos) x = windowWidth;
         else if (showTexts) x = windowWidth * 2;
 
-        // 처음 열릴 때는 애니메이션 없이, 이미 열려있는 상태에서 탭 전환 시에만 애니메이션 적용
         bottomSheetScrollRef.current.scrollTo({ x, animated: prevBottomSheetOpen.current });
         prevBottomSheetOpen.current = true;
-    }, [showStickers, showPhotos, showTexts, windowWidth]);
+    }, [showStickers, showPhotos, showTexts, windowWidth, activeCategoryId, visibleCategories]);
 
     // 📷 사진용 공유 애니메이션 관리 (반투명 사진 실시간 동기화용)
     const photoAnimations = useRef({});
@@ -882,7 +899,6 @@ export function WriteScreenView({ route, navigation }) {
                                         horizontal
                                         pagingEnabled
                                         showsHorizontalScrollIndicator={false}
-                                        contentOffset={{ x: 0, y: 0 }} // 🚀 항상 0점에서 시작하도록 강제
                                         onMomentumScrollEnd={(e) => {
                                             const idx = Math.round(e.nativeEvent.contentOffset.x / (windowWidth - 32));
                                             const cat = visibleCategories[idx];

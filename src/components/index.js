@@ -105,8 +105,13 @@ export function StaticPhoto({ photo }) {
 }
 
 // ─── Static Text (View Only) ───
-export function StaticText({ textNode }) {
+export function StaticText({ textNode, bounds }) {
   if (!textNode || !textNode.text) return null;
+
+  const canvasWidth = bounds?.width || 350;
+  const padding = 16;
+  const remainingSpace = Math.max(0, (canvasWidth - padding) - (textNode.x || 0));
+  const dynamicMaxWidth = remainingSpace / (textNode.scale || 1);
 
   return (
     <View style={{
@@ -114,7 +119,7 @@ export function StaticText({ textNode }) {
       left: textNode.x || 0,
       top: textNode.y || 0,
       padding: 8, // Draggable container padding
-      maxWidth: '95%',
+      maxWidth: Math.max(dynamicMaxWidth, 20), // 최소 너비 보장
       zIndex: 8,
       transform: [
         { rotate: `${textNode.rotation || 0}deg` },
@@ -123,7 +128,7 @@ export function StaticText({ textNode }) {
       transformOrigin: ['0%', '0%', 0]
     }}>
       {/* 🎨 순수 시각 레이어 (BaseText) */}
-      <BaseText textNode={textNode} />
+      <BaseText textNode={textNode} style={{ maxWidth: '100%' }} />
     </View>
   );
 }

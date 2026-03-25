@@ -15,6 +15,7 @@
 
 | 상품명 | Product ID | 가격 (현지화 전) | 유형 |
 | :--- | :--- | :--- | :--- |
+| **오늘조각 프리미엄 (3개월)** | `com.team.today_piece.premium_3month` | ₩1,900 / 3개월 | 3개월 구독 (Subscription) |
 | **오늘조각 프리미엄** | `com.team.today_piece.premium_yearly` | ₩5,900 / 년 | 연간 구독 (Subscription) |
 
 ### 2.2. 스티커 팩 (Sticker Packs) — 현재 전체 무료

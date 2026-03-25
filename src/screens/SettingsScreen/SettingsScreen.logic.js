@@ -8,8 +8,17 @@ import * as BackupRestore from '../../utils/backupRestore';
 import { restoreFromData } from '../../database/db';
 import { Alert, DevSettings, Platform } from 'react-native';
 import { usePremium } from '../../hooks/usePremium';
-import * as RNIap from 'react-native-iap';
-import { PREMIUM_SKUS } from '../../constants/iap';
+import {
+    initConnection,
+    endConnection,
+    fetchProducts,
+    getAvailablePurchases,
+    purchaseUpdatedListener,
+    purchaseErrorListener,
+    finishTransaction,
+    requestPurchase
+} from 'react-native-iap';
+import { PREMIUM_SKUS, PREMIUM_PRODUCT_ID, PREMIUM_QUARTERLY_PRODUCT_ID } from '../../constants/iap';
 
 /**
  * ⚙️ 설정 화면용 비즈니스 로직 훅입니다.
@@ -36,15 +45,15 @@ export function useSettingsLogic() {
 
         const initIap = async () => {
             try {
-                await RNIap.initConnection();
-// RNIap v14+ 에서는 flushFailedPurchasesCachedAsPendingAndroid 가 라이브러리에서 제거되었습니다. 
-// 최신 버전은 이를 내부적으로 처리하거나 호출할 필요가 없습니다.
+                await initConnection();
+                // RNIap v14+ 에서는 flushFailedPurchasesCachedAsPendingAndroid 가 라이브러리에서 제거되었습니다. 
+                // 최신 버전은 이를 내부적으로 처리하거나 호출할 필요가 없습니다.
 
-                purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(async (purchase) => {
+                purchaseUpdateSubscription = purchaseUpdatedListener(async (purchase) => {
                     const receipt = purchase.transactionReceipt;
                     if (receipt) {
                         try {
-                            await RNIap.finishTransaction({ purchase, isConsumable: false });
+                            await finishTransaction({ purchase, isConsumable: false });
                             await saveSetting('isPremium', 'true');
                             Alert.alert('결제 성공 ✨', '오늘조각 프리미엄 구독이 완료되었습니다!');
                         } catch (err) {
@@ -53,7 +62,7 @@ export function useSettingsLogic() {
                     }
                 });
 
-                purchaseErrorSubscription = RNIap.purchaseErrorListener((error) => {
+                purchaseErrorSubscription = purchaseErrorListener((error) => {
                     console.log('Purchase error', error);
                     // 사용자가 직접 결제를 취소한 경우 알림 생략
                     if (error.code !== 'E_USER_CANCELLED') {
@@ -74,7 +83,7 @@ export function useSettingsLogic() {
         return () => {
             if (purchaseUpdateSubscription) purchaseUpdateSubscription.remove();
             if (purchaseErrorSubscription) purchaseErrorSubscription.remove();
-            RNIap.endConnection();
+            endConnection();
         };
     }, []);
 
@@ -216,7 +225,7 @@ export function useSettingsLogic() {
     };
 
     // 프리미엄 결제 버튼 클릭 (실제 결제 호출)
-    const handlePremiumPress = async () => {
+    const handlePremiumPress = async (skuId = PREMIUM_PRODUCT_ID) => {
         if (isPremium) {
             setAlertConfig({
                 title: '이미 프리미엄 회원이에요! ✨',
@@ -227,9 +236,31 @@ export function useSettingsLogic() {
         }
 
         try {
-            const subscriptions = await RNIap.getSubscriptions({ skus: PREMIUM_SKUS });
+            // 최신 v14에서는 getSubscriptions 대신 fetchProducts를 공통으로 사용합니다.
+            const subscriptions = await fetchProducts({ skus: PREMIUM_SKUS, type: 'subs' });
             if (subscriptions && subscriptions.length > 0) {
-                await RNIap.requestSubscription({ sku: PREMIUM_SKUS[0] });
+                const subId = skuId || PREMIUM_SKUS[0];
+                const sub = subscriptions.find(s => s.productId === subId) || subscriptions.find(s => s.productId === PREMIUM_SKUS[0]) || subscriptions[0];
+
+                if (Platform.OS === 'android') {
+                    // 구글 플레이 결제 라이브러리 v5 대응: 요금제의 offerToken 필수
+                    const offers = sub.subscriptionOfferDetails;
+                    if (!offers || offers.length === 0) {
+                        Alert.alert('안내', '구독 상품의 요금제 정보를 스토어에서 찾을 수 없습니다.');
+                        return;
+                    }
+                    const offerToken = offers[0].offerToken;
+
+                    await requestPurchase({
+                        skus: [subId],
+                        subscriptionOffers: [{ sku: subId, offerToken }]
+                    });
+                } else {
+                    // iOS 대응
+                    await requestPurchase({
+                        sku: subId
+                    });
+                }
             } else {
                 Alert.alert('안내', '스토어에서 상품 정보를 가져오지 못했습니다. 네트워크 상태를 확인해주세요.');
             }
@@ -375,7 +406,7 @@ export function useSettingsLogic() {
             });
             setShowAlert(true);
 
-            const purchases = await RNIap.getAvailablePurchases();
+            const purchases = await getAvailablePurchases();
             const hasPremium = purchases.some(p => PREMIUM_SKUS.includes(p.productId));
 
             setShowAlert(false);
@@ -422,6 +453,8 @@ export function useSettingsLogic() {
         setIsShopMore,
         isTrial,
         hasPremiumBenefits,
-        forceFreeVersion
+        forceFreeVersion,
+        PREMIUM_PRODUCT_ID,
+        PREMIUM_QUARTERLY_PRODUCT_ID
     };
 }

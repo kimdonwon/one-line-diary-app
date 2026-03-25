@@ -106,6 +106,68 @@ export const styles = StyleSheet.create({
         lineHeight: 22,
         marginBottom: 6,
     },
+    // ─── 폴라로이드 스택 컨셉 (Polaroid Stack) ───
+    polaroidStackContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 12,
+        marginVertical: 20,
+    },
+    polaroidCard: {
+        backgroundColor: '#FFFFFF',
+        width: 140, // 155 -> 140으로 축소
+        padding: 8,
+        paddingBottom: 18, // 폴라로이드 특유의 하단 여백 축소
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: '#F0EEE9',
+        ...SOFT_SHADOW.card,
+    },
+    polaroidPhotoArea: {
+        width: '100%',
+        aspectRatio: 1,
+        borderRadius: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 10,
+        padding: 4,
+    },
+    polaroidCharacterRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: '100%',
+    },
+    polaroidLabel: {
+        fontFamily: 'SingleDay_400Regular',
+        fontSize: 13, // 14 -> 13
+        color: COLORS.text,
+        textAlign: 'center',
+    },
+    polaroidPrice: {
+        fontFamily: 'SingleDay_400Regular',
+        fontSize: 16, // 18 -> 16
+        fontWeight: '700',
+        color: COLORS.text,
+        marginTop: 2,
+    },
+    polaroidBadge: {
+        position: 'absolute',
+        top: -8,
+        right: -8,
+        backgroundColor: COLORS.todayHighlight,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        zIndex: 10,
+    },
+    polaroidBadgeText: {
+        fontSize: 10,
+        fontWeight: '900',
+        color: '#FFFFFF',
+    },
     premiumSubscribeButton: {
         backgroundColor: '#1F1F1F',
         paddingVertical: 16,

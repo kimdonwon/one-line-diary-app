@@ -20,7 +20,8 @@ export function SettingsScreenView({ navigation }) {
         isShopMore, setIsShopMore,
         purchasedPacks, handleBuyStickerPack, resetPurchases, resetDiaryData,
         handleExportBackup, handleImportBackup, handleRestorePurchases,
-        isTrial, hasPremiumBenefits, forceFreeVersion
+        isTrial, hasPremiumBenefits, forceFreeVersion,
+        PREMIUM_PRODUCT_ID, PREMIUM_QUARTERLY_PRODUCT_ID
     } = useSettingsLogic();
 
 
@@ -187,7 +188,7 @@ export function SettingsScreenView({ navigation }) {
                         </View>
                     )}
 
-                    <Text style={styles.premiumPrice}>₩5,900 <Text style={styles.premiumPriceUnit}>(1년 이용권)</Text></Text>
+                    {/* <Text style={styles.premiumPrice}>₩5,900 <Text style={styles.premiumPriceUnit}>(1년 이용권)</Text></Text> */}
 
                     <View style={styles.premiumBenefits}>
                         <Text style={styles.premiumBenefitItem}>✓ 페이지당 스티커 최대 {SYSTEM_LIMITS.PREMIUM_TIER.MAX_STICKERS}개 부착 </Text>
@@ -198,18 +199,55 @@ export function SettingsScreenView({ navigation }) {
                         <Text style={styles.premiumBenefitItem}>✓ 광고 없는 쾌적한 다이어리 작성</Text>
                     </View>
 
-                    <TouchableOpacity
-                        style={[
-                            styles.premiumSubscribeButton,
-                            isPremium && styles.premiumSubscribeButtonActive
-                        ]}
-                        onPress={handlePremiumPress}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={styles.premiumSubscribeText}>
-                            {isPremium ? '프리미엄 혜택 이용 중 ✨' : '프리미엄 1년 구독하기'}
-                        </Text>
-                    </TouchableOpacity>
+                    {!isPremium ? (
+                        <View style={styles.polaroidStackContainer}>
+                            <TouchableOpacity
+                                style={[styles.polaroidCard, { zIndex: 1 }]}
+                                onPress={() => handlePremiumPress(PREMIUM_QUARTERLY_PRODUCT_ID)}
+                                activeOpacity={0.9}
+                            >
+                                <View style={[styles.polaroidPhotoArea, { backgroundColor: COLORS.surprised + '30' }]}>
+                                    <MoodCharacter character="frog" size={56} />
+                                </View>
+                                <Text style={styles.polaroidLabel}>3개월 이용권</Text>
+                                <Text style={[styles.polaroidPrice, { textAlign: 'center' }]}>₩1,900</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.polaroidCard, { zIndex: 2 }]}
+                                onPress={() => handlePremiumPress(PREMIUM_PRODUCT_ID)}
+                                activeOpacity={0.9}
+                            >
+                                <View style={styles.polaroidBadge}>
+                                    <Text style={styles.polaroidBadgeText}>추천!</Text>
+                                </View>
+                                <View style={[styles.polaroidPhotoArea, { backgroundColor: COLORS.happy + '20' }]}>
+                                    <View style={styles.polaroidCharacterRow}>
+                                        <MoodCharacter character="frog" size={32} />
+                                        <MoodCharacter character="cat" size={32} />
+                                        <MoodCharacter character="chick" size={32} />
+                                        <MoodCharacter character="rabbit" size={32} />
+                                        <MoodCharacter character="bear" size={32} />
+                                    </View>
+                                </View>
+                                <Text style={styles.polaroidLabel}>1년 이용권</Text>
+                                <Text style={[styles.polaroidPrice, { textAlign: 'center' }]}>₩5,900</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <TouchableOpacity
+                            style={[
+                                styles.premiumSubscribeButton,
+                                isPremium && styles.premiumSubscribeButtonActive
+                            ]}
+                            onPress={() => handlePremiumPress()} // 이미 구독중 알림 용
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.premiumSubscribeText}>
+                                {isPremium ? '프리미엄 혜택 이용 중 ✨' : '프리미엄 1년 구독하기'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                         style={styles.restorePurchaseButton}
                         onPress={handleRestorePurchases}
@@ -217,7 +255,7 @@ export function SettingsScreenView({ navigation }) {
                     >
                         <Text style={styles.restorePurchaseText}>기존 구매 내역 복원하기</Text>
                     </TouchableOpacity>
-                    <Text style={styles.premiumSubText}>결제일로부터 1년간 모든 프리미엄 혜택을 이용하실 수 있습니다.{"\n"}최초 앱 실행 시 14일간 프리미엄 혜택을 미리 체험할 수 있습니다.</Text>
+                    <Text style={styles.premiumSubText}>최초 앱 실행 시 14일간 프리미엄 혜택을 미리 체험할 수 있습니다.</Text>
                 </View>
 
                 {/* 데이터 관리 섹션 */}

@@ -29,13 +29,13 @@ export const BaseSticker = React.memo(({ sticker, isGhost = false }) => {
 
 export const styles = StyleSheet.create({
     contentWrapper: {
-        width: 100, 
-        height: 100, 
-        alignItems: 'center', 
+        width: 100,
+        height: 100,
+        alignItems: 'center',
         justifyContent: 'center',
     },
     textSticker: {
-        fontSize: 80, 
+        fontSize: 80,
         lineHeight: 90,
     }
 });
