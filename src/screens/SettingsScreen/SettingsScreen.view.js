@@ -8,6 +8,7 @@ import { PinSetupModal } from '../../components/PinSetupModal';
 
 import { useSettingsLogic } from './SettingsScreen.logic';
 import { styles } from './SettingsScreen.styles';
+import pkg from '../../../package.json'; // 📦 버전 소스 오브 트루스 (경로 수정)
 
 export function SettingsScreenView({ navigation }) {
     const {
@@ -316,7 +317,7 @@ export function SettingsScreenView({ navigation }) {
                 )}
 
                 <View style={styles.footer}>
-                    <Text style={styles.versionText}>오늘조각 v1.0.0</Text>
+                    <Text style={styles.versionText}>오늘조각 v{pkg.version}</Text>
                 </View>
             </ScrollView>
 
