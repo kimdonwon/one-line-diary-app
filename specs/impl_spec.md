@@ -20,7 +20,7 @@
 ### 2.1 테이블 명세
 
 | 테이블명 | 주요 컬럼 | 설명 |
-|:--- |:--- |:--- |
+| :--- | :--- | :--- |
 | **diary** | `id`, `date`, `content`, `mood`, `stickers`, `photos`, `texts`, `updated_at` | 일기 본문 및 모든 드래거블 요소(JSON), 수정 시간 저장 |
 | **activities** | `id`, `date`, `activity`, `title`, `note` | 사용자 일일 활동 기록 (Unique: date + activity) |
 | **comments** | `id`, `diary_date`, `content`, `created_at`, `character` | 곰돌이/캐릭터의 피드백 댓글 저장 |
@@ -132,10 +132,15 @@
 
 ### 5.2 백업 및 보안
 
-- **보안**: 락스크린 핀코드 인증 및 생체 인식 확장성 확보.
+- **보안 (v1.0.1 강화)**:
+  - PIN 비밀번호는 `expo-secure-store`를 통해 OS 보안 영역(Keychain/Keystore)에 저장. SQLite 평문 저장 폐기.
+  - 기존 유저 자동 마이그레이션: DB에 남아있는 레거시 PIN을 SecureStore로 이전 후 DB에서 삭제.
+  - 락스크린 핀코드 인증 및 생체 인식(LocalAuthentication) 지원.
 - **백업 (v2.0.0)**:
   - `JSZip`을 이용한 데이터 + 사진 통합 패키징.
   - 복구 시 `word_stats`를 실시간 재계산하여 통계 일관성 유지.
+  - **암호화 V2**: AES-CBC 모드 + 무작위 IV 적용. V1(ECB) 백업 파일과 하위 호환성 유지.
+  - 암호문 포맷: `TPv2:<IV hex>:<ciphertext>` (V1은 프리픽스 없음으로 자동 감지).
 
 ### 5.3 앱 출시 관련 (Release)
 
@@ -150,12 +155,24 @@
 
 - **모듈**: `react-native-google-mobile-ads`
 - **Configuration (환경 변수)**:
-  - **App ID**: `app.json`을 통해 네이티브(Android/iOS) 전역 환경으로 주입 (`ca-app-pub-1781835804890106~9205277146`).
-  - **Ad Units**: `src/constants/ads.js`에서 보상형 광고(Rewarded Ad) 단위 ID 중앙 관리 (`ca-app-pub-1781835804890106/5632162943`). 개발 환경(`__DEV__`)에서는 계정 보호를 위해 강제로 `TestIds.REWARDED`를 사용.
+  - **App ID**: `.env` 파일에서 `dotenv`를 통해 `app.config.js`로 주입. 소스 코드에 하드코딩하지 않음.
+  - **Ad Units**: `src/constants/ads.js`에서 `Constants.expoConfig.extra`를 통해 `.env`로부터 주입된 값을 사용. 개발 환경(`__DEV__`)에서는 계정 보호를 위해 강제로 `TestIds.REWARDED`를 사용.
 - **Usage (`WriteScreen.logic.js`)**:
   - 스티커 및 텍스트 박스 한도 초과 시, `rewardTypeRef`('sticker' | 'text')에 따라 동적으로 광고 보상(Reward)을 지급.
   - 이벤트를 리스닝하여 `EARNED_REWARD`가 트리거되었을 때 스마트하게 한도(+2)를 증설함.
   - 프리미엄 구독자는 해당 광고 로딩 로직 전체가 무시되어 최적화된 퍼포먼스를 제공함.
 
+### 5.5 환경 변수 관리
+
+- **`.env`**: 민감한 AdMob ID 등을 소스 코드와 분리 저장. `.gitignore`에 등록하여 깃 업로드 차단.
+- **`.env.example`**: 팀원/미래 참조용 템플릿 (실제 값 없음, 깃 업로드 허용).
+- **`dotenv`**: `app.config.js`에서 `.env` 파일을 읽어 빌드 타임에 환경 변수 주입.
+
+### 6. 정기 관리 및 메인터넌스
+
+- **버전 관리**: `package.json`의 버전을 단일 진실 공급원으로 사용.
+- **의존성 업데이트**: 보안 패치 및 최신 SDK 대응을 위해 정기적인 `npm audit` 권장.
+
 ---
-*Last Updated: 2026-03-23*
+*Last Updated: 2026-03-26*
+

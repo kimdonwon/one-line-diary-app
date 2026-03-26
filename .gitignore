@@ -11,3 +11,13 @@ npm-debug.*
 web-build/
 android/
 ios/
+
+# 🔐 민감 정보 (환경 변수)
+.env
+.env.local
+.env.production
+
+# 🗑️ 디버그/임시 파일
+debug.txt
+build.log
+*.bak

@@ -1,8 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 import { getSetting, saveSetting } from '../database/db';
 
 const LockContext = createContext();
+
+// 🔐 SecureStore 키 상수
+const SECURE_PIN_KEY = 'today_piece_pin';
 
 export function LockProvider({ children }) {
     const [isLockEnabled, setIsLockEnabled] = useState(false);
@@ -28,7 +32,29 @@ export function LockProvider({ children }) {
         setIsLoading(true);
         try {
             const enabled = await getSetting('isLockEnabled');
-            const pass = await getSetting('password');
+
+            // 🔐 SecureStore에서 PIN을 읽습니다 (안전한 금고)
+            let pass = null;
+            try {
+                pass = await SecureStore.getItemAsync(SECURE_PIN_KEY);
+            } catch (e) {
+                console.warn('[Lock] SecureStore read failed, trying DB fallback:', e.message);
+            }
+
+            // 🔄 마이그레이션: 기존 DB에 저장된 PIN이 있으면 SecureStore로 이전
+            if (!pass) {
+                const dbPass = await getSetting('password');
+                if (dbPass && dbPass.length === 4) {
+                    pass = dbPass;
+                    try {
+                        await SecureStore.setItemAsync(SECURE_PIN_KEY, dbPass);
+                        // DB에서 평문 비밀번호 삭제 (보안 강화)
+                        await saveSetting('password', '');
+                    } catch (e) {
+                        console.warn('[Lock] Migration to SecureStore failed:', e.message);
+                    }
+                }
+            }
 
             const isEnabled = enabled === 'true';
             setIsLockEnabled(isEnabled);
@@ -72,7 +98,6 @@ export function LockProvider({ children }) {
                 setShowPinFallback(false);
                 return true;
             } else {
-                // 생체인증 실패/취소 → PIN 화면으로 전환
                 setShowPinFallback(true);
                 return false;
             }
@@ -96,7 +121,20 @@ export function LockProvider({ children }) {
     // ⚙️ 잠금 설정 변경
     const updateLockSettings = async (enabled, newPass) => {
         await saveSetting('isLockEnabled', String(enabled));
-        await saveSetting('password', newPass);
+
+        // 🔐 PIN은 SecureStore에 저장 (DB가 아닌 OS 보안 영역)
+        try {
+            if (enabled && newPass) {
+                await SecureStore.setItemAsync(SECURE_PIN_KEY, newPass);
+            } else {
+                await SecureStore.deleteItemAsync(SECURE_PIN_KEY);
+            }
+        } catch (e) {
+            console.error('[Lock] SecureStore write failed:', e);
+        }
+
+        // DB에는 평문 비밀번호를 저장하지 않습니다
+        await saveSetting('password', '');
 
         setIsLockEnabled(enabled);
         setPassword(newPass);

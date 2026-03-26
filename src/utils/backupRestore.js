@@ -3,13 +3,18 @@ import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
+import Hex from 'crypto-js/enc-hex';
 import Pkcs7 from 'crypto-js/pad-pkcs7';
 import ECB from 'crypto-js/mode-ecb';
+import CryptoJSLib from 'crypto-js/lib-typedarrays';
 import JSZip from 'jszip';
 import { getAllData, restoreFromData } from '../database/db';
 
-// 암호화용 고정 키 (32바이트)
+// 🔐 암호화용 고정 키 (32바이트) - 향후 사용자별 키 도입 권장
 const SECRET_KEY = Utf8.parse('today-piece-secure-key-32chars!!');
+
+// 📌 암호화 버전 식별자
+const ENCRYPTION_V2_PREFIX = 'TPv2:';
 
 // 사진 저장용 앱 전용 디렉토리
 const PHOTOS_DIR = `${FileSystem.documentDirectory}diary_photos/`;
@@ -25,24 +30,49 @@ async function ensurePhotosDir() {
 }
 
 /**
- * 🔐 JSON 문자열을 AES 암호화
+ * 🔐 [V2] JSON 문자열을 AES-CBC 암호화 (무작위 IV 사용)
+ * 결과: "TPv2:<IV hex>:<암호문>"
  */
 function encryptData(jsonString) {
-    return AES.encrypt(jsonString, SECRET_KEY, {
-        mode: ECB,
+    const iv = CryptoJSLib.random(16); // 무작위 16바이트 IV 생성
+    const encrypted = AES.encrypt(jsonString, SECRET_KEY, {
+        iv: iv,
         padding: Pkcs7
     }).toString();
+    const ivHex = iv.toString(Hex);
+    return `${ENCRYPTION_V2_PREFIX}${ivHex}:${encrypted}`;
 }
 
 /**
- * 🔓 AES 암호화된 문자열을 복호화
+ * 🔓 암호화된 문자열을 복호화 (V1/V2 자동 감지)
  */
 function decryptData(encryptedString) {
-    const bytes = AES.decrypt(encryptedString, SECRET_KEY, {
-        mode: ECB,
-        padding: Pkcs7
-    });
-    const result = bytes.toString(Utf8);
+    let result;
+
+    if (encryptedString.startsWith(ENCRYPTION_V2_PREFIX)) {
+        // V2: CBC 모드 (IV 포함)
+        const payload = encryptedString.slice(ENCRYPTION_V2_PREFIX.length);
+        const colonIdx = payload.indexOf(':');
+        if (colonIdx === -1) throw new Error('잘못된 V2 암호문 형식입니다.');
+
+        const ivHex = payload.slice(0, colonIdx);
+        const cipherText = payload.slice(colonIdx + 1);
+        const iv = Hex.parse(ivHex);
+
+        const bytes = AES.decrypt(cipherText, SECRET_KEY, {
+            iv: iv,
+            padding: Pkcs7
+        });
+        result = bytes.toString(Utf8);
+    } else {
+        // V1: 레거시 ECB 모드 (기존 백업 파일 호환)
+        const bytes = AES.decrypt(encryptedString, SECRET_KEY, {
+            mode: ECB,
+            padding: Pkcs7
+        });
+        result = bytes.toString(Utf8);
+    }
+
     if (!result) {
         throw new Error('복호화 실패: 올바른 백업 파일이 아니거나 비밀번호가 틀립니다.');
     }
@@ -59,18 +89,15 @@ function extractAllPhotoUris(diaries) {
         if (!diary.photos || diary.photos === '[]') continue;
         try {
             const parsed = JSON.parse(diary.photos);
-            // 2차원 배열 (멀티 페이지) 또는 1차원 배열 (레거시) 처리
             if (Array.isArray(parsed)) {
                 for (const item of parsed) {
                     if (Array.isArray(item)) {
-                        // 2차원: 페이지별 사진 배열
                         for (const photo of item) {
                             if (photo && photo.uri) {
                                 uris.push(photo.uri);
                             }
                         }
                     } else if (item && item.uri) {
-                        // 1차원: 단일 페이지 레거시
                         uris.push(item.uri);
                     }
                 }
@@ -143,7 +170,7 @@ function remapPhotosToLocalRecursive(arr) {
 
 /**
  * 📤 ZIP 파일로 전체 백업을 생성하고 공유합니다.
- * - data.json: AES 암호화된 DB 데이터
+ * - data.json: AES-CBC 암호화된 DB 데이터 (V2)
  * - images/: 일기에 첨부된 사진 파일들
  */
 export async function exportToShareSheet() {
@@ -159,7 +186,7 @@ export async function exportToShareSheet() {
         const zip = new JSZip();
 
         for (const uri of photoUris) {
-            if (uriToFilenameMap[uri]) continue; // 중복 방지
+            if (uriToFilenameMap[uri]) continue;
 
             try {
                 const fileInfo = await FileSystem.getInfoAsync(uri);
@@ -168,13 +195,11 @@ export async function exportToShareSheet() {
                     continue;
                 }
 
-                // 파일 확장자 추출
                 const ext = uri.split('.').pop()?.toLowerCase() || 'jpg';
                 const filename = `photo_${photoIndex}.${ext}`;
                 uriToFilenameMap[uri] = filename;
                 photoIndex++;
 
-                // base64로 읽어서 ZIP에 추가
                 const base64Data = await FileSystem.readAsStringAsync(uri, {
                     encoding: FileSystem.EncodingType.Base64,
                 });
@@ -194,7 +219,7 @@ export async function exportToShareSheet() {
             }
         };
 
-        // 3. JSON → 암호화 → ZIP에 추가
+        // 3. JSON → AES-CBC 암호화 → ZIP에 추가
         const jsonString = JSON.stringify(exportData, null, 2);
         const encrypted = encryptData(jsonString);
         zip.file('data.json', encrypted);
@@ -248,11 +273,9 @@ export async function importFromFile() {
         const fileUri = pickedFile.uri;
         const fileName = pickedFile.name || '';
 
-        // ZIP 파일인지 레거시 JSON 파일인지 판별
         if (fileName.endsWith('.zip') || pickedFile.mimeType === 'application/zip') {
             return await importFromZip(fileUri);
         } else {
-            // 레거시 JSON 호환 (기존 백업 파일 지원)
             return await importFromLegacyJson(fileUri);
         }
     } catch (error) {
@@ -262,18 +285,15 @@ export async function importFromFile() {
 }
 
 /**
- * 📦 ZIP 파일에서 복원
+ * 📦 ZIP 파일에서 복원 (V1/V2 자동 감지)
  */
 async function importFromZip(fileUri) {
-    // 1. ZIP 파일을 base64로 읽기
     const zipBase64 = await FileSystem.readAsStringAsync(fileUri, {
         encoding: FileSystem.EncodingType.Base64,
     });
 
-    // 2. JSZip으로 열기
     const zip = await JSZip.loadAsync(zipBase64, { base64: true });
 
-    // 3. data.json 복호화
     const dataFile = zip.file('data.json');
     if (!dataFile) {
         throw new Error('올바른 오늘조각 백업 파일이 아닙니다. (data.json 없음)');
@@ -293,7 +313,7 @@ async function importFromZip(fileUri) {
         throw new Error('올바른 오늘조각 백업 파일 형식이 아닙니다.');
     }
 
-    // 4. 사진 파일 복원
+    // 사진 파일 복원
     await ensurePhotosDir();
 
     const imageFiles = Object.keys(zip.files).filter(name => name.startsWith('images/') && !zip.files[name].dir);
@@ -312,7 +332,6 @@ async function importFromZip(fileUri) {
         }
     }
 
-    // 5. diary의 상대 경로를 실제 로컬 경로로 변환
     if (data.tables.diary) {
         data.tables.diary = remapPhotoUrisToLocal(data.tables.diary);
     }
