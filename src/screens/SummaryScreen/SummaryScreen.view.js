@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, TextInput, Modal, Pressable, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Animated, TextInput, Modal, Pressable, FlatList, InteractionManager } from 'react-native';
 import Reanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, withDelay, useAnimatedProps } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
@@ -19,6 +19,64 @@ import { BentoBoard } from './components/BentoBoard';
 
 // 💡 세션 내 넛지 애니메이션 실행 여부 추적
 let SummaryScreenNudged = false;
+
+/**
+ * 💡 메모이제이션된 SVG 차트 컴포넌트들
+ * 네비게이션 전환이나 미세 상태 변경 시 무거운 SVG 노드들의 re-render를 완벽 차단.
+ */
+const MemoizedMoodLineChart = React.memo(({ moodLineData, maxLineValue }) => (
+    <View style={styles.chartContainer}>
+        <Svg width={chartConstants.chartW} height={chartConstants.chartH}>
+            {moodLineData.map((d) => {
+                const points = d.values.map((v, i) => {
+                    const x = (i / (MONTH_NAMES.length - 1)) * chartConstants.chartW;
+                    const y = chartConstants.chartH - chartConstants.pBot - (v / maxLineValue) * (chartConstants.chartH - chartConstants.pTop - chartConstants.pBot);
+                    return `${x},${y}`;
+                }).join(' ');
+                return (
+                    <React.Fragment key={d.key}>
+                        <Polyline points={points} fill="none" stroke={d.color} strokeWidth="2.5" />
+                        {d.values.map((v, i) => {
+                            const x = (i / (MONTH_NAMES.length - 1)) * chartConstants.chartW;
+                            const y = chartConstants.chartH - chartConstants.pBot - (v / maxLineValue) * (chartConstants.chartH - chartConstants.pTop - chartConstants.pBot);
+                            return <SvgCircle key={i} cx={x} cy={y} r="3" fill={d.color} />;
+                        })}
+                    </React.Fragment>
+                );
+            })}
+        </Svg>
+        <View style={styles.lineChartLabels}>
+            {MONTH_NAMES.map((name, i) => <Text key={`ml-${i}`} style={styles.lineChartLabel}>{name.replace('월', '')}</Text>)}
+        </View>
+    </View>
+));
+
+const MemoizedActivityLineChart = React.memo(({ activityLineData, maxActivityLineValue }) => (
+    <View style={styles.chartContainer}>
+        <Svg width={chartConstants.chartW} height={chartConstants.chartH}>
+            {activityLineData.map((d) => {
+                const points = d.values.map((v, i) => {
+                    const x = (i / (MONTH_NAMES.length - 1)) * chartConstants.chartW;
+                    const y = chartConstants.chartH - chartConstants.pBot - (v / maxActivityLineValue) * (chartConstants.chartH - chartConstants.pTop - chartConstants.pBot);
+                    return `${x},${y}`;
+                }).join(' ');
+                return (
+                    <React.Fragment key={d.key}>
+                        <Polyline points={points} fill="none" stroke={d.color} strokeWidth="2.5" />
+                        {d.values.map((v, i) => {
+                            const x = (i / (MONTH_NAMES.length - 1)) * chartConstants.chartW;
+                            const y = chartConstants.chartH - chartConstants.pBot - (v / maxActivityLineValue) * (chartConstants.chartH - chartConstants.pTop - chartConstants.pBot);
+                            return <SvgCircle key={i} cx={x} cy={y} r="3" fill={d.color} />;
+                        })}
+                    </React.Fragment>
+                );
+            })}
+        </Svg>
+        <View style={styles.lineChartLabels}>
+            {MONTH_NAMES.map((name, i) => <Text key={`al-${i}`} style={styles.lineChartLabel}>{name.replace('월', '')}</Text>)}
+        </View>
+    </View>
+));
 
 /**
  * 📊 애니메이션 활동 바 (Reanimated v4 기반)
@@ -101,7 +159,10 @@ export function SummaryScreenView({ route, navigation }) {
 
     useFocusEffect(
         useCallback(() => {
-            setAnimKey(p => p + 1);
+            const handle = InteractionManager.runAfterInteractions(() => {
+                setAnimKey(p => p + 1);
+            });
+            return () => handle.cancel();
         }, [])
     );
 
@@ -121,60 +182,6 @@ export function SummaryScreenView({ route, navigation }) {
     };
 
 
-
-    const renderMoodLineChart = () => (
-        <View style={styles.chartContainer}>
-            <Svg width={chartConstants.chartW} height={chartConstants.chartH}>
-                {moodLineData.map((d) => {
-                    const points = d.values.map((v, i) => {
-                        const x = (i / (MONTH_NAMES.length - 1)) * chartConstants.chartW;
-                        const y = chartConstants.chartH - chartConstants.pBot - (v / maxLineValue) * (chartConstants.chartH - chartConstants.pTop - chartConstants.pBot);
-                        return `${x},${y}`;
-                    }).join(' ');
-                    return (
-                        <React.Fragment key={d.key}>
-                            <Polyline points={points} fill="none" stroke={d.color} strokeWidth="2.5" />
-                            {d.values.map((v, i) => {
-                                const x = (i / (MONTH_NAMES.length - 1)) * chartConstants.chartW;
-                                const y = chartConstants.chartH - chartConstants.pBot - (v / maxLineValue) * (chartConstants.chartH - chartConstants.pTop - chartConstants.pBot);
-                                return <SvgCircle key={i} cx={x} cy={y} r="3" fill={d.color} />;
-                            })}
-                        </React.Fragment>
-                    );
-                })}
-            </Svg>
-            <View style={styles.lineChartLabels}>
-                {MONTH_NAMES.map((name, i) => <Text key={i} style={styles.lineChartLabel}>{name.replace('월', '')}</Text>)}
-            </View>
-        </View>
-    );
-
-    const renderActivityLineChart = () => (
-        <View style={styles.chartContainer}>
-            <Svg width={chartConstants.chartW} height={chartConstants.chartH}>
-                {activityLineData.map((d) => {
-                    const points = d.values.map((v, i) => {
-                        const x = (i / (MONTH_NAMES.length - 1)) * chartConstants.chartW;
-                        const y = chartConstants.chartH - chartConstants.pBot - (v / maxActivityLineValue) * (chartConstants.chartH - chartConstants.pTop - chartConstants.pBot);
-                        return `${x},${y}`;
-                    }).join(' ');
-                    return (
-                        <React.Fragment key={d.key}>
-                            <Polyline points={points} fill="none" stroke={d.color} strokeWidth="2.5" />
-                            {d.values.map((v, i) => {
-                                const x = (i / (MONTH_NAMES.length - 1)) * chartConstants.chartW;
-                                const y = chartConstants.chartH - chartConstants.pBot - (v / maxActivityLineValue) * (chartConstants.chartH - chartConstants.pTop - chartConstants.pBot);
-                                return <SvgCircle key={i} cx={x} cy={y} r="3" fill={d.color} />;
-                            })}
-                        </React.Fragment>
-                    );
-                })}
-            </Svg>
-            <View style={styles.lineChartLabels}>
-                {MONTH_NAMES.map((name, i) => <Text key={i} style={styles.lineChartLabel}>{name.replace('월', '')}</Text>)}
-            </View>
-        </View>
-    );
 
     // 💡 초기 진입 시 페이지가 더 있음을 알려주는 '넛지' 효과 (세션당 1회)
     useEffect(() => {
@@ -246,7 +253,7 @@ export function SummaryScreenView({ route, navigation }) {
                                 </Card>
                                 <Card style={styles.monthlyCard}>
                                     <View style={styles.sectionRow}><Text style={styles.sectionTitle}>월별 기분 흐름</Text></View>
-                                    {renderMoodLineChart()}
+                                    <MemoizedMoodLineChart moodLineData={moodLineData} maxLineValue={maxLineValue} />
                                 </Card>
                                 <BentoBoard
                                     topWords={bentoData.topWords}
@@ -299,7 +306,7 @@ export function SummaryScreenView({ route, navigation }) {
                                 </Card>
                                 <Card style={styles.monthlyCard}>
                                     <View style={styles.sectionRow}><Text style={styles.sectionTitle}>월별 활동 흐름</Text></View>
-                                    {renderActivityLineChart()}
+                                    <MemoizedActivityLineChart activityLineData={activityLineData} maxActivityLineValue={maxActivityLineValue} />
                                 </Card>
                                 <Card style={styles.chartCard}>
                                     <View style={styles.sectionRow}><Text style={styles.sectionTitle}>활동별 행복 지수</Text></View>

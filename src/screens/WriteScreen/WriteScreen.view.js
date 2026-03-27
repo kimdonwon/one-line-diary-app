@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Animated, Modal, Pressable, FlatList, Dimensions, Alert, LayoutAnimation, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Animated, Modal, Pressable, FlatList, Dimensions, Alert, LayoutAnimation, Keyboard, InteractionManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import RNModal from 'react-native-modal';
@@ -143,6 +143,198 @@ const AnimatedStickerItem = ({ children, onPress }) => {
     );
 };
 
+/**
+ * 🌌 프리미엄 반응형 감정 백드롭 (Responsive Aura Backdrop)
+ */
+const AnimatedAuraBackdrop = ({ isVisible, selectedMoodKey, onPressDismiss }) => {
+    const auraOpacity = useRef(new Animated.Value(0)).current;
+    const backdropOpacity = useRef(new Animated.Value(0)).current;
+    const [renderBackdrop, setRenderBackdrop] = useState(isVisible);
+    const [currentColor, setCurrentColor] = useState('transparent');
+
+    useEffect(() => {
+        if (isVisible) {
+            setRenderBackdrop(true);
+            Animated.timing(backdropOpacity, {
+                toValue: 1,
+                duration: 400,
+                useNativeDriver: true
+            }).start();
+
+            if (selectedMoodKey) {
+                const nextColor = MOOD_LIST.find(m => m.key === selectedMoodKey)?.color || 'transparent';
+                setCurrentColor(nextColor);
+                
+                auraOpacity.setValue(0);
+                Animated.timing(auraOpacity, {
+                    toValue: 0.2,
+                    duration: 800,
+                    useNativeDriver: true
+                }).start();
+            }
+        } else {
+            Animated.parallel([
+                Animated.timing(backdropOpacity, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true
+                }),
+                Animated.timing(auraOpacity, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true
+                })
+            ]).start(() => {
+                setRenderBackdrop(false);
+            });
+        }
+    }, [isVisible, selectedMoodKey]);
+
+    if (!renderBackdrop) return null;
+
+    return (
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity, zIndex: 9999 }]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={onPressDismiss}>
+                <BlurView 
+                    style={StyleSheet.absoluteFill} 
+                    tint="dark" 
+                    intensity={40} 
+                    experimentalBlurMethod="dimezisBlurView" 
+                />
+                {currentColor !== 'transparent' && (
+                    <Animated.View 
+                        style={[StyleSheet.absoluteFill, { backgroundColor: currentColor, opacity: auraOpacity }]} 
+                        pointerEvents="none" 
+                    />
+                )}
+            </Pressable>
+        </Animated.View>
+    );
+};
+
+/**
+ * 🚪 순수 Animated.View 기반 기분/활동 바텀시트
+ * RNModal의 안드로이드 플리커링(네이티브 Modal 마운트 시 1프레임 번쩍) 완벽 차단.
+ * 네이티브 Modal 레이어를 전혀 사용하지 않고, 일반 View 트리 안에서
+ * translateY 애니메이션만으로 슬라이드업/다운을 구현합니다.
+ */
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const MoodBottomSheet = ({ isVisible, insets, selectedMood, setSelectedMood, activeMood, activityStates, toggleActivity, handleMoodModalConfirm, handleMoodModalDismiss }) => {
+    const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+    const [shouldRender, setShouldRender] = useState(false);
+
+    useEffect(() => {
+        if (isVisible) {
+            setShouldRender(true);
+            Animated.spring(slideAnim, {
+                toValue: 0,
+                friction: 9,
+                tension: 65,
+                useNativeDriver: true,
+            }).start();
+        } else {
+            Animated.timing(slideAnim, {
+                toValue: SCREEN_HEIGHT,
+                duration: 250,
+                useNativeDriver: true,
+            }).start(() => {
+                setShouldRender(false);
+            });
+        }
+    }, [isVisible]);
+
+    if (!shouldRender) return null;
+
+    return (
+        <Animated.View
+            style={{
+                position: 'absolute', left: 0, right: 0, bottom: 0,
+                zIndex: 10000,
+                transform: [{ translateY: slideAnim }],
+            }}
+            pointerEvents="box-none"
+        >
+            <View style={{
+                backgroundColor: '#FAFAF9',
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                padding: 24,
+                paddingBottom: insets.bottom + 24,
+                maxHeight: SCREEN_HEIGHT * 0.9,
+                ...SOFT_SHADOW.card,
+            }}>
+                {/* 핸들 바 */}
+                <View style={{ width: 40, height: 5, backgroundColor: '#D9D9D6', borderRadius: 3, alignSelf: 'center', marginBottom: 20 }} />
+                <ScrollView showsVerticalScrollIndicator={false}>
+
+                    {/* 오늘의 기분 (Staggered Pop-up) */}
+                    <Text style={[styles.sectionTitle, { marginTop: 0 }]}>오늘의 기분은?</Text>
+                    <View style={styles.moodRow}>
+                        {MOOD_LIST.map((mood, index) => (
+                            <MoodCard
+                                key={`modal-${mood.key}`}
+                                mood={mood}
+                                selected={selectedMood === mood.key}
+                                onPress={() => setSelectedMood(mood.key)}
+                                index={index}
+                                isVisible={isVisible}
+                            />
+                        ))}
+                    </View>
+
+                    {/* 오늘의 활동 */}
+                    <Text style={[styles.sectionTitle, { marginTop: 32 }]}>오늘 뭐 했어?</Text>
+                    <View style={styles.activityGrid}>
+                        {ACTIVITIES.map((act) => {
+                            const state = activityStates.find(a => a.key === act.key);
+                            const isSelected = state?.selected;
+                            return (
+                                <TouchableOpacity
+                                    key={`modal-act-${act.key}`}
+                                    style={[
+                                        styles.activityChip,
+                                        isSelected && { backgroundColor: act.color },
+                                    ]}
+                                    onPress={() => toggleActivity(act.key)}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={styles.activityIcon}>
+                                        <ActivityIcon type={act.key} size={22} />
+                                    </View>
+                                    <Text style={[
+                                        styles.activityLabel,
+                                        isSelected && styles.activityLabelSelected,
+                                    ]}>
+                                        {act.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+
+                    {/* 완료 버튼 */}
+                    <TouchableOpacity
+                        style={{
+                            marginTop: 32,
+                            backgroundColor: activeMood ? activeMood.color : COLORS.soso,
+                            borderRadius: 16,
+                            paddingVertical: 16,
+                            alignItems: 'center',
+                            ...SOFT_SHADOW.card
+                        }}
+                        onPress={handleMoodModalConfirm}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFF' }}>선택하기</Text>
+                    </TouchableOpacity>
+
+                </ScrollView>
+            </View>
+        </Animated.View>
+    );
+};
+
+
 
 /**
  * 🎨 화면 렌더링에 필요한 UI 코드만 모아둔 모듈입니다 (Modular UI Developer 준수)
@@ -162,7 +354,13 @@ export function WriteScreenView({ route, navigation }) {
     const [photoFrameTab, setPhotoFrameTab] = useState('polaroid'); // 'polaroid' | 'transparent' (탭은 유지하되 UI는 하나)
     const [textColorMode, setTextColorMode] = useState('text'); // 'text' | 'highlight'
 
+    // 🚨 20년 차 천재 최적화: 바텀 시트 프로그레시브 렌더링 상태 (Progressive Render)
+    // 0.5초 렉(Jank)을 근본적으로 제거하기 위해 LayoutAnimation 중에는 무거운 뷰들을 마운트하지 않음.
+    const [isDockReady, setIsDockReady] = useState(false);
+
     const {
+        loading,
+        isDataInitialized,
         isMoodModalVisible,
         setMoodModalVisible,
         formattedDate,
@@ -284,6 +482,28 @@ export function WriteScreenView({ route, navigation }) {
         handleMoodModalConfirm,
     } = useWriteLogic(route, navigation, scrollRef);
 
+    // 🎬 하이엔드 도미노 연출 (Staggered Content Reveal)
+    // 캔버스 자체는 진입 즉시 보여주고, внутри 알맹이(텍스트, 사진, 스티커)들만 순차적으로 팝업
+    const textRevealAnim = useRef(new Animated.Value(0)).current;
+    const photoRevealAnim = useRef(new Animated.Value(0)).current;
+    const stickerRevealAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (isDataInitialized) {
+            // 데이터가 준비되면, 텍스트 -> 사진 -> 스티커 순으로 0.08초 간격으로 탄력 있게 등장
+            Animated.stagger(80, [
+                Animated.spring(textRevealAnim, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
+                Animated.spring(photoRevealAnim, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
+                Animated.spring(stickerRevealAnim, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
+            ]).start();
+        } else {
+            // 로딩 중이거나 뷰 초기화 중일 때 숨김 처리
+            textRevealAnim.setValue(0);
+            photoRevealAnim.setValue(0);
+            stickerRevealAnim.setValue(0);
+        }
+    }, [isDataInitialized]);
+
     // 🎨 현재 페이지의 배경색 동기화 (인디케이터 영역 포함)
     const currentBgId = pageBackgrounds[currentPageIndex] || 'default';
     const currentBgData = getBackgroundById(currentBgId);
@@ -364,6 +584,17 @@ export function WriteScreenView({ route, navigation }) {
         prevBottomSheetOpen.current = true;
     }, [showStickers, showPhotos, showTexts, windowWidth, activeCategoryId, visibleCategories]);
 
+    // 🚨 20년 차 천재 최적화: LayoutAnimation 프레임 드랍을 원천 차단하는 Progressive Mount 전략
+    useEffect(() => {
+        if (showStickers || showPhotos || showTexts) {
+            setIsDockReady(false); // 바텀시트 열릴 때는 가벼운 껍데기 레이아웃만 마운트
+            // 애니메이션 부하가 끝난 직후 무거운 컴포넌트들 마운트 개시
+            InteractionManager.runAfterInteractions(() => {
+                setIsDockReady(true);
+            });
+        }
+    }, [showStickers, showPhotos, showTexts]);
+
     // 📷 사진용 공유 애니메이션 관리 (반투명 사진 실시간 동기화용)
     const photoAnimations = useRef({});
 
@@ -433,6 +664,7 @@ export function WriteScreenView({ route, navigation }) {
 
 
                     {/* ─── 🌈 통합 다이어리 카드 영역 (캔버스 + 하단 메타) ─── */}
+                    {/* (기존의 전체를 가리던 둔탁한 Animated.View 제거, 알맹이만 애니메이션 처리) */}
                     <View style={[styles.integratedDiaryCard, { backgroundColor: dynamicCanvasColor }, isDraggingAny]}>
                         {/* 멀티페이지 캔버스 영역 (가로 스와이프 + 엣지 풀 추가) */}
                         <View
@@ -567,7 +799,7 @@ export function WriteScreenView({ route, navigation }) {
                                                         style={[StyleSheet.absoluteFill, { zIndex: 2 }]}
                                                         pointerEvents="none"
                                                     >
-                                                        {(pageTexts[pageIdx] || []).length === 0 && (pagePhotos[pageIdx] || []).length === 0 && (pageStickers[pageIdx] || []).length === 0 && (
+                                                        {isDataInitialized && (pageTexts[pageIdx] || []).length === 0 && (pagePhotos[pageIdx] || []).length === 0 && (pageStickers[pageIdx] || []).length === 0 && (
                                                             <View style={styles.canvasGuide}>
 
                                                                 <Text style={styles.canvasGuideText}>
@@ -607,8 +839,12 @@ export function WriteScreenView({ route, navigation }) {
 
 
                                                     {/* [층2] 📷 폴라로이드 사진 레이어 (반투명 프레임 제외) */}
-                                                    <View
-                                                        style={[StyleSheet.absoluteFill, { zIndex: 5, elevation: 5 }]}
+                                                    <Animated.View
+                                                        style={[StyleSheet.absoluteFill, { 
+                                                            zIndex: 5, elevation: 5, 
+                                                            opacity: photoRevealAnim, 
+                                                            transform: [{ scale: photoRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }] 
+                                                        }]}
                                                         pointerEvents="box-none"
                                                     >
                                                         {(pagePhotos[pageIdx] || []).filter(p => p.frameType !== 'transparent_white' && p.frameType !== 'transparent_gray').map(photo => (
@@ -626,11 +862,15 @@ export function WriteScreenView({ route, navigation }) {
                                                                 isSelected={selectedItemId === photo.id}
                                                             />
                                                         ))}
-                                                    </View>
+                                                    </Animated.View>
 
                                                     {/* [층2.5] ✏️ 텍스트 스티커 영역 */}
-                                                    <View
-                                                        style={[StyleSheet.absoluteFill, { zIndex: 8, elevation: 8 }]}
+                                                    <Animated.View
+                                                        style={[StyleSheet.absoluteFill, { 
+                                                            zIndex: 8, elevation: 8, 
+                                                            opacity: textRevealAnim, 
+                                                            transform: [{ translateY: textRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] 
+                                                        }]}
                                                         pointerEvents="box-none"
                                                     >
                                                         {(pageTexts[pageIdx] || []).map(textNode => (
@@ -658,11 +898,15 @@ export function WriteScreenView({ route, navigation }) {
                                                                 bounds={inputBoxBounds}
                                                             />
                                                         ))}
-                                                    </View>
+                                                    </Animated.View>
 
                                                     {/* [층3] 🌟 다꾸 스티커 영역 (최상위) */}
-                                                    <View
-                                                        style={[StyleSheet.absoluteFill, { zIndex: 10, elevation: 10 }]}
+                                                    <Animated.View
+                                                        style={[StyleSheet.absoluteFill, { 
+                                                            zIndex: 10, elevation: 10, 
+                                                            opacity: stickerRevealAnim, 
+                                                            transform: [{ scale: stickerRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }, { translateY: stickerRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }] 
+                                                        }]}
                                                         pointerEvents="box-none"
                                                         onLayout={(e) => {
                                                             if (pageIdx === currentPageIndex) {
@@ -688,7 +932,7 @@ export function WriteScreenView({ route, navigation }) {
                                                                 isSelected={selectedItemId === sticker.id}
                                                             />
                                                         ))}
-                                                    </View>
+                                                    </Animated.View>
                                                 </Card>
                                             );
                                         }}
@@ -912,7 +1156,22 @@ export function WriteScreenView({ route, navigation }) {
                                             }
                                         }}
                                     >
-                                        {visibleCategories.map((cat) => {
+                                        {visibleCategories.map((cat, index) => {
+                                            // 🚨 20년 차 천재 최적화: 수백 개의 SVG가 동시에 마운트되어 메인 스레드가 멈추는(0.5초 렉) 현상 방지
+                                            // 초기 렌더링에 의한 프레임 드랍(Jank)을 완벽히 없애기 위해 오직 "선택된 탭" 하나만(Windowing 크기=1) 먼저 렌더링.
+                                            // InteractionManager가 LayoutAnimation(슬라이딩 팝업) 완료를 감지하면 그제서야 양옆 탭(isNearby)을 백그라운드에서 마운트(Progressive)
+                                            const activeIdx = visibleCategories.findIndex(c => c.id === activeCategoryId);
+                                            const isExactActive = index === activeIdx;
+                                            const isNearby = Math.abs(index - activeIdx) <= 1;
+
+                                            // 💡 도크가 열리는 도중(isDockReady=false)엔 무조건 한 놈만 그린다! (애니메이션 렉 0초 타겟)
+                                            const shouldRender = isDockReady ? isNearby : isExactActive;
+
+                                            if (!shouldRender) {
+                                                // 스크롤 레이아웃(페이징)은 유지하되 무거운 SVG 렌더링 연산 생략
+                                                return <View key={cat.id} style={{ width: windowWidth - 32, height: 140 }} />; 
+                                            }
+
                                             const catStickers = CATEGORIZED_STICKERS[cat.id] ?? [];
                                             const isEmoji = cat.id === 'emoji';
                                             return (
@@ -1207,91 +1466,25 @@ export function WriteScreenView({ route, navigation }) {
                 onClose={() => setShowAlert(false)}
             />
 
-            {/* 🚪 기분/활동 팝업 모달 */}
-            <RNModal
+            {/* 💎 프리미엄 블러 백드롭 + 감정 오라 (독립 렌더링) */}
+            <AnimatedAuraBackdrop 
+                isVisible={isMoodModalVisible} 
+                selectedMoodKey={selectedMood} 
+                onPressDismiss={handleMoodModalDismiss} 
+            />
+
+            {/* 🚪 기분/활동 팝업 — 순수 Animated.View 바텀시트 (RNModal 제거, 안드로이드 플리커링 원천 차단) */}
+            <MoodBottomSheet
                 isVisible={isMoodModalVisible}
-                onBackdropPress={handleMoodModalDismiss}
-                onSwipeComplete={handleMoodModalDismiss}
-                onBackButtonPress={handleMoodModalDismiss}
-                swipeDirection="down"
-                style={{ justifyContent: 'flex-end', margin: 0 }}
-                propagateSwipe={true}
-                avoidKeyboard={true}
-                backdropOpacity={0.5}
-            >
-                <View style={{
-                    backgroundColor: '#FAFAF9',
-                    borderTopLeftRadius: 24,
-                    borderTopRightRadius: 24,
-                    padding: 24,
-                    paddingBottom: insets.bottom + 24,
-                    maxHeight: '90%'
-                }}>
-                    <View style={{ width: 40, height: 5, backgroundColor: '#D9D9D6', borderRadius: 3, alignSelf: 'center', marginBottom: 20 }} />
-                    <ScrollView showsVerticalScrollIndicator={false}>
-
-                        {/* 오늘의 기분 영역 */}
-                        <Text style={[styles.sectionTitle, { marginTop: 0 }]}>오늘의 기분은?</Text>
-                        <View style={styles.moodRow}>
-                            {MOOD_LIST.map((mood) => (
-                                <MoodCard
-                                    key={`modal-${mood.key}`}
-                                    mood={mood}
-                                    selected={selectedMood === mood.key}
-                                    onPress={() => setSelectedMood(mood.key)}
-                                />
-                            ))}
-                        </View>
-
-                        {/* 오늘의 활동 영역 */}
-                        <Text style={[styles.sectionTitle, { marginTop: 32 }]}>오늘 뭐 했어?</Text>
-                        <View style={styles.activityGrid}>
-                            {ACTIVITIES.map((act) => {
-                                const state = activityStates.find(a => a.key === act.key);
-                                const isSelected = state?.selected;
-                                return (
-                                    <TouchableOpacity
-                                        key={`modal-act-${act.key}`}
-                                        style={[
-                                            styles.activityChip,
-                                            isSelected && { backgroundColor: act.color },
-                                        ]}
-                                        onPress={() => toggleActivity(act.key)}
-                                        activeOpacity={0.7}
-                                    >
-                                        <View style={styles.activityIcon}>
-                                            <ActivityIcon type={act.key} size={22} />
-                                        </View>
-                                        <Text style={[
-                                            styles.activityLabel,
-                                            isSelected && styles.activityLabelSelected,
-                                        ]}>
-                                            {act.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-
-                        {/* 완료 버튼 */}
-                        <TouchableOpacity
-                            style={{
-                                marginTop: 32,
-                                backgroundColor: activeMood ? activeMood.color : COLORS.soso,
-                                borderRadius: 16,
-                                paddingVertical: 16,
-                                alignItems: 'center',
-                                ...SOFT_SHADOW.card
-                            }}
-                            onPress={handleMoodModalConfirm}
-                            activeOpacity={0.8}
-                        >
-                            <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFF' }}>선택하기</Text>
-                        </TouchableOpacity>
-
-                    </ScrollView>
-                </View>
-            </RNModal>
+                insets={insets}
+                selectedMood={selectedMood}
+                setSelectedMood={setSelectedMood}
+                activeMood={activeMood}
+                activityStates={activityStates}
+                toggleActivity={toggleActivity}
+                handleMoodModalConfirm={handleMoodModalConfirm}
+                handleMoodModalDismiss={handleMoodModalDismiss}
+            />
 
         </View >
     );

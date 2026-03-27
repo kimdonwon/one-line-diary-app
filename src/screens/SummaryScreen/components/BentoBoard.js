@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Card } from '../../../components';
+import { Card, StaticSticker } from '../../../components';
 
 /**
  * 🍱 벤토 보드 메인 뷰

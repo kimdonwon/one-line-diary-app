@@ -93,7 +93,7 @@ export function SettingsScreenView({ navigation }) {
 
                                         // 파스텔 팩 & 프리미엄 혜택 체크
                                         if (pack.catId === 'pastel' && hasPremiumBenefits) {
-                                            statusText = '무료 증정';
+                                            statusText = '무료';
                                             statusStyle = styles.shopCardPrice; // 별도 색상 혹은 금액 스타일 유지
                                         }
 

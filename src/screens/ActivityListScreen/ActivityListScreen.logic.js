@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { InteractionManager } from 'react-native';
+import { Animated } from 'react-native';
 import { getActivityByKey } from '../../constants/activities';
 import { useYearSpecificActivities, useDiariesForYear, useYearAllActivities, useAllCommentCounts } from '../../hooks/useDiary';
 
@@ -20,18 +20,41 @@ export function useActivityListLogic(route, navigation) {
     const { activities: specificActs, loading: loadingActs } = useYearSpecificActivities(year, activityKey, !ready);
     const { diaries, loading: loadingDiaries } = useDiariesForYear(ready ? year : null);
     const { activities: allActivities, loading: loadingAllActivities } = useYearAllActivities(ready ? year : null);
-    const { commentCounts } = useAllCommentCounts();
+    const { commentCounts } = useAllCommentCounts(ready);
+
+    // Fade-in 애니메이션 상태
+    const [fadeAnim] = useState(() => new Animated.Value(0));
 
     // 통합 로딩 상태
     const loading = !ready || loadingActs || loadingDiaries || loadingAllActivities;
 
-    // InteractionManager를 활용해 UI 스레드가 네비게이션 애니메이션을 완전히 끝낼 때까지 기다립니다.
+    // 애니메이션이 완전히 끝날 때까지 기다립니다.
     useEffect(() => {
-        const task = InteractionManager.runAfterInteractions(() => {
+        const unsubscribe = navigation.addListener('transitionEnd', () => {
             setReady(true);
         });
-        return () => task.cancel();
-    }, []);
+        
+        // 안전장치
+        const fallbackTimer = setTimeout(() => {
+            setReady(true);
+        }, 400);
+
+        return () => {
+            unsubscribe();
+            clearTimeout(fallbackTimer);
+        };
+    }, [navigation]);
+
+    // 로딩이 끝나면 리스트를 부드럽게 띄움
+    useEffect(() => {
+        if (!loading && ready) {
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [loading, ready, fadeAnim]);
 
     /**
      * 📊 해당 연도의 기록들 중에서 특정 활동 코드가 매칭되는 날짜의 일기만 필터링합니다.
@@ -81,6 +104,7 @@ export function useActivityListLogic(route, navigation) {
         activitiesMap,
         commentCounts,
         handleGoBack,
-        handleDiaryPress
+        handleDiaryPress,
+        fadeAnim
     };
 }

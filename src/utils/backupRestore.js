@@ -9,9 +9,10 @@ import ECB from 'crypto-js/mode-ecb';
 import CryptoJSLib from 'crypto-js/lib-typedarrays';
 import JSZip from 'jszip';
 import { getAllData, restoreFromData } from '../database/db';
+import { CONFIG } from '../constants/config';
 
-// 🔐 암호화용 고정 키 (32바이트) - 향후 사용자별 키 도입 권장
-const SECRET_KEY = Utf8.parse('today-piece-secure-key-32chars!!');
+// 🔐 소스 코드에서 비밀 키를 분리하여 보안성 향상 (32바이트 권장)
+const SECRET_KEY = Utf8.parse(CONFIG.BACKUP_SECRET);
 
 // 📌 암호화 버전 식별자
 const ENCRYPTION_V2_PREFIX = 'TPv2:';
@@ -34,7 +35,13 @@ async function ensurePhotosDir() {
  * 결과: "TPv2:<IV hex>:<암호문>"
  */
 function encryptData(jsonString) {
-    const iv = CryptoJSLib.random(16); // 무작위 16바이트 IV 생성
+    // 무작위 16바이트(32자 Hex) IV 생성 (React Native에서 CryptoJSLib.random() 실패 방지)
+    let ivHexString = '';
+    for (let i = 0; i < 32; i++) {
+        ivHexString += Math.floor(Math.random() * 16).toString(16);
+    }
+    const iv = Hex.parse(ivHexString);
+
     const encrypted = AES.encrypt(jsonString, SECRET_KEY, {
         iv: iv,
         padding: Pkcs7

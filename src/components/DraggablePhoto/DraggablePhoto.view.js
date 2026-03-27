@@ -63,9 +63,9 @@ const DraggablePhoto = React.memo(({
             style={[
                 styles.container,
                 {
-                    left: pan.x,
-                    top: pan.y,
                     transform: [
+                        { translateX: pan.x },
+                        { translateY: pan.y },
                         { rotate: rotateStr },
                         { scale }
                     ],

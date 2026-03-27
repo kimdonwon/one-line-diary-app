@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { InteractionManager } from 'react-native';
 import { getMoodByKey, MOOD_LIST } from '../../constants/mood';
 import { ACTIVITIES, getActivityByKey } from '../../constants/activities';
 import {
@@ -39,12 +40,15 @@ export function useSummaryLogic(route, navigation, scrollRef) {
 
     useFocusEffect(
         useCallback(() => {
-            reloadDiaries();
-            reloadStats();
-            reloadMonthly();
-            reloadActivities();
-            reloadMonthlyActivity();
-            reloadAllActivities();
+            const handle = InteractionManager.runAfterInteractions(() => {
+                reloadDiaries();
+                reloadStats();
+                reloadMonthly();
+                reloadActivities();
+                reloadMonthlyActivity();
+                reloadAllActivities();
+            });
+            return () => handle.cancel();
         }, [reloadDiaries, reloadStats, reloadMonthly, reloadActivities, reloadMonthlyActivity, reloadAllActivities])
     );
 
@@ -80,7 +84,13 @@ export function useSummaryLogic(route, navigation, scrollRef) {
         const counts = {};
         diaries.forEach(d => {
             try {
-                const stickers = JSON.parse(d.stickers || '[]');
+                const stickersRaw = JSON.parse(d.stickers || '[]');
+                
+                // 멀티페이지(2차원 배열) 대응을 위해 1차원으로 병합(Flatten)
+                const stickers = stickersRaw.reduce((acc, val) => 
+                    Array.isArray(val) ? acc.concat(val) : acc.concat([val])
+                , []);
+
                 stickers.forEach(s => {
                     const type = s.type;
                     if (type) counts[type] = (counts[type] || 0) + 1;
@@ -94,52 +104,68 @@ export function useSummaryLogic(route, navigation, scrollRef) {
             .slice(0, 3);
     }, [diaries]);
 
-    const maxCount = stats.reduce((max, s) => Math.max(max, s.count), 0);
     const totalEntries = diaries.length;
 
-    const topMood = stats.length > 0
-        ? stats.reduce((top, s) => (s.count > top.count ? s : top), stats[0])
-        : null;
-    const topMoodData = topMood ? getMoodByKey(topMood.mood) : null;
-    const topMoodCount = topMood ? topMood.count : 0;
-
-    const allMoodStats = MOOD_LIST.map((mood) => {
-        const stat = stats.find((s) => s.mood === mood.key);
-        return { ...mood, count: stat ? stat.count : 0 };
-    });
-
-    const monthlyEntryCounts = MONTH_NAMES.map((name, i) => {
-        const monthKey = `${year}-${String(i + 1).padStart(2, '0')}`;
-        const count = monthlyStats
-            .filter((s) => s.month === monthKey)
-            .reduce((sum, s) => sum + s.count, 0);
-        return { name, count };
-    });
-    const maxMonthlyCount = Math.max(...monthlyEntryCounts.map(m => m.count), 1);
-
-    const monthlyTopMoods = MONTH_NAMES.map((name, i) => {
-        const monthKey = `${year}-${String(i + 1).padStart(2, '0')}`;
-        const monthData = monthlyStats.filter((s) => s.month === monthKey);
-        if (monthData.length === 0) return { name, mood: null };
-        const top = monthData.reduce((t, s) => (s.count > t.count ? s : t), monthData[0]);
-        return { name, mood: getMoodByKey(top.mood) };
-    });
-
-    // 기분 꺾은선 그래프 데이터
-    const moodLineData = MOOD_LIST.map((mood) => {
-        const monthlyValues = MONTH_NAMES.map((_, i) => {
-            const monthKey = `${year}-${String(i + 1).padStart(2, '0')}`;
-            const stat = monthlyStats.find(s => s.month === monthKey && s.mood === mood.key);
-            return stat ? stat.count : 0;
+    // ─── 📊 기분 통계 (stats 변경 시에만 재계산) ───
+    const { maxCount, topMoodData, topMoodCount, allMoodStats } = useMemo(() => {
+        const _maxCount = stats.reduce((max, s) => Math.max(max, s.count), 0);
+        const topMood = stats.length > 0
+            ? stats.reduce((top, s) => (s.count > top.count ? s : top), stats[0])
+            : null;
+        const _topMoodData = topMood ? getMoodByKey(topMood.mood) : null;
+        const _topMoodCount = topMood ? topMood.count : 0;
+        const _allMoodStats = MOOD_LIST.map((mood) => {
+            const stat = stats.find((s) => s.mood === mood.key);
+            return { ...mood, count: stat ? stat.count : 0 };
         });
-        return { ...mood, values: monthlyValues };
-    });
-    const maxLineValue = Math.max(...moodLineData.flatMap(m => m.values), 1);
+        return { maxCount: _maxCount, topMoodData: _topMoodData, topMoodCount: _topMoodCount, allMoodStats: _allMoodStats };
+    }, [stats]);
+
+    // ─── 📈 월별 통계 (monthlyStats 변경 시에만 재계산) ───
+    const { monthlyEntryCounts, maxMonthlyCount, monthlyTopMoods, moodLineData, maxLineValue } = useMemo(() => {
+        const _monthlyEntryCounts = MONTH_NAMES.map((name, i) => {
+            const monthKey = `${year}-${String(i + 1).padStart(2, '0')}`;
+            const count = monthlyStats
+                .filter((s) => s.month === monthKey)
+                .reduce((sum, s) => sum + s.count, 0);
+            return { name, count };
+        });
+        const _maxMonthlyCount = Math.max(..._monthlyEntryCounts.map(m => m.count), 1);
+
+        const _monthlyTopMoods = MONTH_NAMES.map((name, i) => {
+            const monthKey = `${year}-${String(i + 1).padStart(2, '0')}`;
+            const monthData = monthlyStats.filter((s) => s.month === monthKey);
+            if (monthData.length === 0) return { name, mood: null };
+            const top = monthData.reduce((t, s) => (s.count > t.count ? s : t), monthData[0]);
+            return { name, mood: getMoodByKey(top.mood) };
+        });
+
+        // 기분 꺾은선 그래프 데이터
+        const _moodLineData = MOOD_LIST.map((mood) => {
+            const monthlyValues = MONTH_NAMES.map((_, i) => {
+                const monthKey = `${year}-${String(i + 1).padStart(2, '0')}`;
+                const stat = monthlyStats.find(s => s.month === monthKey && s.mood === mood.key);
+                return stat ? stat.count : 0;
+            });
+            return { ...mood, values: monthlyValues };
+        });
+        const _maxLineValue = Math.max(..._moodLineData.flatMap(m => m.values), 1);
+
+        return {
+            monthlyEntryCounts: _monthlyEntryCounts,
+            maxMonthlyCount: _maxMonthlyCount,
+            monthlyTopMoods: _monthlyTopMoods,
+            moodLineData: _moodLineData,
+            maxLineValue: _maxLineValue,
+        };
+    }, [year, monthlyStats]);
 
     // 활동 통계
-    const maxActivityCount = activityStats.length > 0
-        ? Math.max(...activityStats.map(a => a.count))
-        : 1;
+    const maxActivityCount = useMemo(() => {
+        return activityStats.length > 0
+            ? Math.max(...activityStats.map(a => a.count))
+            : 1;
+    }, [activityStats]);
 
     // 프로그래밍 방식 스크롤 중인지 추적하는 플래그 (탭 버튼 클릭 시)
     const isProgrammaticScroll = useRef(false);
@@ -165,21 +191,28 @@ export function useSummaryLogic(route, navigation, scrollRef) {
     };
 
     // 활동 꺾은선 그래프 데이터
-    const activityLineData = ACTIVITIES.filter(act =>
-        activityStats.some(s => s.activity === act.key)
-    ).map(act => {
-        const monthlyValues = MONTH_NAMES.map((_, i) => {
-            const monthKey = `${year}-${String(i + 1).padStart(2, '0')}`;
-            const stat = monthlyActivityStats.find(s => s.month === monthKey && s.activity === act.key);
-            return stat ? stat.count : 0;
+    const { activityLineData, maxActivityLineValue } = useMemo(() => {
+        const _activityLineData = ACTIVITIES.filter(act =>
+            activityStats.some(s => s.activity === act.key)
+        ).map(act => {
+            const monthlyValues = MONTH_NAMES.map((_, i) => {
+                const monthKey = `${year}-${String(i + 1).padStart(2, '0')}`;
+                const stat = monthlyActivityStats.find(s => s.month === monthKey && s.activity === act.key);
+                return stat ? stat.count : 0;
+            });
+            return { ...act, values: monthlyValues };
         });
-        return { ...act, values: monthlyValues };
-    });
-    const maxActivityLineValue = Math.max(...activityLineData.flatMap(a => a.values), 1);
+        const _maxActivityLineValue = Math.max(..._activityLineData.flatMap(a => a.values), 1);
+        return { activityLineData: _activityLineData, maxActivityLineValue: _maxActivityLineValue };
+    }, [year, activityStats, monthlyActivityStats]);
 
     const handleGoBack = () => navigation.goBack();
-    const handleMoodPress = (moodKey) => navigation.navigate('MoodList', { year, moodKey });
-    const handleActivityPress = (activityKey) => navigation.navigate('ActivityList', { year, activityKey });
+    const handleMoodPress = (moodKey) => {
+        requestAnimationFrame(() => navigation.navigate('MoodList', { year, moodKey }));
+    };
+    const handleActivityPress = (activityKey) => {
+        requestAnimationFrame(() => navigation.navigate('ActivityList', { year, activityKey }));
+    };
 
     return {
         year,

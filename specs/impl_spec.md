@@ -59,6 +59,12 @@
   - **캡처 우선순위**: 선택 상태에서만 제스처를 선점하여 부모(FlatList)의 페이징 스크롤을 차단.
   - **쓰레기통 인터랙션**: 드래그 중 실시간 위치(`onDragMove`)를 보고하여 하단 삭제 영역 활성화 연동.
 
+- **성능 최적화 전략 (Performance Critical)**:
+  - **위치 렌더링**: `left/top`(레이아웃 속성) 대신 `translateX/translateY`(트랜스폼 속성) 사용. 드래그 시 Yoga 레이아웃 엔진 재계산을 완전히 제거.
+  - **조작 핸들 렌더링**: 회전 핸들, 드래그 막대, 편집 버튼의 `bottom/right/left` 애니메이션 오프셋도 `translateY/translateX`로 전환. 크기/회전 조절 시 매 프레임 발생하던 조작 버튼의 레이아웃 재계산을 제거.
+  - **콜백 안정화**: `handleDragMove`의 `isDraggingAny` State 의존성을 `useRef`로 전환하여, 드래그 시작/종료 시 `useCallback`이 재생성되지 않도록 함. 이를 통해 모든 Draggable 컴포넌트의 `React.memo`가 유효하게 유지.
+  - **setMySize 동일값 스킵**: `onLayout`에서 이전과 동일한 크기가 보고되면 `setState`를 스킵하여 불필요한 리렌더링 차단.
+
 - **DraggableText 최적화**:
   - `TextInput`을 Uncontrolled 모드로 운용하여 한글 IME 조합 중 리렌더링 제거.
   - 텍스트 값은 `useRef`로 추적, 편집 종료 시에만 state 동기화.
@@ -139,6 +145,7 @@
 - **백업 (v2.0.0)**:
   - `JSZip`을 이용한 데이터 + 사진 통합 패키징.
   - 복구 시 `word_stats`를 실시간 재계산하여 통계 일관성 유지.
+  - **일기 삭제 시 통계 동기화**: `deleteAllDiaryData` 및 `deleteDiaryByDate` 트랜잭션 내에서 `word_stats` 데이터를 함께 삭제하여 고아 레코드(Orphan Record) 발생을 방지.
   - **암호화 V2**: AES-CBC 모드 + 무작위 IV 적용. V1(ECB) 백업 파일과 하위 호환성 유지.
   - 암호문 포맷: `TPv2:<IV hex>:<ciphertext>` (V1은 프리픽스 없음으로 자동 감지).
 
@@ -151,7 +158,45 @@
   - 결제 요청 시 선택된 상품의 `skuId`를 `handlePremiumPress`의 파라미터로 전달하여 동적으로 대응함.
   - 프리미엄 구독 로직은 구글 플레이 및 앱스토어의 `requestPurchase` 트랜잭션으로, 복원 로직은 `getAvailablePurchases` 영수증 검증으로 완전하게 처리됨.
 
-### 5.4 AdMob Integration (광고 연동)
+### 5.4 요약 화면 성능 최적화 (SummaryScreen Performance)
+
+- **화면 전환 병목 해소 (`InteractionManager`)**:
+  - `useFocusEffect` 내의 데이터 로딩(6개 reload 함수)과 애니메이션 초기화(`animKey`)를 `InteractionManager.runAfterInteractions()`로 감싸서, 네비게이션 전환 애니메이션이 완료된 후에만 JS 스레드 작업이 시작되도록 함.
+  - cleanup 함수에서 `handle.cancel()`을 호출하여 화면 이탈 시 불필요한 작업을 취소.
+- **연산 메모이제이션 (`useMemo`)**:
+  - 기분 통계(`maxCount`, `topMoodData`, `allMoodStats`): `[stats]` 의존성으로 메모이제이션.
+  - 월별 통계(`monthlyEntryCounts`, `moodLineData`, `maxLineValue` 등): `[year, monthlyStats]` 의존성으로 메모이제이션.
+  - 활동 통계(`maxActivityCount`): `[activityStats]` 의존성으로 메모이제이션.
+  - 활동 꺾은선 데이터(`activityLineData`, `maxActivityLineValue`): `[year, activityStats, monthlyActivityStats]` 의존성으로 메모이제이션.
+- **기존 최적화 유지**: `moodActivityCorrelation`은 기존 `useMemo`를 유지. `useBentoBoard`의 시그니처 캐싱도 기존 그대로. `stickerStats`는 멀티페이지(2차원 배열)와 과거 데이터(1차원 배열)를 모두 합산(`Flatten`)하도록 방어 로직이 보완됨.
+- **화면 이탈 시 네비게이션 지연 (`requestAnimationFrame`)**:
+  - `handleMoodPress`, `handleActivityPress`의 `navigation.navigate` 호출을 `requestAnimationFrame`으로 감싸서, 터치 피드백(TouchableOpacity의 opacity 복귀)이 현재 프레임에서 완료된 후 다음 프레임에서 네비게이션을 시작.
+  - SummaryScreen의 무거운 렌더 트리가 전환 애니메이션 준비와 동일 프레임에서 경쟁하는 것을 방지.
+- **SVG 컴포넌트 격리 (`Memoized Chart`) & 전역 동결 (`enableFreeze`)**:
+  - `SummaryScreenView` 내부에 존재하여 미세한 상태 변경이나 블러(Blur) 이벤트 시 다시 렌더링되던 무거운 SVG 차트 함수(`renderMoodLineChart`, `renderActivityLineChart`)를 컴포넌트 외부로 분리.
+  - `React.memo`로 감싸 네비게이션 전환 시 불필요한 JS 스레드의 **Diffing 연산을 완벽히 차단(Isolation)**함.
+  - `App.js` 단에서 `react-native-screens`의 `enableFreeze(true)`를 활성화하여, Stack 전환 시 백그라운드로 밀려나는 Tab 화면(예: SummaryScreen)의 JS 연산을 OS 레벨에서 완전히 **동결(Freeze)**.
+- **도착 화면 지연 렌더링 및 페이드인 (Transition Staggering)**:
+  - `Wait for Transition` 방식의 단점(2단계 로딩 체감)을 없애고, **진입 즉시 빈 캔버스와 레이아웃을 투명도 100%로 마운트**시킴. (사용자는 화면이 바뀜과 동시에 완전한 형태의 일기장을 보게 됨)
+  - 데이터 페칭 로딩(`!loading`)이 끝나는 즉시 일기장 내부의 **알맹이 에셋들(텍스트 -> 사진 -> 스티커)**을 각각 담당하는 3개의 `Animated.Value`에 `Animated.stagger`를 가동하여 **0.08초 간격으로 순차적 팝업(Spring Physics)**을 연출함.
+  - 이를 통해 모놀리식 렌더링(통짜로 어둡게 팝업되는 방식)이 주던 무거운 체감을 탈피하고, 애플(Apple) 스타일의 병렬적이고 스무스한 최고급 UX를 완성함.
+- **모달 플리커링 및 프리미엄(High-end) 애니메이션 렌더링 부하 제거**:
+  - **Android 모달 플리커링 근절 (RNModal 완전 폐기)**: `react-native-modal`(RNModal)은 내부적으로 React Native의 네이티브 `Modal` 컴포넌트를 사용하며, 안드로이드에서 이 네이티브 Modal이 마운트되는 시점에 컨텐츠를 1프레임 동안 최종 위치에 그린 후 애니메이션을 시작하는 구조적 문제가 있음. `hideModalContentWhileAnimating` 옵션으로 우회하면 반대로 빈 껍데기가 먼저 올라왔다가 팝인되는 현상 발생. 이를 근본적으로 해결하기 위해 **RNModal 자체를 완전히 폐기**하고, 순수 `Animated.View` + `translateY` 스프링 애니메이션 기반의 `MoodBottomSheet` 커스텀 컴포넌트로 대체함. 네이티브 Modal 레이어를 전혀 거치지 않으므로 플리커링이 물리적으로 발생 불가능.
+  - 단순 투명도 대신 `expo-blur`와 `Animated.View`를 합성한 **`AnimatedAuraBackdrop`** 컴포넌트를 자체 제작. 기쁨, 슬픔 등 유저가 선택한 기분(Mood)의 색상값이 즉시 배경 블러에 스며들며 은은하게 빛나는 **반응형 감정 오라(Responsive Aura)** UX 적용.
+  - 모달 내부의 기분 아이콘 목록에 `react-native`의 `Animated.spring`을 활용해 인덱스 번호(`index * 60ms`)에 따른 **순차적 팝업(Staggered Pop-up)** 기능을 추가. 바텀시트가 열릴 때 캐릭터들이 도미노처럼 젤리 푸딩 같은 텐션으로 하나씩 통통 튀어 오르는 마이크로 모션 구현. 또한, 모달이 열린 이후 다른 이모지를 터치할 때 불필요하게 스케일이 0으로 초기화되며 깜빡이는 현상(Flickering)을 `useRef` 상태 분기를 통해 제거.
+- **플로팅 글래스 아일랜드(바텀시트 도크) 마운트 최적화 (Progressive Lazy Windowing)**:
+  - `WriteScreen.view.js`의 좌하단 툴바(스티커, 프레임, 텍스트) 버튼 클릭 시 바텀시트가 열리며 발생하는 **0.5초 극심한 렌더링 렉(Jank)**을 해결. 
+  - 렉의 주원인이었던 "수백 개의 SVG 스티커를 `LayoutAnimation` 프레임에 동시에 마운트"하던 구조를 뜯어고침.
+  - `InteractionManager`를 결합하여 **바텀시트가 열리는 애니메이션(300ms) 도중에는 현재 활성화된 탭 딱 한 개(1 Window)만 집중해서 렌더링**하고, 슬라이딩이 완료된 시점(`isDockReady`)에 양옆 스와이프에 필요한 여분 탭을 백그라운드에서 지연 마운팅(Multi-stage Render)하도록 구조화함. 결과적으로 체감 오픈 딜레이를 0ms 수준으로 즉각화.
+- **스티커 팩 라이프사이클 관리**:
+  - 스티커 상점에서 새로운 팩을 구매/다운로드했을 때, 기존에 **자동으로 활성화(enabledStickerCats에 강제 주입)**되던 로직을 제거함.
+  - 이제 구매 시 전체 스티커 목록(`catOrder`)에만 추가되며, 사용자가 직접 '서랍장 관리(Drawer Manager)'에서 원하는 팩만 켜서 사용할 수 있도록 UX를 제어함. 불필요하게 서랍 인터페이스가 복잡해지는 현상을 방어함.
+- **Staggered Canvas Reveal (일기 화면 진입 시 고급 페이드인 연출)**:
+  - 기존에 일기 쓰기 화면으로 진입할 때 DB에서 데이터를 로딩하는 동안 빈 캔버스가 먼저 보이고, 로딩이 끝나면 모든 에셋(텍스트, 스티커, 사진)이 한꺼번에 '팍!' 하고 나타나는 B급 UX를 근절함.
+  - `navigation.addListener('transitionEnd')`로 화면 전환 애니메이션 완료 시점을 감지하고, `useDiaryForDate` 훅의 `loading` 상태와 AND 조건으로 결합하여, **둘 다 완료되었을 때만** 캔버스 영역 전체를 `Animated.timing`으로 페이드인(0→1, 350ms) + 살짝 슬라이드업(12px→0) 시켜 부드럽게 등장시킴.
+  - 이 패턴으로 인해 빈 화면이 보이는 시점 자체가 사라지며, 유저에게는 화면이 실크처럼 자연스럽게 나타나는 프리미엄 경험을 전달함.
+
+### 5.5 AdMob Integration (광고 연동)
 
 - **모듈**: `react-native-google-mobile-ads`
 - **Configuration (환경 변수)**:
@@ -174,5 +219,4 @@
 - **의존성 업데이트**: 보안 패치 및 최신 SDK 대응을 위해 정기적인 `npm audit` 권장.
 
 ---
-*Last Updated: 2026-03-26*
-
+*Last Updated: 2026-03-27*

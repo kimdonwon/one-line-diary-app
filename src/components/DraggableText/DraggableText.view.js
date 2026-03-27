@@ -193,11 +193,11 @@ export const DraggableText = React.memo(({
             style={[
                 styles.container,
                 {
-                    left: pan.x,
-                    top: pan.y,
                     maxWidth: dynamicMaxWidth,
                     minWidth: isEditing ? dynamicMaxWidth : undefined, // 💡 핵심: 편집 중 상자 너비를 최대치로 강제 고정 (Yoga 버그 차단)
                     transform: [
+                        { translateX: pan.x },
+                        { translateY: pan.y },
                         {
                             rotate: rotation.interpolate({
                                 inputRange: [-360, 360],

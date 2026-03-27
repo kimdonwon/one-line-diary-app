@@ -199,7 +199,7 @@ export async function getMoodStatsByDateRange(startDate, endDate) {
 export async function getYearDiaries(year) {
     return enqueueDBTask(async (d) => {
         return await d.getAllAsync(
-            "SELECT * FROM diary WHERE date LIKE ? ORDER BY date ASC",
+            "SELECT id, date, content, mood, stickers, updated_at, texts FROM diary WHERE date LIKE ? ORDER BY date ASC",
             [`${year}%`]
         );
     });
@@ -401,28 +401,14 @@ export async function restoreFromData(data) {
             await d.execAsync('DELETE FROM app_settings');
             await d.execAsync('DELETE FROM word_stats');
 
-            // 2. 데이터 삽입
+            // 2. 데이터 삽입 (단어 분석 없이 빠르게)
             const { diary, activities, comments, app_settings } = data.tables;
 
             for (const item of diary) {
                 await d.runAsync(
-                    'INSERT INTO diary (id, date, content, mood, stickers, photos, backgrounds, texts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                    [item.id, item.date, item.content, item.mood, item.stickers || '[]', item.photos || '[]', item.backgrounds || '[]', item.texts || '[]']
+                    'INSERT INTO diary (id, date, content, mood, stickers, photos, backgrounds, texts, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    [item.id, item.date, item.content, item.mood, item.stickers || '[]', item.photos || '[]', item.backgrounds || '[]', item.texts || '[]', item.updated_at || '']
                 );
-
-                // 🍱 복구 시 word_stats도 함께 생성
-                try {
-                    const wordMap = analyzeWordsFromDiary(item);
-                    const entries = Object.entries(wordMap);
-                    for (const [word, count] of entries) {
-                        await d.runAsync(
-                            'INSERT INTO word_stats (date, word, count) VALUES (?, ?, ?)',
-                            [item.date, word, count]
-                        );
-                    }
-                } catch (e) {
-                    // 단어 분석 실패해도 복구는 계속 진행
-                }
             }
 
             for (const item of activities) {
@@ -447,6 +433,10 @@ export async function restoreFromData(data) {
             }
 
             await d.execAsync('COMMIT');
+
+            // 3. 🍱 단어 분석은 복원 시 수행하지 않습니다. 
+            // (Summary 진입 시 useBentoBoard 훅에서 비동기 점진적(Staggered)으로 안전하게 빈 데이터를 채워 넣습니다.)
+
             return true;
         } catch (error) {
             await d.execAsync('ROLLBACK');
@@ -454,6 +444,7 @@ export async function restoreFromData(data) {
         }
     });
 }
+
 /**
  * 🗑️ 모든 일기, 활동, 댓글 데이터를 삭제합니다. (테스트용)
  */
@@ -464,6 +455,7 @@ export async function deleteAllDiaryData() {
             await d.execAsync('DELETE FROM diary');
             await d.execAsync('DELETE FROM activities');
             await d.execAsync('DELETE FROM comments');
+            await d.execAsync('DELETE FROM word_stats');
             await d.execAsync('COMMIT');
             return true;
         } catch (error) {
@@ -483,6 +475,7 @@ export async function deleteDiaryByDate(date) {
             await d.runAsync('DELETE FROM diary WHERE date = ?', [date]);
             await d.runAsync('DELETE FROM activities WHERE date = ?', [date]);
             await d.runAsync('DELETE FROM comments WHERE diary_date = ?', [date]);
+            await d.runAsync('DELETE FROM word_stats WHERE date = ?', [date]);
             await d.execAsync('COMMIT');
             return true;
         } catch (error) {

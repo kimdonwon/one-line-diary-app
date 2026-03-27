@@ -278,12 +278,44 @@ export function HeaderButton({ title, onPress }) {
   );
 }
 
-// ─── Mood Selector Card (Combo Tap & Shake 적용) ───
-export function MoodCard({ mood, selected, onPress }) {
-  const bounceScale = useRef(new Animated.Value(1)).current;
+// ─── Mood Selector Card (Staggered Mount & Combo Shake) ───
+export function MoodCard({ mood, selected, onPress, index = 0, isVisible = true }) {
+  const bounceScale = useRef(new Animated.Value(0)).current; // 시작값을 0으로 설정하여 Pop-up 대기
   const shakeRotate = useRef(new Animated.Value(0)).current;
   const comboScale = useRef(1);
   const comboTimer = useRef(null);
+
+  const isInitialMount = useRef(true);
+
+  // 🪄 기분 모달이 열릴 때 Staggered Pop-up 작동 (푸딩 텐션)
+  useEffect(() => {
+    if (isVisible) {
+      if (isInitialMount.current) {
+        // 모달 첫 진입 시에만 0에서부터 튀어오름
+        bounceScale.setValue(0);
+        isInitialMount.current = false;
+        Animated.spring(bounceScale, {
+          toValue: selected ? 1.15 : 1, // 선택 여부에 따른 목표 크기
+          friction: 6,
+          tension: 180,
+          useNativeDriver: true,
+          delay: index * 60 // 0.06초 간격의 타다닥- 도미노 효과
+        }).start();
+      } else {
+        // 이미 켜진 상태에서 다른 이모지를 눌렀을 때는 크기만 부드럽게 전환 (플리커링 방지)
+        Animated.spring(bounceScale, {
+          toValue: selected ? 1.15 : 1,
+          friction: 6,
+          tension: 180,
+          useNativeDriver: true,
+          delay: 0
+        }).start();
+      }
+    } else {
+      isInitialMount.current = true; // 모달이 닫히면 다시 초기화 준비
+      bounceScale.setValue(0);
+    }
+  }, [isVisible, selected]);
 
   const handlePressIn = () => {
     if (comboTimer.current) clearTimeout(comboTimer.current);
@@ -312,7 +344,7 @@ export function MoodCard({ mood, selected, onPress }) {
   };
 
   const handlePressOut = () => {
-    // 손 떼면 크기는 돌아오되, 콤보는 일정 시간 유지
+    // 손 떼면 크기는 돌아오되, 콤보는 일정 시간 유지 (푸딩처럼 회복)
     const targetScale = selected ? 1.15 : 1;
     Animated.parallel([
       Animated.spring(bounceScale, { toValue: targetScale, friction: 6, tension: 200, useNativeDriver: true }),

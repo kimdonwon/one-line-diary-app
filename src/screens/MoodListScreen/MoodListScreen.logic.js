@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { InteractionManager } from 'react-native';
+import { Animated } from 'react-native';
 import { getMoodByKey } from '../../constants/mood';
 import { useDiariesForYear, useYearAllActivities, useAllCommentCounts } from '../../hooks/useDiary';
 
@@ -17,9 +17,12 @@ export function useMoodListLogic(route, navigation) {
 
     const { diaries, loading: loadingDiaries } = useDiariesForYear(ready ? year : null);
     const { activities, loading: loadingActivities } = useYearAllActivities(ready ? year : null);
-    const { commentCounts } = useAllCommentCounts();
+    const { commentCounts } = useAllCommentCounts(ready);
 
-    // 전체 로딩 상태 산출
+    // Fade-in 애니메이션을 위한 상태
+    const [fadeAnim] = useState(() => new Animated.Value(0));
+
+    // 전체 로딩 상태 산출 (데이터 모두 들어왔을 때 false)
     const loading = !ready || loadingDiaries || loadingActivities;
 
     // 날짜별 활동 맵핑
@@ -33,12 +36,32 @@ export function useMoodListLogic(route, navigation) {
     }, [activities]);
 
     useEffect(() => {
-        // 인터랙션(애니메이션 등)이 끝난 직후 콜백을 실행하여 ready 상태로 전환합니다.
-        const task = InteractionManager.runAfterInteractions(() => {
+        // 네비게이션 애니메이션(1번 아이디어)이 완전히 끝난 후 데이터 페칭 시작
+        const unsubscribe = navigation.addListener('transitionEnd', () => {
             setReady(true);
         });
-        return () => task.cancel();
-    }, []);
+
+        // 애니메이션 이벤트 유실 방지(안전장치)
+        const fallbackTimer = setTimeout(() => {
+            setReady(true);
+        }, 400);
+
+        return () => {
+            unsubscribe();
+            clearTimeout(fallbackTimer);
+        };
+    }, [navigation]);
+
+    // 데이터 로딩이 완료(loading === false)되면 리스트를 부드럽게 Fade-in (2번 아이디어 접목)
+    useEffect(() => {
+        if (!loading && ready) {
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [loading, ready, fadeAnim]);
 
     /**
      * 📊 일기 목록 중 해당 기분 코드(moodKey)와 일치하는 것들만 필터링합니다.
@@ -77,6 +100,7 @@ export function useMoodListLogic(route, navigation) {
         activitiesMap,
         commentCounts,
         handleGoBack,
-        handleDiaryPress
+        handleDiaryPress,
+        fadeAnim,
     };
 }

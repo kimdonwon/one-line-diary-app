@@ -62,10 +62,20 @@ export function useBentoBoard(year, diaries) {
     const lastDataRef = useRef(''); // 👈 추가: 마지막으로 분석한 일기 상태(시그니처) 저장
     // 2. useEffect 내부에서 체크 (약 64라인부터 시작되는 useEffect)
     useEffect(() => {
-        if (!diaries || diaries.length === 0) return;
-        // ─── 🚀 지능형 캐싱 로직 추가 ───
-        // 현재 일기의 [개수 + 마지막 날짜 + 연도]로 고유한 '지문'을 만듭니다.
-        const currentSignature = `${year}_${diaries.length}_${diaries[diaries.length - 1].date}`;
+        if (!diaries || diaries.length === 0) {
+            // 📌 일기가 모두 삭제된 경우 상태를 초기값으로 리셋
+            setTopWords([]);
+            setMaxStreak(0);
+            setGoldenHour(null);
+            lastDataRef.current = '';
+            return;
+        }
+        // ─── 🚀 지능형 캐싱 로직 ───
+        // 개수 + 마지막 날짜 + 최근 updated_at (내용 수정·교체 감지) 로 지문 생성
+        const latestUpdatedAt = diaries.reduce((latest, d) => {
+            return (d.updated_at && d.updated_at > latest) ? d.updated_at : latest;
+        }, '');
+        const currentSignature = `${year}_${diaries.length}_${latestUpdatedAt}`;
 
         // 만약 지문이 이전과 똑같다면? (바뀐 게 없으므로 분석 중단!)
         if (lastDataRef.current === currentSignature) return;
@@ -94,8 +104,9 @@ export function useBentoBoard(year, diaries) {
                                 await saveWordStats(diaries[i].date, wordMap);
                             }
                         } catch (e) { }
-                        if (i % 10 === 9) {
-                            await new Promise(r => setTimeout(r, 0));
+                        if (i % 5 === 4) {
+                            // 💡 5개마다 30ms 쉬어줌으로써 UI 그리기(특히 드래그 애니메이션) 쓰레드 양보
+                            await new Promise(r => setTimeout(r, 30));
                         }
                     }
                     try {

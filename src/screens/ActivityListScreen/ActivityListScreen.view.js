@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, FlatList, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StatusBar, Animated } from 'react-native';
 import { Header } from '../../components';
 import { DiaryEntryCard } from '../../components/DiaryEntryCard';
 import { ActivityIcon } from '../../constants/ActivityIcons';
+import { MoodCharacter } from '../../components';
 import { getMoodByKey } from '../../constants/mood';
 
 import { useActivityListLogic } from './ActivityListScreen.logic';
@@ -23,7 +24,8 @@ export function ActivityListScreenView({ route, navigation }) {
         activitiesMap,
         commentCounts,
         handleGoBack,
-        handleDiaryPress
+        handleDiaryPress,
+        fadeAnim
     } = useActivityListLogic(route, navigation);
 
     /**
@@ -56,22 +58,27 @@ export function ActivityListScreenView({ route, navigation }) {
             {loading ? (
                 // 로딩 레이어 출력
                 <View style={styles.centerBox}>
+                    <View style={{ marginBottom: 16 }}>
+                        <MoodCharacter character="rabbit" size={80} />
+                    </View>
                     <Text style={styles.loadingText}>기록을 불러오는 중...</Text>
                 </View>
             ) : filteredDiaries.length === 0 ? (
                 // 빈 결과 레이어 출력
-                <View style={styles.centerBox}>
+                <Animated.View style={[styles.centerBox, { opacity: fadeAnim }]}>
                     <Text style={styles.emptyText}>'{act.label}' 관련 기록이 없어요.</Text>
-                </View>
+                </Animated.View>
             ) : (
                 // 필터링된 데이터 출력
-                <FlatList
-                    data={filteredDiaries}
-                    keyExtractor={(item) => item.id.toString()}
-                    renderItem={renderItem}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                />
+                <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+                    <FlatList
+                        data={filteredDiaries}
+                        keyExtractor={(item) => item.id.toString()}
+                        renderItem={renderItem}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                    />
+                </Animated.View>
             )}
         </View>
     );

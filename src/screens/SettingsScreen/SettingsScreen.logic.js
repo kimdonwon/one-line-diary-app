@@ -133,15 +133,9 @@ export function useSettingsLogic() {
         setPurchasedPacks(newPurchased);
         await saveSetting('purchasedPacks', JSON.stringify(newPurchased));
 
-        // 서랍 상태에도 강제로 추가해줌
+        // 서랍 상태 가동 목록에 강제로 추가하던 로직 제거 (사용자 요청: 구매 시 바로 활성화되지 않도록)
         try {
-            const enabledVal = await getSetting('enabledStickerCats');
-            const enabled = enabledVal ? JSON.parse(enabledVal) : ['emoji', 'legacy', 'pastel'];
-            if (!enabled.includes(catId)) {
-                await saveSetting('enabledStickerCats', JSON.stringify([...enabled, catId]));
-            }
-
-            // 순서에도 추가
+            // 순서 리스트에는 추가하여 사용자가 '서랍장 관리'에서 볼 수 있게 함
             const orderVal = await getSetting('stickerCatOrder');
             const order = orderVal ? JSON.parse(orderVal) : ['emoji', 'legacy', 'pastel'];
             if (!order.includes(catId)) {
@@ -152,7 +146,7 @@ export function useSettingsLogic() {
         setShowPreview(false);
         setAlertConfig({
             title: '다운로드 완료! 🎉',
-            message: `[${title}] 팩이 스티커 서랍에 추가되었습니다.`
+            message: `[${title}] 팩이 추가되었습니다.\n'서랍장 관리'에서 꺼내 쓸 수 있어요! ✨`
         });
         setShowAlert(true);
     };

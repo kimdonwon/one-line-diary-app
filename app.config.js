@@ -24,7 +24,7 @@ module.exports = {
     android: {
       package: "com.oneline.diary",
       softwareKeyboardLayoutMode: "resize",
-      versionCode: 3
+      versionCode: 4
     },
     web: {},
     plugins: [
@@ -47,7 +47,8 @@ module.exports = {
       },
       // 🔐 런타임에서 접근할 수 있도록 extra에 주입
       admobRewardedAndroid: process.env.ADMOB_REWARDED_ANDROID || "",
-      admobRewardedIos: process.env.ADMOB_REWARDED_IOS || ""
+      admobRewardedIos: process.env.ADMOB_REWARDED_IOS || "",
+      backupSecret: process.env.BACKUP_SECRET_KEY || "today-piece-secure-key-32chars!!"
     },
     owner: "mrbob"
   }

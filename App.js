@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import { enableFreeze } from 'react-native-screens';
+
+// 🚀 백그라운드 스크린 동결 (네비게이션 성능 최적화)
+enableFreeze(true);
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFonts } from 'expo-font';

@@ -162,6 +162,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
     // 🗑️ 쓰레기통 드래그 삭제 상태
     const [isDraggingAny, setIsDraggingAny] = useState(false); // 드래거블이 하나라도 드래그 중이면 true
+    const isDraggingAnyRef = useRef(false); // 💡 콜백 안정화용 Ref (handleDragMove 의존성 제거)
     const [isOverTrash, setIsOverTrash] = useState(false); // 현재 쓰레기통 위에 있는지
     const trashZoneRef = useRef({ y: 0, height: 80 });
     const draggingItemId = useRef(null);
@@ -216,11 +217,14 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
 
     // ─── 💾 데이터 복원 및 관리 ───
+    const [isDataInitialized, setIsDataInitialized] = useState(false);
 
     /**
      * 기존 일기 데이터가 있으면 폼 상태를 복원합니다.
      */
     useEffect(() => {
+        if (loading) return; // DB 조회가 끝나기 전에는 대기
+
         if (diary) {
             setSelectedMood(diary.mood);
 
@@ -322,7 +326,11 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
             setCurrentPageIndex(0);
         }
-    }, [diary]);
+        
+        // 데이터 복원 완벽히 마무리 (단, state update batching 고려)
+        setIsDataInitialized(true);
+
+    }, [diary, loading]);
 
     // 스티커 서랍 설정 로드
     useEffect(() => {
@@ -1033,10 +1041,12 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
     const handleInteractionStart = useCallback(() => {
         setIsInteracting(true);
+        isDraggingAnyRef.current = true;
         setIsDraggingAny(true); // 💡 터치 즉시 부모 스크롤을 막기 위해 상태 즉시 업데이트
     }, []);
     const handleInteractionEnd = useCallback(() => {
         setIsInteracting(false);
+        isDraggingAnyRef.current = false;
         setIsDraggingAny(false);
         setIsOverTrash(false);
     }, []);
@@ -1049,21 +1059,23 @@ export function useWriteLogic(route, navigation, scrollRef) {
      * 🗑️ 드래그 중 실시간 위치 감지 (쓰레기통 영역 판단)
      */
     const handleDragMove = useCallback((itemId, pageX, pageY, itemType = 'sticker') => {
-        if (!isDraggingAny) {
+        if (!isDraggingAnyRef.current) {
             // 드래그가 시작되면 부모 스크롤을 막기 위해 상태를 업데이트합니다.
+            isDraggingAnyRef.current = true;
             setIsDraggingAny(true);
             draggingItemId.current = itemId;
             draggingItemType.current = itemType;
         }
         // [쓰레기통 판정] 손가락 위치(pageY)가 화면 하단 임계값을 넘으면 쓰레기통 활성화
         setIsOverTrash(pageY > TRASH_ZONE_TOP);
-    }, [isDraggingAny, TRASH_ZONE_TOP]);
+    }, [TRASH_ZONE_TOP]); // 💡 isDraggingAny 대신 Ref를 사용하므로 의존성에서 제거 → 콜백 안정화
 
     /**
      * 🗑️ 드롭 시 쓰레기통 위인지 판단 → 삭제 처리
      */
     const handleDragDrop = useCallback((itemId, pageX, pageY, itemType = 'sticker') => {
         const overTrash = pageY > TRASH_ZONE_TOP;
+        isDraggingAnyRef.current = false;
         setIsDraggingAny(false);
         setIsOverTrash(false);
 
@@ -1103,6 +1115,8 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
     return {
         // Properties
+        loading, // 🎬 DB 데이터 로딩 상태 (Staggered Reveal 트리거용)
+        isDataInitialized, // 🎬 알맹이 페칭+상태 동기화 완전히 끝남
         isMoodModalVisible,
         setMoodModalVisible,
         date,

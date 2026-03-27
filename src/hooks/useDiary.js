@@ -452,7 +452,7 @@ export function useCommentsForDiary(diary_date) {
     return { comments, loading, reload: load };
 }
 
-export function useAllCommentCounts() {
+export function useAllCommentCounts(ready = true) {
     const [commentCounts, setCommentCounts] = useState({});
     const [loading, setLoading] = useState(true);
 
@@ -473,8 +473,8 @@ export function useAllCommentCounts() {
     }, []);
 
     useEffect(() => {
-        load();
-    }, [load]);
+        if (ready) load();
+    }, [load, ready]);
 
     // 댓글 추가 이벤트 감지하여 갱신
     useEffect(() => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, FlatList, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StatusBar, Animated } from 'react-native';
 
 import { Header } from '../../components';
 import { DiaryEntryCard } from '../../components/DiaryEntryCard';
@@ -24,7 +24,8 @@ export function MoodListScreenView({ route, navigation }) {
         activitiesMap,
         commentCounts,
         handleGoBack,
-        handleDiaryPress
+        handleDiaryPress,
+        fadeAnim
     } = useMoodListLogic(route, navigation);
 
     // List 렌더링 부분 캡슐화
@@ -54,20 +55,25 @@ export function MoodListScreenView({ route, navigation }) {
 
             {loading ? (
                 <View style={styles.centerBox}>
+                    <View style={{ marginBottom: 16 }}>
+                        <MoodCharacter character="rabbit" size={80} />
+                    </View>
                     <Text style={styles.loadingText}>기록을 불러오는 중...</Text>
                 </View>
             ) : filteredDiaries.length === 0 ? (
-                <View style={styles.centerBox}>
+                <Animated.View style={[styles.centerBox, { opacity: fadeAnim }]}>
                     <Text style={styles.emptyText}>'{mood.label}' 관련 기록이 없어요.</Text>
-                </View>
+                </Animated.View>
             ) : (
-                <FlatList
-                    data={filteredDiaries}
-                    keyExtractor={(item) => item.id.toString()}
-                    renderItem={renderItem}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                />
+                <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+                    <FlatList
+                        data={filteredDiaries}
+                        keyExtractor={(item) => item.id.toString()}
+                        renderItem={renderItem}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                    />
+                </Animated.View>
             )}
         </View>
     );

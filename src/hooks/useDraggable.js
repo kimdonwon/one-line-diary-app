@@ -81,6 +81,8 @@ export function useDraggable({
     const [mySize, setMySizeState] = useState(defaultSize);
     const mySizeRef = useRef(defaultSize);
     const setMySize = useCallback((size) => {
+        // 💡 동일한 크기면 setState 스킵 (불필요한 리렌더링 방지)
+        if (mySizeRef.current.width === size.width && mySizeRef.current.height === size.height) return;
         mySizeRef.current = size;
         setMySizeState(size);
     }, []);
@@ -159,20 +161,27 @@ export function useDraggable({
         extrapolate: 'clamp'
     });
 
+    // 💡 성능 최적화: layout 속성(bottom/right) 대신 transform(translateY/X)으로 위치를 제어하기 위해 부호 반전 값 미리 계산
+    const negHandleOffset = Animated.multiply(handleOffset, -1);
+    const negDragHandleOffset = Animated.multiply(dragHandleOffset, -1);
+
     // 4. 공통 드래그 핸들 렌더러
     const renderDragHandle = () => {
         if (!effectiveSelected || isEditing) return null;
         return (
             <Animated.View style={{
                 position: 'absolute',
-                bottom: dragHandleOffset,
+                bottom: 0,
                 left: '50%',
                 marginLeft: -13,
                 width: 40,
                 height: 15,
                 borderRadius: 5,
                 backgroundColor: '#8B7E74',
-                transform: [{ scale: rawHandleScale }],
+                transform: [
+                    { translateY: negDragHandleOffset },
+                    { scale: rawHandleScale }
+                ],
                 zIndex: 1000, // 👈 다른 핸들(999)보다 높게 설정하여 우선순위 확보
             }} />
         );
@@ -196,13 +205,17 @@ export function useDraggable({
                     onRotateEnd={handleRotationEnd}
                     onInteractionStart={onInteractionStart}
                     onInteractionEnd={onInteractionEnd}
-                    minScale={minScale} // 👈 전달
-                    maxScale={maxScale} // 👈 전달
+                    minScale={minScale}
+                    maxScale={maxScale}
                     style={{
                         position: 'absolute',
-                        right: flipRightOffset,
-                        bottom: handleOffset,
-                        transform: [{ scale: handleScale }]
+                        right: 0,
+                        bottom: 0,
+                        transform: [
+                            { translateX: Animated.multiply(flipRightOffset, -1) },
+                            { translateY: negHandleOffset },
+                            { scale: handleScale }
+                        ]
                     }}
                 />
 
@@ -212,8 +225,8 @@ export function useDraggable({
                         {...(editOptions.panHandlers || {})}
                         style={{
                             position: 'absolute',
-                            left: flipLeftOffset,
-                            bottom: handleOffset,
+                            left: 0,
+                            bottom: 0,
                             width: 43,
                             height: 43,
                             borderRadius: 21.5,
@@ -228,7 +241,11 @@ export function useDraggable({
                             shadowOpacity: 0.2,
                             shadowRadius: 5,
                             elevation: 6,
-                            transform: [{ scale: handleScale }]
+                            transform: [
+                                { translateX: flipLeftOffset },
+                                { translateY: negHandleOffset },
+                                { scale: handleScale }
+                            ]
                         }}
                     >
                         <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
