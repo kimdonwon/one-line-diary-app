@@ -9,7 +9,7 @@ import { COLORS } from '../../constants/theme';
 import { Card, MoodBar, Header } from '../../components';
 import { MoodCharacter } from '../../constants/MoodCharacters';
 import { ActivityIcon } from '../../constants/ActivityIcons';
-import { ConfettiEffect } from '../../components/ConfettiEffect';
+import { SkiaConfettiEffect } from '../../components/SkiaConfettiEffect';
 
 import { useSummaryLogic, MONTH_NAMES } from './SummaryScreen.logic';
 import { styles, chartConstants } from './SummaryScreen.styles';
@@ -166,15 +166,17 @@ export function SummaryScreenView({ route, navigation }) {
         }, [])
     );
 
-    const handleMoodHeroPress = (evt) => {
+    const handleMoodHeroPress = useCallback((evt) => {
         const { pageX, pageY } = evt.nativeEvent;
         moodConfettiRef.current?.burst(pageX, pageY);
-    };
+    }, []);
 
-    const handleActivityHeroPress = (evt) => {
+    const handleActivityHeroPress = useCallback((evt) => {
         const { pageX, pageY } = evt.nativeEvent;
         activityConfettiRef.current?.burst(pageX, pageY);
-    };
+    }, []);
+
+    // renderParticle 콜백 제거됨 — SkiaConfettiEffect는 내장 텍스처 사용
 
     const handleYearSelect = (selectedYear) => {
         setYear(selectedYear);
@@ -365,15 +367,9 @@ export function SummaryScreenView({ route, navigation }) {
                 </Pressable>
             </Modal>
 
-            {/* 화면 전체를 덮는 절대 좌표 기준 폭죽 효과 (Ref 사용으로 리렌더링 방지) */}
-            <ConfettiEffect
-                ref={moodConfettiRef}
-                renderItem={() => <MoodCharacter character={topMoodData?.character} size={30} />}
-            />
-            <ConfettiEffect
-                ref={activityConfettiRef}
-                renderItem={() => <ActivityIcon type={activityStats[0]?.activity} size={30} />}
-            />
+            {/* 🎨 Skia 기반 고성능 파티클 (v4.1 - Character Pre-Baking) */}
+            <SkiaConfettiEffect ref={moodConfettiRef} character={topMoodData?.character} />
+            <SkiaConfettiEffect ref={activityConfettiRef} />
         </View>
     );
 }

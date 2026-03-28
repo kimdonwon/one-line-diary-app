@@ -9,7 +9,7 @@ import { MoodCharacter } from '../../constants/MoodCharacters';
 import { ActivityIcon } from '../../constants/ActivityIcons';
 import { getMoodByKey } from '../../constants/mood';
 import { getActivityByKey } from '../../constants/activities';
-import { ConfettiEffect } from '../../components/ConfettiEffect';
+import { SkiaConfettiEffect } from '../../components/SkiaConfettiEffect';
 import Svg, { Polyline, Circle as SvgCircle } from 'react-native-svg';
 
 import {
@@ -289,6 +289,8 @@ export function MainScreenView({ navigation }) {
         );
     };
 
+    // renderConfettiItem 제거됨 — SkiaConfettiEffect는 내장 텍스처 사용
+
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
@@ -416,12 +418,9 @@ export function MainScreenView({ navigation }) {
                 <View style={styles.bottomSpacer} />
             </ScrollView>
 
-            {/* 화면 전체를 덮는 절대 좌표 기준 폭죽 효과 (Ref 사용으로 렉 방지) */}
-            <ConfettiEffect
-                ref={confettiRef}
-                renderItem={() => <MoodCharacter character={topMoodData?.character} size={24} />}
-            />
-            
+            {/* 🎨 Skia 기반 고성능 파티클 (v4.1 - Character Pre-Baking) */}
+            <SkiaConfettiEffect ref={confettiRef} character={topMoodData?.character} />
+
             <SoftAlertModal
                 isVisible={showAlert}
                 title={alertConfig.title}

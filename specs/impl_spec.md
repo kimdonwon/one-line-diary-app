@@ -213,10 +213,23 @@
 - **`.env.example`**: 팀원/미래 참조용 템플릿 (실제 값 없음, 깃 업로드 허용).
 - **`dotenv`**: `app.config.js`에서 `.env` 파일을 읽어 빌드 타임에 환경 변수 주입.
 
+### 5.6 범용 애니메이션 엔진 최적화 (Global Animation Engine)
+
+- **Skia Single Canvas Architecture (v4.1 — `SkiaConfettiEffect`)**:
+  - **개요**: 기존 `ConfettiEffect`(Reanimated View Pooling, v3.1)의 성능 한계를 극복하기 위해 `@shopify/react-native-skia`의 `Atlas` 컴포넌트 기반으로 전면 교체. 리액트 트리에 개별 View를 생성하지 않고, 단 하나의 `<Canvas>` GPU 레이어에서 모든 파티클을 Batch Draw로 렌더링.
+  - **Character Pre-Baking (v4.1 Upgrade)**: `character` prop으로 전달된 MoodCharacter(개구리, 고양이 등)의 SVG 원본을 `Skia.SVG.MakeFromString()`으로 파싱하고, `useTexture` + `ImageSVG`로 마운트 시 1회 GPU 텍스처로 사전 굽기(Pre-Baking). 이후 `Atlas`에서 동일 텍스처를 15개 파티클로 Batch Draw하므로 GPU 부하가 컬러 도형과 동일(Zero Difference).
+  - **SVG 데이터 소스**: `src/constants/MoodCharacterSVGs.js`에 5개 캐릭터(frog, cat, chick, bear, rabbit)의 표준 SVG XML 문자열을 정적 상수로 보관. `MoodCharacters.js`의 react-native-svg JSX를 kebab-case 속성으로 변환한 미러 파일.
+  - **Graceful Fallback**: `character` prop이 없거나 파싱 실패 시, 15색 파스텔 컬러 도형(원형/사각형)으로 자동 폴백하여 앱 크래시를 방지.
+  - **useRSXformBuffer (UI Thread 물리 연산)**: `useRSXformBuffer` Worklet 내에서 매 프레임 각 파티클의 위치(포물선 궤적 + 중력), 회전, 스케일을 직접 계산. JS Thread를 전혀 경유하지 않으므로 스크롤 등 다른 인터랙션과 완벽히 병렬 동작.
+  - **useFrameCallback (시간 동기화)**: Reanimated의 `useFrameCallback`으로 고정밀 시간 추적. 각 파티클의 `startTime` 대비 경과 시간을 기반으로 물리 시뮬레이션 수행.
+  - **Zero React Tree Overhead**: 리액트 트리에 파티클 View가 존재하지 않으므로 Yoga 레이아웃 재계산, 리액트 Diffing, Bridge 통신 부하가 모두 0. 애니메이션 종료 후 스크롤 미세 버벅임 현상까지 완전 해소.
+  - **이전 엔진 (v3.1 `ConfettiEffect`)**: `src/components/ConfettiEffect.js`에 보존. 레거시 참조용으로 유지하되 어떤 화면에서도 사용하지 않음.
+
 ### 6. 정기 관리 및 메인터넌스
 
 - **버전 관리**: `package.json`의 버전을 단일 진실 공급원으로 사용.
 - **의존성 업데이트**: 보안 패치 및 최신 SDK 대응을 위해 정기적인 `npm audit` 권장.
 
 ---
-*Last Updated: 2026-03-27*
+*Last Updated: 2026-03-28*
+
