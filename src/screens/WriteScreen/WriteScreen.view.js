@@ -645,6 +645,7 @@ export function WriteScreenView({ route, navigation }) {
             <StatusBar style="dark" />
             <Header
                 title="오늘의 기록"
+                style={{ backgroundColor: '#e7e3ddff' }}
                 subtitle={
                     <Text style={{ fontSize: 16, color: '#9E8E82', fontWeight: '600', marginTop: 2 }}>
                         {formattedDate}

@@ -9,6 +9,7 @@ import Modal from "react-native-modal";
 import { ComboShakeWrapper } from "./ComboShakeWrapper";
 export { ComboShakeWrapper };
 export * from './DraggableText'; // ✏️ 추가
+export * from './SeasonalBackground'; // 🌸 계절별 확장 배경 모듈 추가
 import { BasePhoto } from './canvasElements/BasePhoto';
 import { BaseSticker } from './canvasElements/BaseSticker';
 import { BaseText } from './canvasElements/BaseText';

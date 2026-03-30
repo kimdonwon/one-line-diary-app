@@ -16,7 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import Modal from 'react-native-modal';
 
 import { COLORS, DIARY_CARD_HEIGHT } from '../../constants/theme';
-import { Header, StaticSticker, ComboShakeMoodCharacter } from '../../components';
+import { Header, StaticSticker, ComboShakeMoodCharacter, SeasonalBackground } from '../../components';
 import { DiaryEntryCard } from '../../components/DiaryEntryCard';
 import { MessageCircleIcon, XIcon } from '../../constants/icons';
 import { ActivityIcon } from '../../constants/ActivityIcons';
@@ -211,6 +211,7 @@ export function DiaryFeedScreenView({ navigation }) {
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
+            <SeasonalBackground />
             <Header
                 title="다이어리"
                 subtitle={

@@ -24,7 +24,7 @@ module.exports = {
     android: {
       package: "com.oneline.diary",
       softwareKeyboardLayoutMode: "resize",
-      versionCode: 4
+      versionCode: 5
     },
     web: {},
     plugins: [

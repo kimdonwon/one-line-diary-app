@@ -4,21 +4,21 @@ import { COLORS, FONTS, SPACING, RADIUS, SOFT_SHADOW, DIARY_CARD_HEIGHT } from '
 export const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: '#e7e3ddff',
     },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
-        flexGrow: 1, 
+        flexGrow: 1,
         paddingHorizontal: SPACING.lg,
         paddingBottom: 0, // 스크롤 방지를 위해 하단 패딩 제거
-        paddingTop: 0, 
+        paddingTop: 0,
     },
     sectionTitle: {
         ...FONTS.subtitle,
         fontSize: 18,
-        color: COLORS.text,
+        color: '#e7e3ddff',
         marginBottom: SPACING.md,
         marginTop: 16,
     },

@@ -109,6 +109,11 @@
 - **Tool Panel (Floating Glass Island)**:
   - 반투명 블러 효과(`BlurView`) 가로 스와이프 도크.
   - **레이어링**: 키보드 간섭 방지 및 zIndex 이슈 해결을 위해 루트 레이어에 배치.
+- **Background Theme**: `WriteScreen`의 전체 배경색은 브랜드 감성(Warm Oatmeal)을 위해 `#e7e3ddff`로 고정 적용되며, 상단 `Header` 컴포넌트에도 동일한 색상을 주입하여 시각적 일관성을 확보함.
+- **Seasonal Background Decoration (`SeasonalBackground.js`)**:
+  - `DiaryFeedScreen(다이어리 탭)` 배경에 OCP(개방-폐쇄 원칙)를 준수하는 모듈식 계절 패턴 시스템 추가.
+  - 기기의 시스템 월(Month)을 분석하여 자동으로 벚꽃(봄), 태양(여름), 단풍(가을), 눈(겨울) 아트를 스왑(Swap) 렌더링하도록 지능화.
+  - 리액트 트리에 애니메이션 부하를 생략하고 고정 `absoluteFill` 레이어에 다중 SVG Path를 입체적으로(퍼스펙티브 투명도, 회전) 흩뿌려, 제로(0) 렉과 프리미엄 앱의 감성을 동시 확보함.
 
 ### 4.2 멀티페이지 캔버스
 
