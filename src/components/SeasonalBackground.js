@@ -12,7 +12,7 @@ const CherryBlossomInner = ({ color }) => (
                 {/* 메인 잎 */}
                 <Path d="M 50,50 C 25,20 28,0 43,2 C 47,2.5 49,7 50,11 C 51,7 53,2.5 57,2 C 72,0 75,20 50,50 Z" fill={color} />
                 {/* 잎 안쪽 그라데이션/음영 */}
-                <Path d="M 50,50 C 37,30 40,15 46,16 C 48,16.5 49,19 50,22 C 51,19 52,16.5 54,16 C 60,15 63,30 50,50 Z" fill="#FF8FAB" opacity="0.6"/>
+                <Path d="M 50,50 C 37,30 40,15 46,16 C 48,16.5 49,19 50,22 C 51,19 52,16.5 54,16 C 60,15 63,30 50,50 Z" fill="#FF8FAB" opacity="0.6" />
                 {/* 수술 라인 */}
                 <Line x1="50" y1="50" x2="43" y2="30" stroke="#FF6B81" strokeWidth="1" />
                 <Line x1="50" y1="50" x2="57" y2="30" stroke="#FF6B81" strokeWidth="1" />
@@ -37,7 +37,7 @@ const CherryBlossomBranch = ({ color }) => (
             <Path d="M 80,150 Q 150,180 180,180" strokeWidth="4" />
             <Path d="M 120,110 Q 110,60 80,20" strokeWidth="3" />
         </G>
-        
+
         {/* 활짝 핀 꽃들 */}
         <G transform="translate(140, 0) scale(0.6) rotate(15)"><CherryBlossomInner color={color} /></G>
         <G transform="translate(40, 100) scale(0.8) rotate(-20)"><CherryBlossomInner color={color} /></G>
@@ -46,15 +46,15 @@ const CherryBlossomBranch = ({ color }) => (
         <G transform="translate(150, 50) scale(0.5) rotate(-40)"><CherryBlossomInner color={color} /></G>
         <G transform="translate(60, 30) scale(0.65) rotate(10)"><CherryBlossomInner color={color} /></G>
         <G transform="translate(-10, 140) scale(0.55) rotate(110)"><CherryBlossomInner color={color} /></G>
-        
+
         {/* 꽃봉오리 */}
         <G transform="translate(180, 40) scale(0.3) rotate(80)">
-             <Path d="M 50,50 C 30,20 40,0 50,0 C 60,0 70,20 50,50 Z" fill={color} />
-             <Path d="M 45,50 Q 50,60 55,50 Z" fill="#5D4037" />
+            <Path d="M 50,50 C 30,20 40,0 50,0 C 60,0 70,20 50,50 Z" fill={color} />
+            <Path d="M 45,50 Q 50,60 55,50 Z" fill="#5D4037" />
         </G>
         <G transform="translate(70, 10) scale(0.25) rotate(-30)">
-             <Path d="M 50,50 C 30,20 40,0 50,0 C 60,0 70,20 50,50 Z" fill={color} />
-             <Path d="M 45,50 Q 50,60 55,50 Z" fill="#5D4037" />
+            <Path d="M 50,50 C 30,20 40,0 50,0 C 60,0 70,20 50,50 Z" fill={color} />
+            <Path d="M 45,50 Q 50,60 55,50 Z" fill="#5D4037" />
         </G>
     </Svg>
 );
@@ -62,8 +62,8 @@ const CherryBlossomBranch = ({ color }) => (
 const CherryBlossomPetal = ({ color }) => (
     <Svg viewBox="0 0 100 100" width="100%" height="100%">
         <G origin="50,50" rotation="0">
-             <Path d="M 50,50 C 25,20 28,0 43,2 C 47,2.5 49,7 50,11 C 51,7 53,2.5 57,2 C 72,0 75,20 50,50 Z" fill={color} />
-             <Path d="M 50,50 C 37,30 40,15 46,16 C 48,16.5 49,19 50,22 C 51,19 52,16.5 54,16 C 60,15 63,30 50,50 Z" fill="#FF8FAB" opacity="0.6"/>
+            <Path d="M 50,50 C 25,20 28,0 43,2 C 47,2.5 49,7 50,11 C 51,7 53,2.5 57,2 C 72,0 75,20 50,50 Z" fill={color} />
+            <Path d="M 50,50 C 37,30 40,15 46,16 C 48,16.5 49,19 50,22 C 51,19 52,16.5 54,16 C 60,15 63,30 50,50 Z" fill="#FF8FAB" opacity="0.6" />
         </G>
     </Svg>
 );
@@ -137,6 +137,22 @@ const SEASON_CONFIG = {
     }
 };
 
+export const getCurrentSeason = () => {
+    const month = new Date().getMonth() + 1;
+    if (month >= 3 && month <= 5) return 'spring';
+    if (month >= 6 && month <= 8) return 'summer';
+    if (month >= 9 && month <= 11) return 'autumn';
+    return 'winter';
+};
+
+export const getSeasonEmoji = (season) => {
+    const s = season || getCurrentSeason();
+    if (s === 'spring') return '🌸';
+    if (s === 'summer') return '☀️';
+    if (s === 'autumn') return '🍂';
+    return '⛄';
+};
+
 /**
  * 🌸 동적 계절 정적 패턴 배경 (Premium Version)
  * 
@@ -144,16 +160,7 @@ const SEASON_CONFIG = {
  * 계절마다 다른 데코레이션 레이아웃(decorations)을 가질 수 있습니다.
  */
 export function SeasonalBackground({ season }) {
-    const getSeason = () => {
-        if (season) return season;
-        const month = new Date().getMonth() + 1;
-        if (month >= 3 && month <= 5) return 'spring';
-        if (month >= 6 && month <= 8) return 'summer';
-        if (month >= 9 && month <= 11) return 'autumn';
-        return 'winter';
-    };
-
-    const currentSeason = getSeason();
+    const currentSeason = season || getCurrentSeason();
     const config = SEASON_CONFIG[currentSeason] || SEASON_CONFIG['spring'];
     const activeDecorations = config.decorations || DEFAULT_DECORATIONS;
 
@@ -171,7 +178,7 @@ export function SeasonalBackground({ season }) {
                         width: decor.size,
                         height: decor.size,
                         transform: [{ rotate: decor.rotate }],
-                        opacity: config.opacity * decor.opScale, 
+                        opacity: config.opacity * decor.opScale,
                     }}
                 >
                     {config.renderShape(config.color, decor.type)}
