@@ -119,6 +119,14 @@
 ## 🛠️ 기술 및 공통 명세 (Technical Details)
 
 *   **그래프 엔진**: `react-native-svg` (Path, Polyline, Circle 사용)
-*   **애니메이션**: `react-native-reanimated v4`. `useSharedValue`, `withSpring`, `withTiming`을 사용하여 수치 변화 시 부드러운 인터랙션 제공.
+*   **폭죽 엔진**: `@shopify/react-native-skia` (Atlas 기반 Batch Draw)
+*   **애니메이션**: 
+    *   **UI 스레드 가속**: `useNativeDriver: true` 및 `transform(scaleX, translateY)` 중심 설계. 레이아웃 재계산(Reflow) 없이 60fps 보장.
+    *   **교체 이력**: `width`(JS 스레드) 기반 애니메이션은 성능 문제로 폐기됨.
 *   **반응형**: `Dimensions`를 사용해 화면 너비에 맞게 그래프 너비(`chartW`) 자동 조정.
+*   **Skia SVG 호환성 수칙 (v2) - [필수 준수]**:
+    *   **Path 분산**: `M...M...` 형태의 복합 서브패스는 Skia 파서에서 누락될 위험이 크므로 개별 `<line>`이나 단일 `<path>`로 물리적으로 분리할 것.
+    *   **Arc 제거**: `A` (Elliptical Arc) 명령은 기기별 파싱 변동성이 크므로 `C` (Cubic Bezier) 명령으로 변환하여 기술할 것.
+    *   **투명도 표준**: `fill="none"` 대신 `fill="transparent"`를 사용하여 렌더링 누락 방지.
+    *   **검증**: 새로운 활동 아이콘 추가 시 `SkiaConfettiEffect`에서 정상 파싱되는지 로그(`console.warn`) 필히 확인.
 *   **색상 체계**: `constants/mood.js` 및 `constants/activities.js`에 정의된 파스텔 고유 컬러를 엄격히 준수.

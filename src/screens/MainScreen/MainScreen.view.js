@@ -95,23 +95,18 @@ const CalendarCell = ({ day, year, month, diaryMap, isToday, getWeekMoodColor, o
  */
 const AnimatedActivityBar = ({ stat, maxActCount, onPress }) => {
     const act = getActivityByKey(stat.activity);
-    const ratio = stat.count / maxActCount;
-    const widthAnim = useRef(new Animated.Value(0)).current;
+    const ratio = maxActCount > 0 ? stat.count / maxActCount : 0;
+    const scaleAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        widthAnim.setValue(0);
-        Animated.timing(widthAnim, {
-            toValue: Math.max(ratio * 100, 10),
+        scaleAnim.setValue(0.001);
+        Animated.timing(scaleAnim, {
+            toValue: Math.max(ratio, 0.1),
             duration: 600,
             delay: 100,
-            useNativeDriver: false,
+            useNativeDriver: true,
         }).start();
     }, [ratio]);
-
-    const animatedWidth = widthAnim.interpolate({
-        inputRange: [0, 100],
-        outputRange: ['0%', '100%'],
-    });
 
     return (
         <TouchableOpacity style={styles.actBarRow} onPress={onPress}>
@@ -123,8 +118,9 @@ const AnimatedActivityBar = ({ stat, maxActCount, onPress }) => {
                 <Animated.View style={[
                     styles.actBarFill,
                     {
-                        width: animatedWidth,
+                        width: '100%',
                         backgroundColor: act.color,
+                        transform: [{ scaleX: scaleAnim }],
                     },
                 ]} />
             </View>

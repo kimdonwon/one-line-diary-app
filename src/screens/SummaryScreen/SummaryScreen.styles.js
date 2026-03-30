@@ -117,7 +117,7 @@ export const styles = StyleSheet.create({
         borderWidth: 1, borderColor: COLORS.border,
         marginHorizontal: SPACING.sm,
     },
-    activityBarFill: { height: '100%', borderRadius: RADIUS.full },
+    activityBarFill: { height: '100%', borderRadius: RADIUS.full, transformOrigin: 'left center' },
     activityBarCount: { width: 28, textAlign: 'right', fontSize: 14, fontWeight: '700', color: COLORS.text },
 
     // 활동 그리드 버튼

@@ -10,8 +10,10 @@ export const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
+        flexGrow: 1, 
         paddingHorizontal: SPACING.lg,
-        paddingBottom: 40,
+        paddingBottom: 0, // 스크롤 방지를 위해 하단 패딩 제거
+        paddingTop: 0, 
     },
     sectionTitle: {
         ...FONTS.subtitle,
@@ -677,7 +679,7 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E9E9E7',
         overflow: 'hidden',
-        marginTop: 20, // 날짜와 캔버스 사이 마진 추가
+        marginTop: '2.5%', // 공식 비례 마진 적용
         ...SOFT_SHADOW.card,
     },
     integratedDiaryMeta: {
@@ -685,7 +687,7 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 6, // 12 -> 6 으로 압축하여 높이 절약
         backgroundColor: '#FCFCFC',
         borderTopWidth: 1,
         borderTopColor: '#F1F1F0',
@@ -716,8 +718,8 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
-        backgroundColor: 'transparent', // 인디케이터 컨테이너 배경을 투명하게 (바깥쪽 integratedDiaryCard에 맞춤)
+        paddingVertical: 4, // 10 -> 4 로 압축하여 높이 절약
+        backgroundColor: 'transparent',
     },
     cardIndicatorDots: {
         flexDirection: 'row',
@@ -995,14 +997,14 @@ export const styles = StyleSheet.create({
     // ─── 🗑️ 인스타그램 스타일 다크 펄스 쓰레기통 ───
     trashZone: {
         position: 'absolute',
-        bottom: 110,
+        bottom: '7%', // 하드코딩 제거: 화면 높이 대비 비율(7%)로 배치
         alignSelf: 'center',
         alignItems: 'center',
         justifyContent: 'center',
         width: 64,
         height: 64,
-        borderRadius: 32, // 완벽한 원형
-        backgroundColor: 'rgba(0, 0, 0, 0.45)', // 인스타 스타일 다크 반투명
+        borderRadius: 32,
+        backgroundColor: 'rgba(0, 0, 0, 0.45)',
         zIndex: 9999,
         elevation: 10,
         shadowColor: '#000',

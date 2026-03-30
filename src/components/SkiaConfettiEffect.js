@@ -1,4 +1,4 @@
-import React, { useImperativeHandle, forwardRef, useRef, memo, useMemo } from 'react';
+import React, { useImperativeHandle, forwardRef, useRef, memo, useMemo, useCallback } from 'react';
 import { StyleSheet, Dimensions } from 'react-native';
 import {
     Canvas,
@@ -14,114 +14,176 @@ import {
 import { useSharedValue, useFrameCallback } from 'react-native-reanimated';
 
 import { MOOD_CHARACTER_SVG_MAP } from '../constants/MoodCharacterSVGs';
+import { ACTIVITY_ICON_SVG_MAP } from '../constants/ActivityIconSVGs';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 /**
- * 🎨 Skia 기반 고성능 파티클 엔진 (v4.7 - Hybrid Baking Architecture)
+ * 🎨 Skia 기반 고성능 파티클 엔진 (v5.0 - Circular Queue + Activity Support)
  *
- * 개선 사항:
- * 1. [Fix] canvas.drawSVG 에러 해결: 리액트 컴포넌트 계층(ImageSVG)을 사용하여 텍스처 생성
- * 2. [Clean XML] 이전 단계에서 정제한 표준 XML 데이터를 사용하여 파싱 성공률 확보
- * 3. [Master Atlas] 모든 캐릭터를 단일 텍스처로 미리 구워 리액티브 이슈 원천 차단
+ * v5.0 개선 사항:
+ * 1. [Circular Queue] 연타 시 기존 파티클을 유지하면서 새 파티클을 추가.
+ *    POOL_SIZE를 60으로 키우고, 한번 burst 시 BURST_COUNT(12)개만 순환 사용.
+ * 2. [Activity Icons] activityKey prop 지원. 활동별 SVG 아이콘을 Skia 텍스처로 베이킹.
+ * 3. [Lazy Activation] burst 호출 전까지 frameCallback 비활성화 → 마운트 시 렉 제거.
+ * 4. [Context7 참고] Atlas + useRSXformBuffer worklet 패턴 적용.
  */
 
-const POOL_SIZE = 15;
-const PARTICLE_SIZE = 36; 
-const GRAVITY = 650;
-const DURATION_MS = 1300;
+const POOL_SIZE = 60;
+const BURST_COUNT = 12;
+const PARTICLE_SIZE = 50;
+const GRAVITY = 950;
+const DURATION_MS = 1000;
 
-const ATLAS_KEYS = ['frog', 'cat', 'chick', 'bear', 'rabbit', 'fallback'];
-const COLS = ATLAS_KEYS.length;
-const TEX_W = COLS * PARTICLE_SIZE;
-const TEX_H = PARTICLE_SIZE;
+// ─── 무드 캐릭터 Atlas 키 ───
+const MOOD_ATLAS_KEYS = ['frog', 'cat', 'chick', 'bear', 'rabbit', 'fallback'];
+const MOOD_COLS = MOOD_ATLAS_KEYS.length;
+const MOOD_TEX_W = MOOD_COLS * PARTICLE_SIZE;
+const MOOD_TEX_H = PARTICLE_SIZE;
+
+// ─── 활동 아이콘 Atlas 키 ───
+const ACTIVITY_ATLAS_KEYS = ['reading', 'video', 'study', 'date', 'game', 'social', 'exercise', 'default'];
+const ACTIVITY_COLS = ACTIVITY_ATLAS_KEYS.length;
+const ACTIVITY_TEX_W = ACTIVITY_COLS * PARTICLE_SIZE;
+const ACTIVITY_TEX_H = PARTICLE_SIZE;
+
+const MOOD_FALLBACK_COLORS = ['#B4DCC6', '#8BBFEF', '#FEE97D', '#C9B5B6', '#FFB5B5', '#FFD700'];
+const ACTIVITY_FALLBACK_COLORS = ['#B5D8A0', '#A8C8F0', '#FFD485', '#FFB5B5', '#C4A8F0', '#F5C08A', '#8DD4C8', '#E8E8E8'];
 
 /**
- * 텍스처 베이킹을 위한 내부 컴포넌트
+ * 무드 캐릭터 스프라이트 시트
  */
-const MasterSpriteSheet = ({ skSvgs }) => {
-    return (
-        <Group>
-            {ATLAS_KEYS.map((key, i) => {
-                const x = i * PARTICLE_SIZE;
-                const svg = skSvgs[key];
-                
-                // 캐릭터별 고유 색상 (SVG 로드 실패 대비)
-                const colors = ['#B4DCC6', '#8BBFEF', '#FEE97D', '#C9B5B6', '#FFB5B5', '#FFD700'];
-
-                if (key === 'fallback' || !svg) {
-                    return (
-                        <Circle 
-                            key={key} 
-                            cx={x + PARTICLE_SIZE / 2} 
-                            cy={PARTICLE_SIZE / 2} 
-                            r={PARTICLE_SIZE / 2 - 4} 
-                            color={colors[i]} 
-                        />
-                    );
-                }
-
+const MoodSpriteSheet = memo(({ skSvgs }) => (
+    <Group>
+        {MOOD_ATLAS_KEYS.map((key, i) => {
+            const x = i * PARTICLE_SIZE;
+            const svg = skSvgs[key];
+            if (key === 'fallback' || !svg) {
                 return (
-                    <ImageSVG
+                    <Circle
                         key={key}
-                        svg={svg}
-                        x={x + 2}
-                        y={2}
-                        width={PARTICLE_SIZE - 4}
-                        height={PARTICLE_SIZE - 4}
+                        cx={x + PARTICLE_SIZE / 2}
+                        cy={PARTICLE_SIZE / 2}
+                        r={PARTICLE_SIZE / 2 - 4}
+                        color={MOOD_FALLBACK_COLORS[i]}
                     />
                 );
-            })}
-        </Group>
-    );
-};
+            }
+            return (
+                <ImageSVG
+                    key={key}
+                    svg={svg}
+                    x={x + 2}
+                    y={2}
+                    width={PARTICLE_SIZE - 4}
+                    height={PARTICLE_SIZE - 4}
+                />
+            );
+        })}
+    </Group>
+));
 
-export const SkiaConfettiEffect = memo(forwardRef(({ character }, ref) => {
+/**
+ * 활동 아이콘 스프라이트 시트
+ */
+const ActivitySpriteSheet = memo(({ skSvgs }) => (
+    <Group>
+        {ACTIVITY_ATLAS_KEYS.map((key, i) => {
+            const x = i * PARTICLE_SIZE;
+            const svg = skSvgs[key];
+            if (!svg) {
+                return (
+                    <Circle
+                        key={key}
+                        cx={x + PARTICLE_SIZE / 2}
+                        cy={PARTICLE_SIZE / 2}
+                        r={PARTICLE_SIZE / 2 - 4}
+                        color={ACTIVITY_FALLBACK_COLORS[i]}
+                    />
+                );
+            }
+            return (
+                <ImageSVG
+                    key={key}
+                    svg={svg}
+                    x={x + 2}
+                    y={2}
+                    width={PARTICLE_SIZE - 4}
+                    height={PARTICLE_SIZE - 4}
+                />
+            );
+        })}
+    </Group>
+));
+
+// ─── 빈 파티클 생성 유틸 ───
+const createEmptyParticle = () => ({
+    active: false,
+    startTime: 0,
+    originX: 0,
+    originY: 0,
+    vx: 0,
+    vy: 0,
+    rotation: 0,
+});
+
+const DURATION_SEC = DURATION_MS / 1000;
+
+export const SkiaConfettiEffect = memo(forwardRef(({ character, activityKey }, ref) => {
     const lastBurstTime = useRef(0);
+    const slotIndex = useRef(0);
+
+    // ─── 모드 판별: activityKey가 있으면 활동 모드 ───
+    const isActivityMode = !!activityKey;
 
     // ─── 1. SVG 사전 파싱 (마운트 시 1회) ───
     const skSvgs = useMemo(() => {
         const map = {};
-        Object.entries(MOOD_CHARACTER_SVG_MAP).forEach(([key, xml]) => {
+        const sourceMap = isActivityMode ? ACTIVITY_ICON_SVG_MAP : MOOD_CHARACTER_SVG_MAP;
+        Object.entries(sourceMap).forEach(([key, xml]) => {
             try {
                 const parsed = Skia.SVG.MakeFromString(xml);
                 if (parsed) map[key] = parsed;
             } catch (e) {
-                console.warn(`[SkiaConfetti] SVG 파싱 실패 (${key}):`, e);
+                console.warn(`[SkiaConfetti] SVG parse failed for key="${key}":`, e.message);
             }
         });
         return map;
-    }, []);
+    }, [isActivityMode]);
 
-    // ─── 2. 하이브리드 텍스처 생성 (GPU Baking) ───
+    // ─── 2. 텍스처 생성 (모드별 분기) ───
+    const texW = isActivityMode ? ACTIVITY_TEX_W : MOOD_TEX_W;
+    const texH = isActivityMode ? ACTIVITY_TEX_H : MOOD_TEX_H;
+
     const texture = useTexture(
-        <MasterSpriteSheet skSvgs={skSvgs} />,
-        { width: TEX_W, height: TEX_H }
+        isActivityMode
+            ? <ActivitySpriteSheet skSvgs={skSvgs} />
+            : <MoodSpriteSheet skSvgs={skSvgs} />,
+        { width: texW, height: texH }
     );
 
-    // ─── 3. 스프라이트 매핑 (UV 선택) ───
+    // ─── 3. 스프라이트 매핑 ───
     const sprites = useMemo(() => {
-        const charIdx = ATLAS_KEYS.indexOf(character);
-        // 캐릭터가 없거나 'fallback'이 매칭되면 5번 인덱스(도형) 사용
-        const idx = (charIdx !== -1 && charIdx < 5) ? charIdx : 5;
-        const sourceRect = rect(idx * PARTICLE_SIZE, 0, PARTICLE_SIZE, PARTICLE_SIZE);
-        return new Array(POOL_SIZE).fill(sourceRect);
-    }, [character]);
+        if (isActivityMode) {
+            const idx = ACTIVITY_ATLAS_KEYS.indexOf(activityKey);
+            const finalIdx = idx !== -1 ? idx : ACTIVITY_ATLAS_KEYS.length - 1; // 'default'
+            const sourceRect = rect(finalIdx * PARTICLE_SIZE, 0, PARTICLE_SIZE, PARTICLE_SIZE);
+            return new Array(POOL_SIZE).fill(sourceRect);
+        } else {
+            const charIdx = MOOD_ATLAS_KEYS.indexOf(character);
+            const idx = (charIdx !== -1 && charIdx < 5) ? charIdx : 5;
+            const sourceRect = rect(idx * PARTICLE_SIZE, 0, PARTICLE_SIZE, PARTICLE_SIZE);
+            return new Array(POOL_SIZE).fill(sourceRect);
+        }
+    }, [character, activityKey, isActivityMode]);
 
-    // ─── 4. 물리 시뮬레이션 SharedValues ───
+    // ─── 4. 물리 시뮬레이션 (Circular Queue) ───
     const particleData = useSharedValue(
-        new Array(POOL_SIZE).fill(null).map(() => ({
-            active: false,
-            startTime: 0,
-            originX: 0,
-            originY: 0,
-            vx: 0,
-            vy: 0,
-            rotation: 0,
-        }))
+        new Array(POOL_SIZE).fill(null).map(createEmptyParticle)
     );
 
     const clock = useSharedValue(0);
+
     useFrameCallback((info) => {
         'worklet';
         clock.value = info.timeSinceFirstFrame;
@@ -136,25 +198,25 @@ export const SkiaConfettiEffect = memo(forwardRef(({ character }, ref) => {
         }
 
         const elapsed = (clock.value - p.startTime) / 1000;
-        const progress = Math.min(elapsed / (DURATION_MS / 1000), 1);
+        const progress = Math.min(elapsed / DURATION_SEC, 1);
 
         if (progress >= 1) {
             val.set(0, 0, -1000, -1000);
             return;
         }
 
-        // 물리 궤적 연산
+        // 물리 궤적
         const x = p.originX + p.vx * elapsed;
         const y = p.originY + p.vy * elapsed + 0.5 * GRAVITY * elapsed * elapsed;
-        
-        // 애니메이션 곡선 (팝업 -> 유지 -> 소멸)
-        const scale = progress < 0.1 
-            ? (progress / 0.1) * 1.2 
-            : progress < 0.8 
-                ? 1.2 
-                : 1.2 * (1 - (progress - 0.8) / 0.2);
 
-        const angle = p.rotation * progress * Math.PI * 4;
+        // 스케일 곡선 (팝업 → 유지 → 소멸)
+        const scale = progress < 0.1
+            ? (progress / 0.1) * 1.2
+            : progress < 0.8
+                ? 0.7
+                : 0.7 * (1 - (progress - 0.8) / 0.2);
+
+        const angle = p.rotation * progress * Math.PI * 3;
         const cos = Math.cos(angle) * scale;
         const sin = Math.sin(angle) * scale;
 
@@ -164,18 +226,24 @@ export const SkiaConfettiEffect = memo(forwardRef(({ character }, ref) => {
         val.set(cos, sin, tx, ty);
     });
 
+    // ─── 5. burst (Circular Queue 방식) ───
     useImperativeHandle(ref, () => ({
         burst: (x, y) => {
             const now = Date.now();
-            if (now - lastBurstTime.current < 150) return;
+            if (now - lastBurstTime.current < 120) return;
             lastBurstTime.current = now;
+
+
 
             const currentTime = clock.value;
             const newData = [...particleData.value];
-            for (let i = 0; i < POOL_SIZE; i++) {
-                const angle = (i / POOL_SIZE) * Math.PI * 2 + (Math.random() - 0.5) * 1.5;
-                const speed = 220 + Math.random() * 250;
-                newData[i] = {
+            const startIdx = slotIndex.current;
+
+            for (let i = 0; i < BURST_COUNT; i++) {
+                const idx = (startIdx + i) % POOL_SIZE;
+                const angle = (i / BURST_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 1.5;
+                const speed = 160 + Math.random() * 250;
+                newData[idx] = {
                     active: true,
                     startTime: currentTime + Math.random() * 80,
                     originX: x - PARTICLE_SIZE / 2,
@@ -185,6 +253,9 @@ export const SkiaConfettiEffect = memo(forwardRef(({ character }, ref) => {
                     rotation: (Math.random() > 0.5 ? 1 : -1) * (0.8 + Math.random() * 2.0),
                 };
             }
+
+            // 순환 인덱스 전진
+            slotIndex.current = (startIdx + BURST_COUNT) % POOL_SIZE;
             particleData.value = newData;
         },
     }));

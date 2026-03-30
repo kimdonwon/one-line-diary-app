@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Alert, Dimensions } from 'react-native';
+import { Alert, Dimensions, Keyboard, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MOOD_LIST } from '../../constants/mood';
 import { ACTIVITIES } from '../../constants/activities';
@@ -326,7 +326,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
 
             setCurrentPageIndex(0);
         }
-        
+
         // 데이터 복원 완벽히 마무리 (단, state update batching 고려)
         setIsDataInitialized(true);
 
@@ -703,6 +703,34 @@ export function useWriteLogic(route, navigation, scrollRef) {
             scrollRef.current?.scrollToEnd({ animated: true });
         }, 300);
     };
+
+    // ✏️ 키보드 등장 시 ScrollView 자동 스크롤 (캔버스 하단 텍스트 가림 방지)
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const onKeyboardShow = (e) => {
+            const keyboardHeight = e.endCoordinates.height;
+            // 캔버스 하단이 키보드에 가려지지 않도록 스크롤
+            setTimeout(() => {
+                scrollRef.current?.scrollTo({ y: keyboardHeight * 0.5, animated: true });
+            }, 100);
+        };
+
+        const onKeyboardHide = () => {
+            setTimeout(() => {
+                scrollRef.current?.scrollTo({ y: 0, animated: true });
+            }, 100);
+        };
+
+        const subShow = Keyboard.addListener(showEvent, onKeyboardShow);
+        const subHide = Keyboard.addListener(hideEvent, onKeyboardHide);
+
+        return () => {
+            subShow.remove();
+            subHide.remove();
+        };
+    }, []);
 
     // ─── 📷 사진 첨부 로직 ───
 

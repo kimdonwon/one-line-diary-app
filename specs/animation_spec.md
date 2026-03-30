@@ -15,40 +15,30 @@
   2. 400ms 후 원래 위치(`x: 0`)로 복귀
 - **목적**: 버튼이 없는 미니멀한 UI(ㅡ ㅡ 인디케이터) 상황에서 다음 페이지(활동 통계)가 숨겨져 있다는 것을 유저에게 무의식적으로 안내함.
 
-## 2. 통계 바 차트 차오름 애니메이션 (Fill-up Effect)
+## 2. 통계 바 차트 차오름 애니메이션 (Fill-up Effect) - [v2.0 UI 스레드 최적화]
 
-요약 화면의 통계 수치를 시각적으로 채우는 동적인 게이지 애니메이션입니다.
+요약 화면 및 메인 화면의 활동 통계 수치를 시각적으로 채우는 고성능 게이지 애니메이션입니다.
 
-- **위치**: `components/index.js` (`MoodBar`), `SummaryScreen.view.js` (`AnimatedActivityBar`)
-- **트리거**: 뷰어 렌더링 시 또는 탭을 오갈 때 (focus 시 `animKey` 변동)
-- **동작 방식**:
-  - `Animated.timing`을 사용하여 `width`를 0%에서 시작해 계산된 비율(ratio * 100%)까지 도달시킴.
-  - **MoodBar**: 700ms 지속 시간
-  - **ActivityBar**: 600ms 지속 시간, 100ms 지연 (delay)
-- **목적**: 화면에 진입하는 순간 수치가 동적으로 시각화되며 데이터를 읽는 재미와 완성도를 제공.
-- **성능 최적화(Tip)**: SVG 등 복잡한 아이콘 리렌더링을 방지하기 위해 `React.memo`로 컴포넌트를 분리하고 `width` 속성만 애니메이션 처리함.
+- **위치**: `MainScreen.view.js` (`AnimatedActivityBar`), `SummaryScreen.view.js` (`AnimatedActivityBar`)
+- **트리거**: 뷰 렌더링 시 또는 데이터 갱신 시 (`ratio` 변동)
+- **동작 방식 (v2.0 Upgrade)**:
+  - **엔진 교체**: `width` (레이아웃 속성) 기반 애니메이션을 완전히 폐기하고 **`scaleX` (트랜스폼 속성)** 기반으로 재설계.
+  - **네이티브 가속**: `useNativeDriver: true`를 적용하여 애니메이션 연산을 **UI 스레드**로 이관. JS 스레드가 데이터 로딩(DB)으로 점유되어도 프레임 드랍 없이 부드럽게 재생됨.
+  - **레이아웃 독립**: `width: '100%'` 고정 상태에서 스케일만 조절하므로 Yoga 레이아웃 엔진의 재계산(Reflow) 부하가 0.
+  - **기준점 고정**: `transformOrigin: 'left center'` 스타일을 통해 바가 왼쪽에서 오른쪽으로 자연스럽게 확장되도록 구현.
+- **성능 수치**: JS 스레드 점유율과 무관하게 항시 60fps 유지. 메인 화면 스크롤과 동시에 데이터가 로드되더라도 바 애니메이션은 끊기지 않음.
 
-## 3. 폭죽/파티클 애니메이션 (Confetti Effect) - [최적화 완료]
+## 3. 폭죽/파티클 엔진 (SkiaConfettiEffect) - [v5.0 고도화]
 
-화면 내 주요 성과를 탭했을 때 발생하는 초고성능 리액션 애니메이션입니다.
+화면 내 주요 성과를 탭했을 때 발생하는 @shopify/react-native-skia 기반 초고속 파티클 엔진입니다.
 
-- **기술적 특이사항 (Imperative Ref Pooling)**:
-  - **Imperative Control**: 리액트 훅 규칙을 준수하면서도 상태(`State`) 업데이트를 0으로 유지하기 위해 자식 컴포넌트의 `Ref` 메서드를 직접 호출하는 명령형 구조 채택.
-  - **Vector Pre-calculation**: 삼각함수 연산을 JS 스레드에서 사전 처리하여 UI 스레드의 가용 자원을 확보.
-  - **Zero-Alloc Pooling**: 60개의 물리 슬롯을 고정하여 가비지 컬렉션(GC)에 의한 프레임 드랍 방지.
-- **동작 방식**: 리액트 재조정(Reconciliation) 과정을 완전히 바이패스하는 고정 슬롯 재활용 시스템.
-- **목적**: 연타 시에도 렉 없는 프리미엄 사용자 경험 제공.
-- **v3.1 성능 고도화 (Yoga Bypass)**:
-  - **Transform 중심 설계**: `left/top` 레이아웃 속성을 폐기하고 `transform`으로 위치를 계산하여 브라우저/네이티브 레이아웃 재계산(Reflow)을 차단.
-  - **데이터 구조 최적화**: SharedValue 객체를 원시값으로 분리(Flattening)하여 브리지 통신 부하 경감.
-  - **컴포넌트 안정화**: `renderItem` 프롭의 `useCallback` 필수 적용 패턴을 정립하여 부모 상태 변화로부터 파티클 엔진의 독립성 확보.
-- **v3.2 성능 극대화 (Native Layer Cleanup)**:
-  - **Dynamic Display Toggle**: 애니메이션 종료(`p >= 1`) 즉시 스타일 속성에 `display: 'none'`을 주입하여 네이티브 레이아웃 노드에서 해당 뷰를 완전히 제외. 폭죽이 끝난 후 발생하는 지속적인 렉(Persistent Lag)을 99% 차단.
-  - **Ghost View Pruning**: 30개의 파티클이 화면 곳곳에 분산되어 렌더링 파이프라인(Compositor)에 무차별적으로 걸리는 현상을 방지.
-- **v3.3 초고속 연타 최적화 (Saturation Guard & GPU Caching)**:
-  - **GPU Rasterization**: 복잡한 SVG 캐릭터를 비트맵으로 캐싱(`renderToHardwareTextureAndroid`, `shouldRasterizeIOS`)하여 이동 중 발생하는 드로우 콜(Draw Call) 부하를 획기적으로 경감.
-  - **Saturation Guard**: 250ms 미만의 광폭 연타 시 생성되는 파티클 개수를 동적으로 하향 조정(9개 -> 3개)하여 시스템 포화 방지.
-  - **Duration Tapering**: 연타 모드 시 애니메이션 지속 시간을 1300ms에서 800ms로 단축하여 슬롯 자원을 더 빠르게 회수하고 스레드 점유 시간 최소화.
+- **v5.0 신규 기능 (Rapid-fire & Activity Support)**:
+  - **무한 연타 (Circular Queue)**: `POOL_SIZE(60)`와 `BURST_COUNT(12)`를 조합한 순환 큐 설계. 연타 시 기존 파티클을 지우지 않고 새 파티클을 겹쳐서 생성하여 시각적 풍성함 극대화.
+  - **활동 아이콘 베이킹 (Activity Baking)**: `activityKey`를 지원하며, `ActivityIconSVGs.js`의 SVG를 마운트 시 GPU 텍스처로 자동 베이킹. '게임', '운동' 등 각 활동에 맞는 커스텀 아이콘 파티클 제공.
+  - **SVG 호환성 가이드 (v2)**: Skia SVG 파서 한계를 극복하기 위해 복합 Path 분리, Arc 명령의 Bezier 대체, `fill="transparent"` 표준 준수.
+- **기술적 특성**:
+  - **Canvas Isolation**: 단일 `<Canvas>` 레이어에서 수십 개의 파티클을 배치 드로우(Batch Draw).
+  - **Zero Frame Drop**: `useRSXformBuffer`를 통한 UI 스레드 물리 연산으로 메인 스레드 간섭 차단.
 
 ## 4. 탭 전환 스크롤 가드 및 인디케이터 반응 (Scroll Guard & Dash Indicator)
 

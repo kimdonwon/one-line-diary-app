@@ -102,9 +102,10 @@
 
 ### 4.1 하단 탭바 & 툴 패널
 
-- **Bottom Bar (Dual Mode)**:
-  - `nav`: 메인 탭 네비게이션용.
-  - `action`: 작성 화면 전용 (중앙 완료 버튼 + 기분 색상 동기화).
+- **Bottom Bar (Main Navigation)**: 메인 탭 네비게이션용으로 사용 (`nav` 모드).
+- **Write Screen Layout Strategy**: 하단바 제거로 확보된 공간을 활용하여 `ScrollView`의 **상단 정렬(`flex-start`)** 레이아웃을 채택. 캔버스 수직 세부 요소들의 패딩을 최소화(Meta: 6px, Indicator: 4px)하는 **'Padding Diet' 전략**을 통해 전체 높이를 압축. 이를 통해 큰 화면 기기에서는 스크롤 없이 고정된(Premium Fixed) 느낌을 주며, 공간이 부족한 작은 기기에서만 자동으로 스크롤이 활성화되도록 함. (캔버스 상단 마진: `2.5%`, 쓰레기통 위치: `bottom: '7%'`)
+- **Header Layout Strategy**: '오늘의 기록'(Main Title) + 'YYYY.MM.DD'(Sub Date)의 2단 구조로 개편. 특히 날짜 스타일을 **메인 화면(16px, Semi-bold, #9E8E82)과 완벽히 일치**시켜 앱 전체의 시각적 일관성 확보. (저장 및 이탈은 시스템 백버튼의 `beforeRemove` 자동 저장 로직에 의존)
+- **Keyboard Auto-Scroll**: 캔버스 하단 `DraggableText` 입력 시 키보드가 텍스트를 가리는 문제를 `Keyboard.addListener`로 해결. 키보드 등장 시 `scrollRef.scrollTo(keyboardHeight * 0.5)`로 캔버스를 위로 밀어올리고, 키보드 사라질 때 `scrollTo(0)`으로 원위치. DraggableText 수정 없이 WriteScreen.logic.js에서만 처리.
 - **Tool Panel (Floating Glass Island)**:
   - 반투명 블러 효과(`BlurView`) 가로 스와이프 도크.
   - **레이어링**: 키보드 간섭 방지 및 zIndex 이슈 해결을 위해 루트 레이어에 배치.
@@ -158,11 +159,14 @@
   - 결제 요청 시 선택된 상품의 `skuId`를 `handlePremiumPress`의 파라미터로 전달하여 동적으로 대응함.
   - 프리미엄 구독 로직은 구글 플레이 및 앱스토어의 `requestPurchase` 트랜잭션으로, 복원 로직은 `getAvailablePurchases` 영수증 검증으로 완전하게 처리됨.
 
-### 5.4 요약 화면 성능 최적화 (SummaryScreen Performance)
+### 5.4 요약 화면 및 메인 화면 성능 고도화 (Summary/Main Performance)
 
-- **화면 전환 병목 해소 (`InteractionManager`)**:
-  - `useFocusEffect` 내의 데이터 로딩(6개 reload 함수)과 애니메이션 초기화(`animKey`)를 `InteractionManager.runAfterInteractions()`로 감싸서, 네비게이션 전환 애니메이션이 완료된 후에만 JS 스레드 작업이 시작되도록 함.
-  - cleanup 함수에서 `handle.cancel()`을 호출하여 화면 이탈 시 불필요한 작업을 취소.
+- **데이터 로딩 통합 (useSummaryLogic v2.0)**:
+  - **Before**: `useYearMoodStats`, `useYearActivityStats` 등 6개의 개별 DB 훅 병렬 사용 → 각 훅의 데이터가 로드될 때마다 `setState` 발생으로 **6번의 리렌더링 연쇄** 발생.
+  - **After**: `Promise.all`과 단일 `rawData` 상태를 사용하는 통합 로직으로 리팩토링. 6개의 비동기 쿼리가 완료된 후 **단 1회의 setState**만 수행하여 렌더링 부하를 80% 이상 경감.
+- **화면 전환 병목 해소 (Interactions)**:
+  - `useFocusEffect` 내의 통합 `reload` 함수를 `InteractionManager.runAfterInteractions()`로 래핑.
+  - 네비게이션 전환 애니메이션 도중에 JS 스레드가 DB 쿼리를 요청하지 않게 차단하여, 화면 이탈 및 진입 시나리오에서 60fps 보장.
 - **연산 메모이제이션 (`useMemo`)**:
   - 기분 통계(`maxCount`, `topMoodData`, `allMoodStats`): `[stats]` 의존성으로 메모이제이션.
   - 월별 통계(`monthlyEntryCounts`, `moodLineData`, `maxLineValue` 등): `[year, monthlyStats]` 의존성으로 메모이제이션.
@@ -185,7 +189,7 @@
   - 단순 투명도 대신 `expo-blur`와 `Animated.View`를 합성한 **`AnimatedAuraBackdrop`** 컴포넌트를 자체 제작. 기쁨, 슬픔 등 유저가 선택한 기분(Mood)의 색상값이 즉시 배경 블러에 스며들며 은은하게 빛나는 **반응형 감정 오라(Responsive Aura)** UX 적용.
   - 모달 내부의 기분 아이콘 목록에 `react-native`의 `Animated.spring`을 활용해 인덱스 번호(`index * 60ms`)에 따른 **순차적 팝업(Staggered Pop-up)** 기능을 추가. 바텀시트가 열릴 때 캐릭터들이 도미노처럼 젤리 푸딩 같은 텐션으로 하나씩 통통 튀어 오르는 마이크로 모션 구현. 또한, 모달이 열린 이후 다른 이모지를 터치할 때 불필요하게 스케일이 0으로 초기화되며 깜빡이는 현상(Flickering)을 `useRef` 상태 분기를 통해 제거.
 - **플로팅 글래스 아일랜드(바텀시트 도크) 마운트 최적화 (Progressive Lazy Windowing)**:
-  - `WriteScreen.view.js`의 좌하단 툴바(스티커, 프레임, 텍스트) 버튼 클릭 시 바텀시트가 열리며 발생하는 **0.5초 극심한 렌더링 렉(Jank)**을 해결. 
+  - `WriteScreen.view.js`의 좌하단 툴바(스티커, 프레임, 텍스트) 버튼 클릭 시 바텀시트가 열리며 발생하는 **0.5초 극심한 렌더링 렉(Jank)**을 해결.
   - 렉의 주원인이었던 "수백 개의 SVG 스티커를 `LayoutAnimation` 프레임에 동시에 마운트"하던 구조를 뜯어고침.
   - `InteractionManager`를 결합하여 **바텀시트가 열리는 애니메이션(300ms) 도중에는 현재 활성화된 탭 딱 한 개(1 Window)만 집중해서 렌더링**하고, 슬라이딩이 완료된 시점(`isDockReady`)에 양옆 스와이프에 필요한 여분 탭을 백그라운드에서 지연 마운팅(Multi-stage Render)하도록 구조화함. 결과적으로 체감 오픈 딜레이를 0ms 수준으로 즉각화.
 - **스티커 팩 라이프사이클 관리**:
@@ -232,4 +236,3 @@
 
 ---
 *Last Updated: 2026-03-28*
-

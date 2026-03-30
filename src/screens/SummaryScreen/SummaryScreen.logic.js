@@ -4,13 +4,13 @@ import { InteractionManager } from 'react-native';
 import { getMoodByKey, MOOD_LIST } from '../../constants/mood';
 import { ACTIVITIES, getActivityByKey } from '../../constants/activities';
 import {
-    useYearMoodStats,
-    useDiariesForYear,
-    useYearMonthlyStats,
-    useYearActivityStats,
-    useYearMonthlyActivitiesStats,
-    useYearAllActivities
-} from '../../hooks/useDiary';
+    getYearDiaries,
+    getYearMoodStats,
+    getYearMonthlyStats,
+    getYearActivities,
+    getYearMonthlyActivities,
+    getYearAllActivities,
+} from '../../database/db';
 import { chartConstants } from './SummaryScreen.styles';
 import { useBentoBoard } from '../../hooks/useBentoBoard';
 
@@ -26,31 +26,47 @@ export const MONTH_NAMES = ['1월', '2월', '3월', '4월', '5월', '6월', '7�
 
 /**
  * ⚙️ 연간 요약 화면의 비즈니스 로직과 데이터 가공을 담당하는 훅입니다.
+ * v2.0: 6개 개별 DB 훅 → Promise.all 통합 로딩 (리렌더링 6회→1회 압축)
  */
 export function useSummaryLogic(route, navigation, scrollRef) {
     const [year, setYear] = useState(route?.params?.year || new Date().getFullYear());
     const [pageIndex, setPageIndex] = useState(0);
 
-    const { diaries, reload: reloadDiaries } = useDiariesForYear(year);
-    const { stats, reload: reloadStats } = useYearMoodStats(year);
-    const { monthlyStats, reload: reloadMonthly } = useYearMonthlyStats(year);
-    const { activityStats, reload: reloadActivities } = useYearActivityStats(year);
-    const { monthlyActivityStats, reload: reloadMonthlyActivity } = useYearMonthlyActivitiesStats(year);
-    const { activities, reload: reloadAllActivities } = useYearAllActivities(year);
+    // ─── 통합 데이터 로딩 (6회 리렌더링 → 1회 압축) ───
+    const [rawData, setRawData] = useState({
+        diaries: [], stats: [], monthlyStats: [],
+        activityStats: [], monthlyActivityStats: [], activities: [],
+    });
+
+    const reload = useCallback(async () => {
+        if (!year) return;
+        const y = String(year);
+        try {
+            const [diaries, stats, monthlyStats, activityStats, monthlyActivityStats, activities] =
+                await Promise.all([
+                    getYearDiaries(y),
+                    getYearMoodStats(y),
+                    getYearMonthlyStats(y),
+                    getYearActivities(y),
+                    getYearMonthlyActivities(y),
+                    getYearAllActivities(y),
+                ]);
+            setRawData({ diaries, stats, monthlyStats, activityStats, monthlyActivityStats, activities });
+        } catch (e) {
+            console.error('[SummaryLogic] Data load failed:', e);
+        }
+    }, [year]);
 
     useFocusEffect(
         useCallback(() => {
             const handle = InteractionManager.runAfterInteractions(() => {
-                reloadDiaries();
-                reloadStats();
-                reloadMonthly();
-                reloadActivities();
-                reloadMonthlyActivity();
-                reloadAllActivities();
+                reload();
             });
             return () => handle.cancel();
-        }, [reloadDiaries, reloadStats, reloadMonthly, reloadActivities, reloadMonthlyActivity, reloadAllActivities])
+        }, [reload])
     );
+
+    const { diaries, stats, monthlyStats, activityStats, monthlyActivityStats, activities } = rawData;
 
     // ─── 🍱 벤토 보드 데이터 ───
     const bentoData = useBentoBoard(year, diaries);

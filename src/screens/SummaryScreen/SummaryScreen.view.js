@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, TextInput, Modal, Pressable, FlatList, InteractionManager } from 'react-native';
-import Reanimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, withDelay, useAnimatedProps } from 'react-native-reanimated';
+import { View, Text, TouchableOpacity, ScrollView, Animated, Modal, Pressable, FlatList, InteractionManager } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path, Polyline, Circle as SvgCircle } from 'react-native-svg';
@@ -79,38 +78,24 @@ const MemoizedActivityLineChart = React.memo(({ activityLineData, maxActivityLin
 ));
 
 /**
- * 📊 애니메이션 활동 바 (Reanimated v4 기반)
+ * 📊 애니메이션 활동 바 (RN Animated 기반 — enableFreeze 호환)
+ * Reanimated 워클릿은 enableFreeze를 무시하고 UI 스레드에서 영구 실행되므로,
+ * RN Animated로 교체하여 탭 이탈 시 정상 동결되도록 함.
  */
-const AnimatedTextInput = Reanimated.createAnimatedComponent(TextInput);
-
 const AnimatedActivityBar = React.memo(({ stat, maxActCount, triggerKey, getActivityByKey, handleActivityPress }) => {
     const act = getActivityByKey(stat.activity);
     const ratio = maxActCount > 0 ? stat.count / maxActCount : 0;
-
-    const widthSV = useSharedValue(0);
-    const countSV = useSharedValue(0);
+    const scaleAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        widthSV.value = 0;
-        countSV.value = 0;
-
-        widthSV.value = withDelay(100, withSpring(ratio, { damping: 14, stiffness: 90, mass: 0.8 }));
-        countSV.value = withDelay(100, withTiming(stat.count, { duration: 700 }));
-    }, [triggerKey, ratio, stat.count]);
-
-    const animatedStyle = useAnimatedStyle(() => {
-        return {
-            width: `${Math.max(widthSV.value * 100, 10)}%`, // 최소 폭 10%
-            backgroundColor: act.color,
-        };
-    });
-
-    const animatedProps = useAnimatedProps(() => {
-        return {
-            text: Math.round(countSV.value).toString(),
-            value: Math.round(countSV.value).toString(),
-        };
-    });
+        scaleAnim.setValue(0.001);
+        Animated.timing(scaleAnim, {
+            toValue: Math.max(ratio, 0.1),
+            duration: 600,
+            delay: 100,
+            useNativeDriver: true,
+        }).start();
+    }, [triggerKey, ratio]);
 
     return (
         <TouchableOpacity style={styles.activityBarRow} onPress={() => handleActivityPress(stat.activity)}>
@@ -119,14 +104,13 @@ const AnimatedActivityBar = React.memo(({ stat, maxActCount, triggerKey, getActi
             </View>
             <Text style={styles.activityBarLabel}>{act.label}</Text>
             <View style={styles.activityBarTrack}>
-                <Reanimated.View style={[styles.activityBarFill, animatedStyle]} />
+                <Animated.View style={[styles.activityBarFill, {
+                    width: '100%',
+                    backgroundColor: act.color,
+                    transform: [{ scaleX: scaleAnim }],
+                }]} />
             </View>
-            <AnimatedTextInput
-                underlineColorAndroid="transparent"
-                editable={false}
-                animatedProps={animatedProps}
-                style={[styles.activityBarCount, { padding: 0 }]}
-            />
+            <Text style={[styles.activityBarCount, { padding: 0 }]}>{stat.count}</Text>
         </TouchableOpacity>
     );
 });
@@ -369,7 +353,7 @@ export function SummaryScreenView({ route, navigation }) {
 
             {/* 🎨 Skia 기반 고성능 파티클 (v4.1 - Character Pre-Baking) */}
             <SkiaConfettiEffect ref={moodConfettiRef} character={topMoodData?.character} />
-            <SkiaConfettiEffect ref={activityConfettiRef} />
+            <SkiaConfettiEffect ref={activityConfettiRef} activityKey={activityStats[0]?.activity} />
         </View>
     );
 }

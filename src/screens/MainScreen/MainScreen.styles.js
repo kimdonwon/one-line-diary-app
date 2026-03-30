@@ -120,7 +120,7 @@ export const styles = StyleSheet.create({
         borderWidth: 1, borderColor: COLORS.border,
         marginHorizontal: SPACING.sm,
     },
-    actBarFill: { height: '100%', borderRadius: RADIUS.full },
+    actBarFill: { height: '100%', borderRadius: RADIUS.full, transformOrigin: 'left center' },
     actBarCount: { width: 24, textAlign: 'right', fontSize: 14, fontWeight: '700', color: COLORS.text },
 
     // 꺾은선 그래프 (Summary 참고)

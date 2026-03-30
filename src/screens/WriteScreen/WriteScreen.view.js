@@ -164,7 +164,7 @@ const AnimatedAuraBackdrop = ({ isVisible, selectedMoodKey, onPressDismiss }) =>
             if (selectedMoodKey) {
                 const nextColor = MOOD_LIST.find(m => m.key === selectedMoodKey)?.color || 'transparent';
                 setCurrentColor(nextColor);
-                
+
                 auraOpacity.setValue(0);
                 Animated.timing(auraOpacity, {
                     toValue: 0.2,
@@ -195,16 +195,16 @@ const AnimatedAuraBackdrop = ({ isVisible, selectedMoodKey, onPressDismiss }) =>
     return (
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity, zIndex: 9999 }]}>
             <Pressable style={StyleSheet.absoluteFill} onPress={onPressDismiss}>
-                <BlurView 
-                    style={StyleSheet.absoluteFill} 
-                    tint="dark" 
-                    intensity={40} 
-                    experimentalBlurMethod="dimezisBlurView" 
+                <BlurView
+                    style={StyleSheet.absoluteFill}
+                    tint="dark"
+                    intensity={40}
+                    experimentalBlurMethod="dimezisBlurView"
                 />
                 {currentColor !== 'transparent' && (
-                    <Animated.View 
-                        style={[StyleSheet.absoluteFill, { backgroundColor: currentColor, opacity: auraOpacity }]} 
-                        pointerEvents="none" 
+                    <Animated.View
+                        style={[StyleSheet.absoluteFill, { backgroundColor: currentColor, opacity: auraOpacity }]}
+                        pointerEvents="none"
                     />
                 )}
             </Pressable>
@@ -389,7 +389,7 @@ export function WriteScreenView({ route, navigation }) {
         setShowStickers,
         setInputBoxBounds,
         setStickerLimitModalVisible,
-        
+
         isTextLimitModalVisible,
         setTextLimitModalVisible,
         adBonusTexts,
@@ -544,7 +544,7 @@ export function WriteScreenView({ route, navigation }) {
             // 🚀 서랍이 닫힐 때 스크롤 플래그만 초기화 (카테고리 ID는 유지하여 마지막 상태 기억)
             if (prevBottomSheetOpen.current) {
                 // setActiveCategoryId(''); // 30년차 팁: 사용자 Context를 유지하기 위해 ID 초기화 제거
-                isFirstStickerLoad.current = true; 
+                isFirstStickerLoad.current = true;
             }
             prevBottomSheetOpen.current = false;
             return;
@@ -555,11 +555,11 @@ export function WriteScreenView({ route, navigation }) {
             // 💡 데이터 무결성 체크: 기억된 ID가 여전히 유효한지 검증 (다른 탭에서 넘어올 때도 매번 체크)
             const isValid = visibleCategories.some(cat => cat.id === activeCategoryId);
             const targetCatId = isValid ? (activeCategoryId || visibleCategories[0].id) : visibleCategories[0].id;
-            
+
             if (activeCategoryId !== targetCatId) {
                 setActiveCategoryId(targetCatId);
             }
-            
+
             // 💡 스티커 탭으로 '처음' 진입하거나 전환된 순간에만 스크롤 동기화 수행
             if (!prevShowStickers.current) {
                 setTimeout(() => {
@@ -644,7 +644,29 @@ export function WriteScreenView({ route, navigation }) {
         <View style={styles.container}>
             <StatusBar style="dark" />
             <Header
-                title={formattedDate}
+                title="오늘의 기록"
+                subtitle={
+                    <Text style={{ fontSize: 16, color: '#9E8E82', fontWeight: '600', marginTop: 2 }}>
+                        {formattedDate}
+                    </Text>
+                }
+            /* rightButton={
+                <TouchableOpacity
+                    onPress={handleSave}
+                    style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 22,
+                        backgroundColor: activeColor,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        ...SOFT_SHADOW.button
+                    }}
+                    activeOpacity={0.8}
+                >
+                    <CheckIcon size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+            } */
             />
 
             <KeyboardAvoidingView
@@ -840,10 +862,10 @@ export function WriteScreenView({ route, navigation }) {
 
                                                     {/* [층2] 📷 폴라로이드 사진 레이어 (반투명 프레임 제외) */}
                                                     <Animated.View
-                                                        style={[StyleSheet.absoluteFill, { 
-                                                            zIndex: 5, elevation: 5, 
-                                                            opacity: photoRevealAnim, 
-                                                            transform: [{ scale: photoRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }] 
+                                                        style={[StyleSheet.absoluteFill, {
+                                                            zIndex: 5, elevation: 5,
+                                                            opacity: photoRevealAnim,
+                                                            transform: [{ scale: photoRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }]
                                                         }]}
                                                         pointerEvents="box-none"
                                                     >
@@ -866,10 +888,10 @@ export function WriteScreenView({ route, navigation }) {
 
                                                     {/* [층2.5] ✏️ 텍스트 스티커 영역 */}
                                                     <Animated.View
-                                                        style={[StyleSheet.absoluteFill, { 
-                                                            zIndex: 8, elevation: 8, 
-                                                            opacity: textRevealAnim, 
-                                                            transform: [{ translateY: textRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] 
+                                                        style={[StyleSheet.absoluteFill, {
+                                                            zIndex: 8, elevation: 8,
+                                                            opacity: textRevealAnim,
+                                                            transform: [{ translateY: textRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }]
                                                         }]}
                                                         pointerEvents="box-none"
                                                     >
@@ -902,10 +924,10 @@ export function WriteScreenView({ route, navigation }) {
 
                                                     {/* [층3] 🌟 다꾸 스티커 영역 (최상위) */}
                                                     <Animated.View
-                                                        style={[StyleSheet.absoluteFill, { 
-                                                            zIndex: 10, elevation: 10, 
-                                                            opacity: stickerRevealAnim, 
-                                                            transform: [{ scale: stickerRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }, { translateY: stickerRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }] 
+                                                        style={[StyleSheet.absoluteFill, {
+                                                            zIndex: 10, elevation: 10,
+                                                            opacity: stickerRevealAnim,
+                                                            transform: [{ scale: stickerRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }, { translateY: stickerRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }]
                                                         }]}
                                                         pointerEvents="box-none"
                                                         onLayout={(e) => {
@@ -1019,14 +1041,7 @@ export function WriteScreenView({ route, navigation }) {
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            {/* ─── 🚀 공통 바텀바 적용 (이원화 해소 및 코드 통합) ─── */}
-            <BottomBar
-                mode="action"
-                activeTab="none"
-                navigation={navigation}
-                onCenterPress={handleSave}
-                selectedMoodColor={activeColor}
-            />
+
             {/* ─── 🚀 닫기용 투명 오버레이 ─── */}
             {(showTexts || showPhotos || showStickers) && !isDraggingAny && (
                 <Pressable
@@ -1169,7 +1184,7 @@ export function WriteScreenView({ route, navigation }) {
 
                                             if (!shouldRender) {
                                                 // 스크롤 레이아웃(페이징)은 유지하되 무거운 SVG 렌더링 연산 생략
-                                                return <View key={cat.id} style={{ width: windowWidth - 32, height: 140 }} />; 
+                                                return <View key={cat.id} style={{ width: windowWidth - 32, height: 140 }} />;
                                             }
 
                                             const catStickers = CATEGORIZED_STICKERS[cat.id] ?? [];
@@ -1467,10 +1482,10 @@ export function WriteScreenView({ route, navigation }) {
             />
 
             {/* 💎 프리미엄 블러 백드롭 + 감정 오라 (독립 렌더링) */}
-            <AnimatedAuraBackdrop 
-                isVisible={isMoodModalVisible} 
-                selectedMoodKey={selectedMood} 
-                onPressDismiss={handleMoodModalDismiss} 
+            <AnimatedAuraBackdrop
+                isVisible={isMoodModalVisible}
+                selectedMoodKey={selectedMood}
+                onPressDismiss={handleMoodModalDismiss}
             />
 
             {/* 🚪 기분/활동 팝업 — 순수 Animated.View 바텀시트 (RNModal 제거, 안드로이드 플리커링 원천 차단) */}
