@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Alert, Dimensions, Keyboard, Platform } from 'react-native';
+import { Alert, BackHandler, Dimensions, Keyboard, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MOOD_LIST } from '../../constants/mood';
 import { ACTIVITIES } from '../../constants/activities';
@@ -72,6 +72,10 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const [inputBoxBounds, setInputBoxBounds] = useState({ width: 0, height: 0, x: 0, y: 0 });
     const [isStickerLimitModalVisible, setStickerLimitModalVisible] = useState(false);
     const [isTextLimitModalVisible, setTextLimitModalVisible] = useState(false);
+
+    // 📘 초보자 가이드 상태
+    const [isGuideVisible, setGuideVisible] = useState(false);
+    const guideCheckedRef = useRef(false);
 
     // 🔔 커스텀 알림 상태 추가
     const [showAlert, setShowAlert] = useState(false);
@@ -457,6 +461,23 @@ export function useWriteLogic(route, navigation, scrollRef) {
     }, [selectedMood, setAlertConfig, setShowAlert]); // 의존성 배열에 selectedMood 등 추가 필수
 
     /**
+     * 🔙 바텀시트가 열려있을 때 안드로이드 하드웨어 백 버튼 가로채기
+     * 네이티브 Modal이 아닌 Animated.View 기반이므로 BackHandler로 직접 처리해야 합니다.
+     * 백 버튼 → 바텀시트 dismiss(스냅샷 복구) → 저장 없이 이전 상태로 복귀
+     */
+    useEffect(() => {
+        if (!isMoodModalVisible) return;
+
+        const onBackPress = () => {
+            handleMoodModalDismiss();
+            return true; // 이벤트 소비 (네비게이션 goBack 차단)
+        };
+
+        const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+        return () => sub.remove();
+    }, [isMoodModalVisible, handleMoodModalDismiss]);
+
+    /**
      * 🚪 첫 진입 시 (새 일기인 경우) 기분/활동 팝업 자동 오픈
      */
     useEffect(() => {
@@ -468,6 +489,32 @@ export function useWriteLogic(route, navigation, scrollRef) {
             return () => clearTimeout(timer);
         }
     }, [loading, diary, selectedMood, openMoodModal]);
+
+    /**
+     * 📘 초보자 가이드 자동 표시
+     * 조건: 데이터 초기화 완료 + 기분 모달이 닫힌 상태 + 최초 1회만 체크
+     * DB에 'write_guide_dismissed'가 저장되어 있으면 표시하지 않음
+     */
+    /*
+    useEffect(() => {
+        if (isDataInitialized && !isMoodModalVisible && !guideCheckedRef.current) {
+            guideCheckedRef.current = true;
+            (async () => {
+                const dismissed = await getSetting('write_guide_dismissed');
+                if (!dismissed) {
+                    setTimeout(() => setGuideVisible(true), 350);
+                }
+            })();
+        }
+    }, [isDataInitialized, isMoodModalVisible]);
+    */
+
+    const handleGuideDismiss = useCallback(async (dontShowAgain) => {
+        setGuideVisible(false);
+        if (dontShowAgain) {
+            await saveSetting('write_guide_dismissed', 'true');
+        }
+    }, []);
 
     const safeContent = content || '';
     const lineCount = safeContent.split('\n').length;
@@ -1268,5 +1315,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
         openMoodModal,
         handleMoodModalDismiss,
         handleMoodModalConfirm,
+
+        // 📘 Guide
+        isGuideVisible,
+        handleGuideDismiss,
     };
 }

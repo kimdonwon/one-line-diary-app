@@ -27,6 +27,7 @@ import {
     SettingsTabIcon
 } from '../../constants/icons';
 import { BottomBar } from '../../components/BottomBar';
+import WriteGuideOverlay from '../../components/WriteGuideOverlay';
 
 // ✅ 저장 확인(V) 아이콘 - 내부용 (텍스트 컬러 선택기 등에서 사용)
 function CheckIcon({ size = 24, color = '#FFFFFF' }) {
@@ -155,23 +156,26 @@ const AnimatedAuraBackdrop = ({ isVisible, selectedMoodKey, onPressDismiss }) =>
     useEffect(() => {
         if (isVisible) {
             setRenderBackdrop(true);
-            Animated.timing(backdropOpacity, {
-                toValue: 1,
-                duration: 400,
-                useNativeDriver: true
-            }).start();
-
-            if (selectedMoodKey) {
-                const nextColor = MOOD_LIST.find(m => m.key === selectedMoodKey)?.color || 'transparent';
-                setCurrentColor(nextColor);
-
-                auraOpacity.setValue(0);
-                Animated.timing(auraOpacity, {
-                    toValue: 0.2,
-                    duration: 800,
+            // 🚨 View가 마운트된 직후에 애니메이션을 시작하기 위해 지연
+            setTimeout(() => {
+                Animated.timing(backdropOpacity, {
+                    toValue: 1,
+                    duration: 400,
                     useNativeDriver: true
                 }).start();
-            }
+
+                if (selectedMoodKey) {
+                    const nextColor = MOOD_LIST.find(m => m.key === selectedMoodKey)?.color || 'transparent';
+                    setCurrentColor(nextColor);
+
+                    auraOpacity.setValue(0);
+                    Animated.timing(auraOpacity, {
+                        toValue: 0.2,
+                        duration: 800,
+                        useNativeDriver: true
+                    }).start();
+                }
+            }, 16);
         } else {
             Animated.parallel([
                 Animated.timing(backdropOpacity, {
@@ -193,7 +197,7 @@ const AnimatedAuraBackdrop = ({ isVisible, selectedMoodKey, onPressDismiss }) =>
     if (!renderBackdrop) return null;
 
     return (
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity, zIndex: 9999 }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity, zIndex: 9999, elevation: 9999 }]}>
             <Pressable style={StyleSheet.absoluteFill} onPress={onPressDismiss}>
                 <BlurView
                     style={StyleSheet.absoluteFill}
@@ -221,17 +225,20 @@ const AnimatedAuraBackdrop = ({ isVisible, selectedMoodKey, onPressDismiss }) =>
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const MoodBottomSheet = ({ isVisible, insets, selectedMood, setSelectedMood, activeMood, activityStates, toggleActivity, handleMoodModalConfirm, handleMoodModalDismiss }) => {
     const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-    const [shouldRender, setShouldRender] = useState(false);
+    const [shouldRender, setShouldRender] = useState(isVisible);
 
     useEffect(() => {
         if (isVisible) {
             setShouldRender(true);
-            Animated.spring(slideAnim, {
-                toValue: 0,
-                friction: 9,
-                tension: 65,
-                useNativeDriver: true,
-            }).start();
+            // 🚨 View가 마운트된 직후에 애니메이션을 시작하기 위해 지연
+            setTimeout(() => {
+                Animated.spring(slideAnim, {
+                    toValue: 0,
+                    friction: 9,
+                    tension: 65,
+                    useNativeDriver: true,
+                }).start();
+            }, 16);
         } else {
             Animated.timing(slideAnim, {
                 toValue: SCREEN_HEIGHT,
@@ -250,6 +257,7 @@ const MoodBottomSheet = ({ isVisible, insets, selectedMood, setSelectedMood, act
             style={{
                 position: 'absolute', left: 0, right: 0, bottom: 0,
                 zIndex: 10000,
+                elevation: 10000,
                 transform: [{ translateY: slideAnim }],
             }}
             pointerEvents="box-none"
@@ -480,6 +488,10 @@ export function WriteScreenView({ route, navigation }) {
         openMoodModal,
         handleMoodModalDismiss,
         handleMoodModalConfirm,
+
+        // 📘 Guide
+        isGuideVisible,
+        handleGuideDismiss,
     } = useWriteLogic(route, navigation, scrollRef);
 
     // 🎬 하이엔드 도미노 연출 (Staggered Content Reveal)
@@ -827,7 +839,8 @@ export function WriteScreenView({ route, navigation }) {
                                                             <View style={styles.canvasGuide}>
 
                                                                 <Text style={styles.canvasGuideText}>
-                                                                    화면을 꾹 눌러서 일기를 써보세요.
+                                                                    화면을 꾹 눌러서 일기를 써보세요.{'\n'}
+                                                                    옆으로 밀어 페이지를 이동하세요.
                                                                 </Text>
                                                             </View>
                                                         )}
@@ -971,7 +984,7 @@ export function WriteScreenView({ route, navigation }) {
                         {/* ─── 📊 피드 레이아웃의 하단 메타 정보 영역 ─── */}
                         <View style={styles.integratedDiaryMeta}>
                             {/* 🛠️ 좌측 도구 버튼 영역 (스티커, 카메라, 텍스트) */}
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                                 <TouchableOpacity
                                     onPress={() => {
                                         Keyboard.dismiss();
@@ -982,8 +995,9 @@ export function WriteScreenView({ route, navigation }) {
                                         setShowTexts(false);
                                     }}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    style={[styles.canvasToolButton, styles.canvasToolSticker]}
                                 >
-                                    <StickerIcon size={24} active={showStickers} />
+                                    <StickerIcon size={20} active={showStickers} />
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={() => {
@@ -995,8 +1009,9 @@ export function WriteScreenView({ route, navigation }) {
                                         setShowTexts(false);
                                     }}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    style={[styles.canvasToolButton, styles.canvasToolPhoto]}
                                 >
-                                    <CameraIcon size={24} color={showPhotos ? "#2D1E16" : "#8B7E74"} />
+                                    <CameraIcon size={20} color={"#2D1E16"} />
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={() => {
@@ -1008,19 +1023,20 @@ export function WriteScreenView({ route, navigation }) {
                                         setShowBackgrounds(false);
                                     }}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    style={[styles.canvasToolButton, styles.canvasToolText]}
                                 >
-                                    <TextIcon size={24} active={showTexts} color={showTexts ? "#2D1E16" : "#8B7E74"} />
+                                    <TextIcon size={22} active={showTexts} color={"#2D1E16"} />
                                 </TouchableOpacity>
                             </View>
 
                             {/* 우측 활동 및 기분 아이콘 영역 (모달 트리거) */}
                             <TouchableOpacity
-                                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginLeft: 16 }}
+                                style={styles.canvasToolMood}
                                 onPress={openMoodModal}
                                 activeOpacity={0.8}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', marginRight: 8, maxWidth: 110 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', marginRight: 4, maxWidth:80 }}>
                                     {activityStates.filter(a => a.selected).map(act => (
                                         <View key={`meta-act-${act.key}`} style={{ margin: 2 }}>
                                             <ActivityIcon type={act.key} size={16} />
@@ -1501,6 +1517,13 @@ export function WriteScreenView({ route, navigation }) {
                 toggleActivity={toggleActivity}
                 handleMoodModalConfirm={handleMoodModalConfirm}
                 handleMoodModalDismiss={handleMoodModalDismiss}
+            />
+
+            {/* 📘 초보자 가이드 오버레이 */}
+            <WriteGuideOverlay
+                visible={isGuideVisible}
+                onDismiss={handleGuideDismiss}
+                insets={insets}
             />
 
         </View >

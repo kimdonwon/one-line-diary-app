@@ -687,10 +687,30 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingVertical: 6, // 12 -> 6 으로 압축하여 높이 절약
+        paddingVertical: 8, // 12 -> 8 로 압축하여 높이 절약
         backgroundColor: '#FCFCFC',
         borderTopWidth: 1,
         borderTopColor: '#F1F1F0',
+    },
+    canvasToolButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    canvasToolSticker: { backgroundColor: '#E6F4EA' },
+    canvasToolPhoto: { backgroundColor: '#FCE8E6' },
+    canvasToolText: { backgroundColor: '#FEF7E0' },
+    canvasToolMood: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 18,
+        backgroundColor: '#F1F1F0',
+        minWidth: 50,
+        height: 36,
     },
     pageContainer: {
         overflow: 'hidden',

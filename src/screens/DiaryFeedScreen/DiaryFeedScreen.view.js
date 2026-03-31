@@ -306,7 +306,7 @@ export function DiaryFeedScreenView({ navigation }) {
                     <View style={styles.commentInputWrap}>
                         <TextInput
                             style={styles.commentInput}
-                            placeholder="따뜻한 한마디를 보태주세요..."
+                            placeholder="따뜻한 한마디"
                             placeholderTextColor="#A1A19A"
                             value={commentText}
                             onChangeText={setCommentText}

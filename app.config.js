@@ -29,7 +29,7 @@ module.exports = {
         backgroundColor: "#FFFFFF"
       },
       softwareKeyboardLayoutMode: "resize",
-      versionCode: 6
+      versionCode: 7
     },
     web: {},
     plugins: [
