@@ -9,7 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BlurView } from 'expo-blur';
 
 import { COLORS, SOFT_SHADOW } from '../../constants/theme';
-import { Card, MoodCard, SoftAlertModal, Header, SeasonalBackground, getSeasonEmoji } from '../../components';
+import { Card, MoodCard, SoftAlertModal, Header } from '../../components';
 import { MOOD_LIST } from '../../constants/mood';
 import { ACTIVITIES } from '../../constants/activities';
 import { SYSTEM_LIMITS } from '../../constants/limits';
@@ -643,13 +643,9 @@ export function WriteScreenView({ route, navigation }) {
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
-            <SeasonalBackground variant="write" />
+
             <Header
-                title={
-                    <Text>
-                        오늘의 기록 <Text style={{ fontSize: 18 }}>{getSeasonEmoji()}</Text>
-                    </Text>
-                }
+                title="오늘의 기록"
                 style={{ backgroundColor: '#e7e3ddff' }}
                 subtitle={
                     <Text style={{ fontSize: 16, color: '#9E8E82', fontWeight: '600', marginTop: 2 }}>

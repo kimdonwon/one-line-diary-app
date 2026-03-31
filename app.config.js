@@ -6,6 +6,7 @@ require('dotenv').config();
 module.exports = {
   expo: {
     name: "오늘조각",
+    icon: "./assets/icon.png",
     slug: "today-piece",
     version: pkg.version, // 📦 package.json 버전과 동기화
     orientation: "portrait",
@@ -23,8 +24,12 @@ module.exports = {
     },
     android: {
       package: "com.oneline.diary",
+      adaptiveIcon: { // 👈 안드로이드 적응형 아이콘 설정
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#FFFFFF"
+      },
       softwareKeyboardLayoutMode: "resize",
-      versionCode: 5
+      versionCode: 6
     },
     web: {},
     plugins: [

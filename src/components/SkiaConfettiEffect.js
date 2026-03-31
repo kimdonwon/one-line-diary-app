@@ -1,5 +1,5 @@
-import React, { useImperativeHandle, forwardRef, useRef, memo, useMemo, useCallback } from 'react';
-import { StyleSheet, Dimensions } from 'react-native';
+import React, { useImperativeHandle, forwardRef, useRef, memo, useMemo, useState, useEffect } from 'react';
+import { StyleSheet, Dimensions, InteractionManager } from 'react-native';
 import {
     Canvas,
     Atlas,
@@ -129,27 +129,71 @@ const createEmptyParticle = () => ({
 
 const DURATION_SEC = DURATION_MS / 1000;
 
+// ─── SVG 글로벌 캐시 (화면 마운트 부하 최소화) ───
+let parsedMoodCache = null;
+let parsedActivityCache = null;
+
 export const SkiaConfettiEffect = memo(forwardRef(({ character, activityKey }, ref) => {
+    const isActivityMode = !!activityKey;
+
+    const [skSvgs, setSkSvgs] = useState(() => 
+        isActivityMode ? parsedActivityCache : parsedMoodCache
+    );
+
+    const engineRef = useRef(null);
+
+    useImperativeHandle(ref, () => ({
+        burst: (x, y) => {
+            if (engineRef.current) engineRef.current.burst(x, y);
+        }
+    }));
+
+    useEffect(() => {
+        if (skSvgs) return;
+
+        // 화면 렌더링이 완료된 후 여유롭게 파싱 (멈춤 방지)
+        const handle = InteractionManager.runAfterInteractions(() => {
+            setTimeout(() => {
+                const map = {};
+                const sourceMap = isActivityMode ? ACTIVITY_ICON_SVG_MAP : MOOD_CHARACTER_SVG_MAP;
+                Object.entries(sourceMap).forEach(([key, xml]) => {
+                    try {
+                        const parsed = Skia.SVG.MakeFromString(xml);
+                        if (parsed) map[key] = parsed;
+                    } catch (e) {
+                        console.warn(`[SkiaConfetti] SVG parse failed for key="${key}":`, e.message);
+                    }
+                });
+                
+                if (isActivityMode) parsedActivityCache = map;
+                else parsedMoodCache = map;
+                
+                setSkSvgs(map);
+            }, 50);
+        });
+        return () => handle.cancel();
+    }, [isActivityMode, skSvgs]);
+
+    if (!skSvgs) return null;
+
+    return (
+        <ConfettiEngine 
+            ref={engineRef}
+            character={character} 
+            activityKey={activityKey} 
+            skSvgs={skSvgs} 
+        />
+    );
+}));
+
+const ConfettiEngine = memo(forwardRef(({ character, activityKey, skSvgs }, ref) => {
     const lastBurstTime = useRef(0);
     const slotIndex = useRef(0);
 
     // ─── 모드 판별: activityKey가 있으면 활동 모드 ───
     const isActivityMode = !!activityKey;
 
-    // ─── 1. SVG 사전 파싱 (마운트 시 1회) ───
-    const skSvgs = useMemo(() => {
-        const map = {};
-        const sourceMap = isActivityMode ? ACTIVITY_ICON_SVG_MAP : MOOD_CHARACTER_SVG_MAP;
-        Object.entries(sourceMap).forEach(([key, xml]) => {
-            try {
-                const parsed = Skia.SVG.MakeFromString(xml);
-                if (parsed) map[key] = parsed;
-            } catch (e) {
-                console.warn(`[SkiaConfetti] SVG parse failed for key="${key}":`, e.message);
-            }
-        });
-        return map;
-    }, [isActivityMode]);
+
 
     // ─── 2. 텍스처 생성 (모드별 분기) ───
     const texW = isActivityMode ? ACTIVITY_TEX_W : MOOD_TEX_W;
@@ -183,11 +227,30 @@ export const SkiaConfettiEffect = memo(forwardRef(({ character, activityKey }, r
     );
 
     const clock = useSharedValue(0);
+    const isPaused = useSharedValue(true);
+    const lastTime = useSharedValue(0);
+    const hideTimerRef = useRef(null);
 
+    // ✅ JS 멈춤 및 Reanimated Worklet 슬립 처리
     useFrameCallback((info) => {
         'worklet';
-        clock.value = info.timeSinceFirstFrame;
+        if (isPaused.value) {
+            lastTime.value = info.timeSinceFirstFrame;
+            return;
+        }
+        
+        const delta = info.timeSinceFirstFrame - lastTime.value;
+        if (delta > 0) {
+            clock.value += delta;
+        }
+        lastTime.value = info.timeSinceFirstFrame;
     });
+
+    useEffect(() => {
+        return () => {
+            if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+        };
+    }, []);
 
     const transforms = useRSXformBuffer(POOL_SIZE, (val, i) => {
         'worklet';
@@ -233,7 +296,12 @@ export const SkiaConfettiEffect = memo(forwardRef(({ character, activityKey }, r
             if (now - lastBurstTime.current < 120) return;
             lastBurstTime.current = now;
 
-
+            // ✅ 프레임 콜백 부활 및 파티클 발동 유지
+            isPaused.value = false;
+            if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+            hideTimerRef.current = setTimeout(() => {
+                isPaused.value = true;
+            }, DURATION_MS + 100);
 
             const currentTime = clock.value;
             const newData = [...particleData.value];

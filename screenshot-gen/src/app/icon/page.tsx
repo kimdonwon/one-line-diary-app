@@ -53,18 +53,18 @@ export default function IconPage() {
         <div
           className="relative bg-white"
           style={{
-            width: 800,
-            height: 800,
-            borderRadius: 80,
-            marginLeft: 50, // shift slightly right to accommodate rings
+            width: 640,
+            height: 640,
+            borderRadius: 64,
+            marginLeft: 40, // re-balance for 640 width to keep the whole unit centered
             boxShadow: "0 40px 80px rgba(0,0,0,0.15)",
             // background: "#f5f5f5ff"
           }}
         >
           {/* 3D Binder Rings with Holes */}
           <div className="absolute h-full left-[-45px] flex flex-col justify-center items-center">
-            <div className="flex flex-col gap-[90px] z-10">
-              {[...Array(5)].map((_, i) => (
+            <div className="flex flex-col gap-[120px] z-10">
+              {[...Array(3)].map((_, i) => (
                 <div key={i} className="relative flex items-center justify-center" style={{ width: 120, height: 60 }}>
                   {/* Paper Hole */}
                   <div
@@ -84,76 +84,11 @@ export default function IconPage() {
             </div>
           </div>
 
-          {/* Stickers Content */}
-          <div className="w-full h-full pl-[100px] pr-10 py-10 flex flex-col items-center justify-center gap-[40px]">
-            {/* Top Row */}
-            <div className="flex justify-center gap-[50px]">
-              <div
-                className="flex items-center justify-center rounded-[30px]"
-                style={{ width: 180, height: 180, backgroundColor: "#E6F2FF", transform: "rotate(-5deg)" }}
-              >
-                <div style={{ transform: "scale(2.0)" }}>
-                  <CloudSticker size={50} style={{}} />
-                </div>
-              </div>
-              <div
-                className="flex items-center justify-center rounded-[30px]"
-                style={{ width: 180, height: 180, backgroundColor: "#FFF0DC", transform: "rotate(3deg)" }}
-              >
-                <div style={{ transform: "scale(2.0)" }}>
-                  <SunSticker size={50} style={{}} />
-                </div>
-              </div>
+          {/* Minimalist Frog - Perfectly Centered in Paper */}
+          <div className="w-full h-full relative flex items-center justify-center">
+            <div style={{ transform: "scale(8.0)", marginTop: "-10px" }}>
+              <FrogCharacter size={48} />
             </div>
-
-            {/* Middle Row */}
-            <div className="flex justify-center gap-[40px]">
-              <div
-                className="flex items-center justify-center rounded-[30px]"
-                style={{ width: 180, height: 180, backgroundColor: "#E6F2FF", transform: "rotate(-2deg)" }}
-              >
-                <div style={{ transform: "scale(2.5)", marginTop: "-10px" }}>
-                  <CatCharacter size={48} />
-                </div>
-              </div>
-              <div
-                className="flex items-center justify-center rounded-[30px]"
-                style={{ width: 180, height: 180, backgroundColor: "#E1F8E8", transform: "rotate(0deg)" }}
-              >
-                <div style={{ transform: "scale(2.5)", marginTop: "-10px" }}>
-                  <FrogCharacter size={48} />
-                </div>
-              </div>
-              <div
-                className="flex items-center justify-center rounded-[30px]"
-                style={{ width: 180, height: 180, backgroundColor: "#F6E8FF", transform: "rotate(4deg)" }}
-              >
-                <div style={{ transform: "scale(2.5)", marginTop: "-10px" }}>
-                  <RabbitCharacter size={48} />
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Row */}
-            <div className="flex justify-center gap-[50px]">
-              <div
-                className="flex items-center justify-center rounded-[30px]"
-                style={{ width: 180, height: 180, backgroundColor: "#FFEBDE", transform: "rotate(-3deg)" }}
-              >
-                <div style={{ transform: "scale(2.5)", marginTop: "-10px" }}>
-                  <BearCharacter size={48} />
-                </div>
-              </div>
-              <div
-                className="flex items-center justify-center rounded-[30px]"
-                style={{ width: 180, height: 180, backgroundColor: "#FFF0DC", transform: "rotate(5deg)" }}
-              >
-                <div style={{ transform: "scale(2.5)", marginTop: "-10px" }}>
-                  <ChickCharacter size={48} />
-                </div>
-              </div>
-            </div>
-
           </div>
         </div>
       </div>

@@ -718,7 +718,7 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 4, // 10 -> 4 로 압축하여 높이 절약
+        paddingVertical: 8, // 여백을 소폭 늘려 시각적 안정성 확보
         backgroundColor: 'transparent',
     },
     cardIndicatorDots: {
@@ -741,11 +741,11 @@ export const styles = StyleSheet.create({
     },
     cardDeleteBtn: {
         position: 'absolute',
-        right: 16,
-        padding: 4,
+        right: 10,
+        padding: 2,
     },
     cardDeleteText: {
-        fontSize: 14,
+        fontSize: 11,
         fontWeight: '600',
         color: '#D1D1D1',
     },

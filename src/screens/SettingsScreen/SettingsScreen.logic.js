@@ -11,7 +11,7 @@ import { usePremium } from '../../hooks/usePremium';
 import {
     initConnection,
     endConnection,
-    fetchProducts,
+    fetchProducts, // 다시 fetchProducts로 원복
     getAvailablePurchases,
     purchaseUpdatedListener,
     purchaseErrorListener,
@@ -230,33 +230,52 @@ export function useSettingsLogic() {
         }
 
         try {
-            // 최신 v14에서는 getSubscriptions 대신 fetchProducts를 공통으로 사용합니다.
+            // 다시 fetchProducts를 사용하고, 결과값을 아주 상세하게 로깅합니다.
             const subscriptions = await fetchProducts({ skus: PREMIUM_SKUS, type: 'subs' });
+            // console.log('DEBUG [IAP Subscriptions Raw Data]:', JSON.stringify(subscriptions, null, 2));
+
             if (subscriptions && subscriptions.length > 0) {
                 const subId = skuId || PREMIUM_SKUS[0];
-                const sub = subscriptions.find(s => s.productId === subId) || subscriptions.find(s => s.productId === PREMIUM_SKUS[0]) || subscriptions[0];
+                const sub = subscriptions.find(s => s.productId === subId) || subscriptions[0];
+
+                // console.log('DEBUG [Selected Sub Detail]:', JSON.stringify(sub, null, 2));
 
                 if (Platform.OS === 'android') {
-                    // 구글 플레이 결제 라이브러리 v5 대응: 요금제의 offerToken 필수
-                    const offers = sub.subscriptionOfferDetails;
+                    // 로그 분석 결과: subscriptionOfferDetailsAndroid 또는 subscriptionOffers 필드를 사용해야 합니다.
+                    const offers = sub.subscriptionOfferDetailsAndroid || sub.subscriptionOffers || sub.subscriptionOfferDetails || [];
+                    // console.log('DEBUG [Resolved Offers]:', offers.length, 'found');
+
                     if (!offers || offers.length === 0) {
-                        Alert.alert('안내', '구독 상품의 요금제 정보를 스토어에서 찾을 수 없습니다.');
+                        Alert.alert('안내', '구독 상품의 요금제 정보(Offers)를 찾을 수 없습니다.');
                         return;
                     }
-                    const offerToken = offers[0].offerToken;
+
+                    // offerToken 필드명도 환경에 따라 다를 수 있으므로 둘 다 확인합니다.
+                    const firstOffer = offers[0];
+                    const offerToken = firstOffer.offerToken || firstOffer.offerTokenAndroid;
+
+                    if (!offerToken) {
+                        Alert.alert('안내', '요금제 토큰(OfferToken)을 가져오지 못했습니다.');
+                        return;
+                    }
 
                     await requestPurchase({
-                        skus: [subId],
-                        subscriptionOffers: [{ sku: subId, offerToken }]
+                        request: {
+                            android: {
+                                skus: [subId],
+                                subscriptionOffers: [{ sku: subId, offerToken }]
+                            }
+                        }
                     });
                 } else {
-                    // iOS 대응
                     await requestPurchase({
-                        sku: subId
+                        request: {
+                            ios: { sku: subId }
+                        }
                     });
                 }
             } else {
-                Alert.alert('안내', '스토어에서 상품 정보를 가져오지 못했습니다. 네트워크 상태를 확인해주세요.');
+                Alert.alert('안내', '스토어를 통해 상품 정보를 가져오지 못했습니다.');
             }
         } catch (err) {
             console.warn(err.code, err.message);
