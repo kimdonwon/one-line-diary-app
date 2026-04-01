@@ -77,4 +77,25 @@ npx jest src/utils/wordAnalyzer.test.js
 - **케이스 5 (외부 동기화)**: 편집 모드가 아닐 때 부모로부터 전달받은 신규 `text` 프롭에 대해, 컴포넌트 리마운트(Re-mount) 없이 `setNativeProps`를 통해 값만 안전하게 동기화되는지 확인합니다.
 
 ---
-*Last Updated: 2026-03-20*
+
+## 4. 테스트 환경 이슈 및 해결 기록
+
+### 4.1 Node.js 24 + jest-expo 버전 호환성 문제 (2026-04-01)
+
+- **증상**: 모든 테스트 스위트가 `TypeError: Object.defineProperty called on non-object` 에러로 실행 자체가 불가능.
+- **원인**: Node.js 24가 V8 13.6을 탑재하면서 `react-native/Libraries/BatchedBridge/NativeModules`가 sealed 객체가 됨. `jest-expo@47`이 이 객체에 `Object.defineProperty`를 호출하여 에러 발생.
+- **해결**: `package.json`의 `jest-expo` 버전을 `^47.0.1` → `~54.0.17`로 업그레이드 (사용 중인 `expo ~54`와 버전 일치).
+- **파일**: `package.json`
+
+### 4.2 AdMob 목(Mock) 불완전 — WriteScreen 광고 보상 테스트 실패 (2026-04-01)
+
+- **증상**: `WriteScreen.logic.test.js`의 광고 보상 테스트가 실패. "무료 사용자가 광고를 시청하면 스티커 한도가 증가해야 한다" 케이스에서 `Expected: 4, Received: 3`.
+- **원인**:
+  - `jest.setup.js`가 `useRewardedAd` 훅만 목킹한 상태였음.
+  - 실제 `WriteScreen.logic.js`는 `RewardedAd.createForAdRequest()` 클래스 방식을 사용하므로 `createForAdRequest`가 `undefined` → 초기화 실패 → `rewardedAdRef.current = null`.
+  - `handleAdReward()` 호출 시 `rewardedAdRef.current && isAdLoaded` 조건 미충족 → "광고 준비 중" 알림만 표시되고 보상 미지급.
+- **해결**: `jest.setup.js`의 AdMob 목을 `RewardedAd.createForAdRequest`, `RewardedAdEventType`, `AdEventType`을 포함하는 구조로 교체. `load()` 호출 시 즉시 `LOADED` 이벤트, `show()` 호출 시 즉시 `EARNED_REWARD` 이벤트가 발생하도록 구성하여 테스트 환경에서 광고 보상 흐름이 동기적으로 완결되도록 함.
+- **파일**: `jest.setup.js`
+
+---
+*Last Updated: 2026-04-01*
