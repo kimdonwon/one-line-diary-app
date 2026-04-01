@@ -7,7 +7,7 @@
 ## 9. 요약 화면 프리징 및 성능 저하 (2026-03-31)
 
 - **증상**: 요약 화면 진입 시 화면이 멈추거나 애니메이션이 심하게 끊김.
-- **원인**: 
+- **원인**:
     1. `SkiaConfettiEffect`에서 수많은 고해상도 SVG를 동기적으로 파싱하여 JS 스레드 점유.
     2. 파티클이 없을 때도 Worklet 연산이 매 프레임 실행되어 리소스 낭비.
 - **해결**:
@@ -121,3 +121,16 @@
     3. `WriteScreen.view.js`에서 FlatList의 `scrollEnabled`와 `pagingEnabled`를 `!isDraggingAny && !selectedItemId` 조건으로 변경하여 아이템 선택 시 페이지 스크롤을 원천 차단.
 - **참고 스킬**: `Modular UI Developer`, `Logic Documenter`
 - **파일**: `src/hooks/useDraggable.js`, `src/screens/WriteScreen/WriteScreen.view.js`
+
+## 12. 바텀시트(MoodBottomSheet) Release 빌드 구동 실패 해결 (2026-04-01)
+
+- **증상**: 디버그 모드에서는 정상 작동하나, 앱스토어(Release) 빌드에서 일기 쓰기 화면 진입 시 "오늘의 기분은?" 바텀시트가 올라오지 않는 현상.
+- **원인**: `setShouldRender(true)` 후 `setTimeout(16)`으로 애니메이션을 시작하는 기존 구조의 **Release 빌드 Race Condition**.
+    1. 디버그 모드: JS 엔진 속도가 느려 16ms 내에 네이티브 뷰 마운트가 완료됨.
+    2. Release 모드: Hermes 엔진 최적화로 JS가 너무 빨라져, 애니메이션 명령 시점에 네이티브 뷰가 아직 준비되지 않음. `useNativeDriver: true` 설정으로 인해 타겟 뷰를 찾지 못한 애니메이션이 무시(Silently fail)됨.
+- **해결 (무중단 렌더링 전략)**:
+    1. **마운트 조건부 삭제**: `shouldRender` 상태를 제거하고 바텀시트를 항상 렌더 트리에 유지. 대신 `translateY: SCREEN_HEIGHT`로 화면 밖에 대기시켜 타이밍 도박을 원천 차단.
+    2. **명시적 가시성 제어**: 백드롭은 `opacity`와 `pointerEvents` 토글로, 바텀시트는 상시 마운트 방식으로 전환하여 릴리즈 모드에서도 100% 즉각적인 애니메이션 반응 확보.
+    3. **초기값 동기화**: 애니메이션 시작 전 `slideAnim.setValue(SCREEN_HEIGHT)`를 호출하여 브릿지 간의 좌표 상태를 강제로 일치시킴.
+- **파일**: `src/screens/WriteScreen/WriteScreen.view.js`
+

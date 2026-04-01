@@ -150,32 +150,29 @@ const AnimatedStickerItem = ({ children, onPress }) => {
 const AnimatedAuraBackdrop = ({ isVisible, selectedMoodKey, onPressDismiss }) => {
     const auraOpacity = useRef(new Animated.Value(0)).current;
     const backdropOpacity = useRef(new Animated.Value(0)).current;
-    const [renderBackdrop, setRenderBackdrop] = useState(isVisible);
     const [currentColor, setCurrentColor] = useState('transparent');
 
     useEffect(() => {
         if (isVisible) {
-            setRenderBackdrop(true);
-            // 🚨 View가 마운트된 직후에 애니메이션을 시작하기 위해 지연
-            setTimeout(() => {
-                Animated.timing(backdropOpacity, {
-                    toValue: 1,
-                    duration: 400,
+            // 🚨 Release 빌드 안전: 뷰가 항상 마운트되어 있으므로 setTimeout/마운트 타이밍 도박 없이 즉시 시작
+            backdropOpacity.setValue(0);
+            Animated.timing(backdropOpacity, {
+                toValue: 1,
+                duration: 400,
+                useNativeDriver: true
+            }).start();
+
+            if (selectedMoodKey) {
+                const nextColor = MOOD_LIST.find(m => m.key === selectedMoodKey)?.color || 'transparent';
+                setCurrentColor(nextColor);
+
+                auraOpacity.setValue(0);
+                Animated.timing(auraOpacity, {
+                    toValue: 0.2,
+                    duration: 800,
                     useNativeDriver: true
                 }).start();
-
-                if (selectedMoodKey) {
-                    const nextColor = MOOD_LIST.find(m => m.key === selectedMoodKey)?.color || 'transparent';
-                    setCurrentColor(nextColor);
-
-                    auraOpacity.setValue(0);
-                    Animated.timing(auraOpacity, {
-                        toValue: 0.2,
-                        duration: 800,
-                        useNativeDriver: true
-                    }).start();
-                }
-            }, 16);
+            }
         } else {
             Animated.parallel([
                 Animated.timing(backdropOpacity, {
@@ -188,16 +185,15 @@ const AnimatedAuraBackdrop = ({ isVisible, selectedMoodKey, onPressDismiss }) =>
                     duration: 300,
                     useNativeDriver: true
                 })
-            ]).start(() => {
-                setRenderBackdrop(false);
-            });
+            ]).start();
         }
     }, [isVisible, selectedMoodKey]);
 
-    if (!renderBackdrop) return null;
-
     return (
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity, zIndex: 9999, elevation: 9999 }]}>
+        <Animated.View
+            style={[StyleSheet.absoluteFill, { opacity: backdropOpacity, zIndex: 9999, elevation: 9999 }]}
+            pointerEvents={isVisible ? 'auto' : 'none'}
+        >
             <Pressable style={StyleSheet.absoluteFill} onPress={onPressDismiss}>
                 <BlurView
                     style={StyleSheet.absoluteFill}
@@ -225,32 +221,25 @@ const AnimatedAuraBackdrop = ({ isVisible, selectedMoodKey, onPressDismiss }) =>
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const MoodBottomSheet = ({ isVisible, insets, selectedMood, setSelectedMood, activeMood, activityStates, toggleActivity, handleMoodModalConfirm, handleMoodModalDismiss }) => {
     const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-    const [shouldRender, setShouldRender] = useState(isVisible);
 
     useEffect(() => {
         if (isVisible) {
-            setShouldRender(true);
-            // 🚨 View가 마운트된 직후에 애니메이션을 시작하기 위해 지연
-            setTimeout(() => {
-                Animated.spring(slideAnim, {
-                    toValue: 0,
-                    friction: 9,
-                    tension: 65,
-                    useNativeDriver: true,
-                }).start();
-            }, 16);
+            // 🚨 Release 빌드 안전: 뷰가 항상 마운트되어 있으므로 setTimeout 없이 즉시 애니메이션 시작
+            slideAnim.setValue(SCREEN_HEIGHT); // 시작점 명시적 동기화
+            Animated.spring(slideAnim, {
+                toValue: 0,
+                friction: 9,
+                tension: 65,
+                useNativeDriver: true,
+            }).start();
         } else {
             Animated.timing(slideAnim, {
                 toValue: SCREEN_HEIGHT,
                 duration: 250,
                 useNativeDriver: true,
-            }).start(() => {
-                setShouldRender(false);
-            });
+            }).start();
         }
     }, [isVisible]);
-
-    if (!shouldRender) return null;
 
     return (
         <Animated.View
@@ -1036,7 +1025,7 @@ export function WriteScreenView({ route, navigation }) {
                                 activeOpacity={0.8}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', marginRight: 4, maxWidth:80 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', marginRight: 4, maxWidth: 80 }}>
                                     {activityStates.filter(a => a.selected).map(act => (
                                         <View key={`meta-act-${act.key}`} style={{ margin: 2 }}>
                                             <ActivityIcon type={act.key} size={16} />
