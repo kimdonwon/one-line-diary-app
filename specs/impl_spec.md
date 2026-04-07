@@ -105,7 +105,7 @@
 - **Bottom Bar (Main Navigation)**: 메인 탭 네비게이션용으로 사용 (`nav` 모드).
 - **Write Screen Layout Strategy**: 하단바 제거로 확보된 공간을 활용하여 `ScrollView`의 **상단 정렬(`flex-start`)** 레이아웃을 채택. 캔버스 수직 세부 요소들의 패딩을 최소화(Meta: 6px, Indicator: 4px)하는 **'Padding Diet' 전략**을 통해 전체 높이를 압축. 이를 통해 큰 화면 기기에서는 스크롤 없이 고정된(Premium Fixed) 느낌을 주며, 공간이 부족한 작은 기기에서만 자동으로 스크롤이 활성화되도록 함. (캔버스 상단 마진: `2.5%`, 쓰레기통 위치: `bottom: '7%'`)
 - **Header Layout Strategy**: '오늘의 기록'(Main Title) + 'YYYY.MM.DD'(Sub Date)의 2단 구조로 개편. 특히 날짜 스타일을 **메인 화면(16px, Semi-bold, #9E8E82)과 완벽히 일치**시켜 앱 전체의 시각적 일관성 확보. (저장 및 이탈은 시스템 백버튼의 `beforeRemove` 자동 저장 로직에 의존)
-- **Keyboard Auto-Scroll**: 캔버스 하단 `DraggableText` 입력 시 키보드가 텍스트를 가리는 문제를 `Keyboard.addListener`로 해결. 키보드 등장 시 `scrollRef.scrollTo(keyboardHeight * 0.5)`로 캔버스를 위로 밀어올리고, 키보드 사라질 때 `scrollTo(0)`으로 원위치. DraggableText 수정 없이 WriteScreen.logic.js에서만 처리.
+- **Keyboard Scroll (paddingBottom + Auto-Focus)**: `KeyboardAvoidingView`를 사용하지 않고, `Keyboard.addListener`로 키보드 높이를 감지하여 ScrollView `contentContainerStyle`에 `paddingBottom`을 동적 적용. 이를 통해 사용자가 수동 스크롤로 캔버스 하단 텍스트를 키보드 위로 올릴 수 있음. 추가로 `DraggableText`가 편집 진입 시 `onEditFocus(pan.y)` 콜백으로 Y좌표를 보고하면, `canvasOffsetRef`와 합산하여 `scrollTo(textAbsoluteY - visibleHeight * 0.4)`로 자동 포커싱.
 - **Tool Panel (Floating Glass Island)**:
   - 반투명 블러 효과(`BlurView`) 가로 스와이프 도크.
   - **레이어링**: 키보드 간섭 방지 및 zIndex 이슈 해결을 위해 루트 레이어에 배치.

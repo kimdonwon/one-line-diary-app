@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Animated, Modal, Pressable, FlatList, Dimensions, Alert, LayoutAnimation, Keyboard, InteractionManager } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Platform, ScrollView, StyleSheet, Animated, Modal, Pressable, FlatList, Dimensions, Alert, LayoutAnimation, Keyboard, InteractionManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import RNModal from 'react-native-modal';
@@ -410,7 +410,9 @@ export function WriteScreenView({ route, navigation }) {
         setActivityTitle,
         setActivityNote,
         handleSave,
-        slideToBottom,
+        keyboardPadding,
+        handleTextEditFocus,
+        handleCanvasContainerLayout,
 
         // 📷 Photo
         showPhotos,
@@ -672,25 +674,20 @@ export function WriteScreenView({ route, navigation }) {
             } */
             />
 
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            <ScrollView
+                ref={scrollRef}
+                style={styles.scrollView}
+                contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(0, keyboardPadding) }]}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled={true}
+                scrollEnabled={!isDraggingAny}
             >
-                <ScrollView
-                    ref={scrollRef}
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                    nestedScrollEnabled={true}
-                    scrollEnabled={!isDraggingAny}
-                >
 
 
                     {/* ─── 🌈 통합 다이어리 카드 영역 (캔버스 + 하단 메타) ─── */}
                     {/* (기존의 전체를 가리던 둔탁한 Animated.View 제거, 알맹이만 애니메이션 처리) */}
-                    <View style={[styles.integratedDiaryCard, { backgroundColor: dynamicCanvasColor }, isDraggingAny]}>
+                    <View style={[styles.integratedDiaryCard, { backgroundColor: dynamicCanvasColor }, isDraggingAny]} onLayout={handleCanvasContainerLayout}>
                         {/* 멀티페이지 캔버스 영역 (가로 스와이프 + 엣지 풀 추가) */}
                         <View
                             style={[styles.pageContainer, isDraggingAny && { overflow: 'visible' }]}
@@ -922,6 +919,7 @@ export function WriteScreenView({ route, navigation }) {
                                                                 isSelected={selectedItemId === textNode.id}
                                                                 autoFocus={textNode.autoFocus || false}
                                                                 bounds={inputBoxBounds}
+                                                                onEditFocus={handleTextEditFocus}
                                                             />
                                                         ))}
                                                     </Animated.View>
@@ -1046,7 +1044,6 @@ export function WriteScreenView({ route, navigation }) {
                     </View>
 
                 </ScrollView>
-            </KeyboardAvoidingView>
 
 
             {/* ─── 🚀 닫기용 투명 오버레이 ─── */}

@@ -29,6 +29,7 @@ export const DraggableText = React.memo(({
     autoFocus = false,
     createdAt,
     bounds,
+    onEditFocus,
 }) => {
     const [isEditing, setIsEditing] = useState(autoFocus);
     const [displayText, setDisplayText] = useState(text); // 표시 전용 (편집 종료 시에만 업데이트)
@@ -92,6 +93,7 @@ export const DraggableText = React.memo(({
     useEffect(() => {
         if (autoFocus) {
             setIsSelected(true);
+            onEditFocus?.(initialY);
             const timer = setTimeout(() => {
                 inputRef.current?.focus();
                 isNewlyCreated.current = false;
@@ -111,13 +113,12 @@ export const DraggableText = React.memo(({
         }
     }, [text]);
 
-    // 실시간 텍스트 업데이트 (ref만 갱신 → 리렌더링 없음 → IME 튐 방지)
+    // 실시간 텍스트 업데이트 (ref만 갱신 → 부모 리렌더링 0회 → 스크롤 밀림 방지)
     const handleChangeText = (val) => {
         localTextRef.current = val;
-        onTextChange?.(id, val);
     };
 
-    // 편집 완료 처리
+    // 편집 완료 처리 — blur 시 1회만 부모에 동기화
     const handleFinishEditing = () => {
         if (blurTimerRef.current) {
             clearTimeout(blurTimerRef.current);
@@ -130,13 +131,11 @@ export const DraggableText = React.memo(({
                 onDelete?.(id);
             } else {
                 localTextRef.current = trimmed;
-                setDisplayText(trimmed); // 표시용 state 업데이트
+                setDisplayText(trimmed);
                 if (inputRef.current) {
                     inputRef.current.setNativeProps({ text: trimmed });
                 }
-                if (trimmed !== currentText) {
-                    onTextChange?.(id, trimmed);
-                }
+                onTextChange?.(id, trimmed); // 항상 동기화
             }
         }, 100);
     };
@@ -157,6 +156,7 @@ export const DraggableText = React.memo(({
     // ✏️ 수정 버튼 핸들러: 편집 모드 진입
     const handleEditButtonPress = () => {
         setIsEditing(true);
+        onEditFocus?.(pan.y.__getValue());
         if (blurTimerRef.current) {
             clearTimeout(blurTimerRef.current);
             blurTimerRef.current = null;
@@ -195,9 +195,9 @@ export const DraggableText = React.memo(({
                 {
                     maxWidth: dynamicMaxWidth,
                     minWidth: isEditing ? dynamicMaxWidth : undefined, // 💡 핵심: 편집 중 상자 너비를 최대치로 강제 고정 (Yoga 버그 차단)
+                    left: pan.x,
+                    top: pan.y,
                     transform: [
-                        { translateX: pan.x },
-                        { translateY: pan.y },
                         {
                             rotate: rotation.interpolate({
                                 inputRange: [-360, 360],

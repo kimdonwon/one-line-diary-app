@@ -742,32 +742,46 @@ export function useWriteLogic(route, navigation, scrollRef) {
     const formattedDate = date.replace(/-/g, '.');
     const activeMood = selectedMood ? MOOD_LIST.find(m => m.key === selectedMood) : null;
 
-    /**
-     * 키보드가 올라올 때 자동 스크롤 하단 포커싱 지원 함수
-     */
-    const slideToBottom = () => {
-        setTimeout(() => {
-            scrollRef.current?.scrollToEnd({ animated: true });
-        }, 300);
-    };
+    // ✏️ 키보드 올라올 때 ScrollView 하단 여백 확보 (사용자가 직접 스크롤 가능하게)
+    const [keyboardPadding, setKeyboardPadding] = useState(0);
+    const focusedTextYRef = useRef(null);
+    const canvasOffsetRef = useRef(0);
 
-    // ✏️ 키보드 등장 시 ScrollView 자동 스크롤 (캔버스 하단 텍스트 가림 방지)
+    // DraggableText 편집 진입 시 Y좌표 수신
+    const handleTextEditFocus = useCallback((textY) => {
+        focusedTextYRef.current = textY;
+    }, []);
+
+    // 캔버스 컨테이너의 ScrollView 내 Y오프셋 측정
+    const handleCanvasContainerLayout = useCallback((event) => {
+        canvasOffsetRef.current = event.nativeEvent.layout.y;
+    }, []);
+
     useEffect(() => {
         const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
         const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
         const onKeyboardShow = (e) => {
-            const keyboardHeight = e.endCoordinates.height;
-            // 캔버스 하단이 키보드에 가려지지 않도록 스크롤
-            setTimeout(() => {
-                scrollRef.current?.scrollTo({ y: keyboardHeight * 0.5, animated: true });
-            }, 100);
+            const kbHeight = e.endCoordinates.height;
+            setKeyboardPadding(kbHeight);
+
+            // 포커스된 텍스트가 있으면 해당 위치로 자동 스크롤
+            const textY = focusedTextYRef.current;
+            if (textY !== null) {
+                const textAbsoluteY = canvasOffsetRef.current + textY;
+                const screenHeight = Dimensions.get('window').height;
+                const visibleHeight = screenHeight - kbHeight;
+                // 텍스트가 보이는 영역의 40% 지점에 오도록 스크롤
+                const targetScrollY = Math.max(0, textAbsoluteY - visibleHeight * 0.4);
+                setTimeout(() => {
+                    scrollRef.current?.scrollTo({ y: targetScrollY, animated: true });
+                }, 150);
+            }
         };
 
         const onKeyboardHide = () => {
-            setTimeout(() => {
-                scrollRef.current?.scrollTo({ y: 0, animated: true });
-            }, 100);
+            setKeyboardPadding(0);
+            focusedTextYRef.current = null;
         };
 
         const subShow = Keyboard.addListener(showEvent, onKeyboardShow);
@@ -1254,7 +1268,9 @@ export function useWriteLogic(route, navigation, scrollRef) {
         setActivityTitle,
         setActivityNote,
         handleSave,
-        slideToBottom,
+        keyboardPadding,
+        handleTextEditFocus,
+        handleCanvasContainerLayout,
 
         // 📷 Photo
         showPhotos,

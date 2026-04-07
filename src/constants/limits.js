@@ -7,7 +7,7 @@
 
 export const SYSTEM_LIMITS = {
     /** 텍스트 박스(DraggableText) 최대 글자수 */
-    MAX_TEXT_LENGTH: 300,
+    MAX_TEXT_LENGTH: 380,
 
     /** 일기당 최대 생성 가능 페이지 수 */
     MAX_PAGES: 5,
