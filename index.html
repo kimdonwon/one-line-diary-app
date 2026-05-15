@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘의 조각 | Today Piece - 한 줄 일기 서비스</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #FAFAF9;
+            --accent-color: #FF8E8E;
+            --text-main: #2D1E16;
+            --text-sub: #8B7E74;
+            --card-bg: rgba(255, 255, 255, 0.7);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ─── Header ─── */
+        header {
+            padding: 60px 20px;
+            text-align: center;
+            background: linear-gradient(180deg, #FFF0F5 0%, var(--bg-color) 100%);
+        }
+
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            background-color: white;
+            border-radius: 20px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            font-size: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+        }
+
+        .tagline {
+            color: var(--text-sub);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* ─── Content ─── */
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .section {
+            margin-bottom: 80px;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background-color: var(--accent-color);
+            border-radius: 2px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 32px;
+            border-radius: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            margin-bottom: 20px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-item {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .feature-item span {
+            font-size: 32px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        /* ─── Links ─── */
+        .links {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .link-item {
+            text-decoration: none;
+            color: var(--text-main);
+            padding: 16px 24px;
+            background: white;
+            border-radius: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            border: 1px solid #E5E5E5;
+        }
+
+        .link-item:hover {
+            transform: translateX(5px);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            padding: 60px 20px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            border-top: 1px solid #E5E5E5;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background-color: #E5E5E5;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            margin-top: 12px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-icon">🧩</div>
+        <h1>오늘의 조각</h1>
+        <p class="tagline">매일의 소중한 한 줄을 모아, 당신만의 인생 퍼즐을 완성하세요.</p>
+    </header>
+
+    <main>
+        <!-- 앱 소개 -->
+        <section class="section">
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <span>✍️</span>
+                    <h3>심플한 기록</h3>
+                    <p style="color: var(--text-sub); font-size: 0.9rem;">부담 없는 한 줄로 기록하는 일상</p>
+                </div>
+                <div class="feature-item">
+                    <span>🎨</span>
+                    <h3>나만의 무드</h3>
+                    <p style="color: var(--text-sub); font-size: 0.9rem;">그날의 기분을 담는 따뜻한 컬러</p>
+                </div>
+                <div class="feature-item">
+                    <span>🔒</span>
+                    <h3>안전한 보관</h3>
+                    <p style="color: var(--text-sub); font-size: 0.9rem;">오직 당신 기기에만 저장되는 프라이버시</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 고객 지원 및 약관 -->
+        <section class="section">
+            <h2>Support & Legal</h2>
+            <div class="links">
+                <a href="mailto:support@example.com" class="link-item">
+                    <span>고객 지원 및 문의 (Support)</span>
+                    <span>→</span>
+                </a>
+                <a href="#privacy" class="link-item">
+                    <span>개인정보처리방침 (Privacy Policy)</span>
+                    <span>→</span>
+                </a>
+                <a href="#terms" class="link-item">
+                    <span>이용 약관 (Terms of Service)</span>
+                    <span>→</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- 개인정보처리방침 요약 (심사 통과용) -->
+        <section class="section" id="privacy">
+            <h2>Privacy Policy</h2>
+            <div class="card">
+                <p style="font-size: 0.95rem; color: var(--text-main);">
+                    <strong>오늘의 조각</strong>은 사용자의 개인정보를 소중히 여깁니다.<br><br>
+                    1. 개인정보 수집: 본 앱은 서버에 개인정보를 저장하지 않으며, 모든 데이터는 사용자의 기기 내 로컬 DB(SQLite)에만 저장됩니다.<br>
+                    2. 데이터 활용: 수집된 일기 데이터는 앱 기능 제공 이외의 목적으로 사용되지 않습니다.<br>
+                    3. 권한 안내: 사진 첨부 기능을 위해 미디어 라이브러리 접근 권한을 요청할 수 있습니다.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Today Piece. All rights reserved.</p>
+        <div class="badge">Developer: Kim Don Won</div>
+    </footer>
+
+</body>
+</html>
