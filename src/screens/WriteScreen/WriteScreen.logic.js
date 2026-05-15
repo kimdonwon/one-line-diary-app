@@ -186,33 +186,69 @@ export function useWriteLogic(route, navigation, scrollRef) {
         latestData.current = { selectedMood, pages, pageStickers, pagePhotos, pageTexts, pageBackgrounds, activityStates, date };
     }, [selectedMood, pages, pageStickers, pagePhotos, pageTexts, pageBackgrounds, activityStates, date]);
 
+    // 🛡️ 재진입 방지 가드 (dispatch → beforeRemove 재발동 무한루프 차단)
+    const isSavingRef = useRef(false);
+
+    // 🛡️ 실시간 텍스트 편집 추적 (Ref만 업데이트, 리렌더링 0회)
+    // DraggableText가 매 키 입력마다 여기에 기록 → beforeRemove에서 즉시 읽기 가능
+    const pendingTextEditsRef = useRef({});
+    const handlePendingTextUpdate = useCallback((id, text) => {
+        pendingTextEditsRef.current[id] = text;
+    }, []);
+
     useEffect(() => {
         const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+            // 재진입 시 (dispatch에 의한 2차 호출) 그냥 통과시켜 내비게이션 진행
+            if (isSavingRef.current) return;
+
             const data = latestData.current;
-            if (data.selectedMood) {
-                // 멀티페이지: pages 배열과 pageStickers 등 데이터를 저장 형식에 맞게 변환
-                const trimmedPages = data.pages.map(p => (p || '').trim());
-                // 빈 후행 페이지 제거
-                while (trimmedPages.length > 1 && trimmedPages[trimmedPages.length - 1] === '' && (data.pageStickers[trimmedPages.length - 1] || []).length === 0 && (data.pagePhotos[trimmedPages.length - 1] || []).length === 0 && (data.pageTexts[trimmedPages.length - 1] || []).length === 0) {
-                    trimmedPages.pop();
-                }
-                const stickersToSave = data.pageStickers.slice(0, trimmedPages.length);
-                const photosToSave = data.pagePhotos.slice(0, trimmedPages.length);
-                const textsToSave = data.pageTexts.slice(0, trimmedPages.length).map(page =>
-                    (page || []).map(t => ({ ...t, autoFocus: false }))
+            // 저장할 기분 데이터가 없으면 바로 통과
+            if (!data.selectedMood) return;
+
+            // 🛡️ 내비게이션 일시 중단
+            e.preventDefault();
+            isSavingRef.current = true;
+
+            // 🛡️ 미커밋 텍스트 편집 머지: pendingTextEditsRef에 있는 실시간 입력값을 pageTexts에 반영
+            const pending = pendingTextEditsRef.current;
+            let mergedPageTexts = data.pageTexts;
+            if (Object.keys(pending).length > 0) {
+                mergedPageTexts = data.pageTexts.map(page =>
+                    (page || []).map(t => {
+                        if (pending[t.id] !== undefined) {
+                            const trimmed = pending[t.id].trim();
+                            return trimmed.length > 0 ? { ...t, text: trimmed } : null;
+                        }
+                        return t;
+                    }).filter(Boolean)
                 );
-
-                const contentToSave = trimmedPages.length === 1 ? trimmedPages[0] : JSON.stringify(trimmedPages);
-                const stickersStrToSave = trimmedPages.length === 1 ? JSON.stringify(stickersToSave[0] || []) : JSON.stringify(stickersToSave);
-                const photosStrToSave = JSON.stringify(photosToSave);
-                const textsStrToSave = JSON.stringify(textsToSave);
-                const bgsToSave = data.pageBackgrounds.slice(0, trimmedPages.length);
-                const bgsStrToSave = JSON.stringify(bgsToSave);
-
-                // 화면 이탈 시 비동기 저장 백그라운드 수행 (Fire and Forget)
-                saveDiary(data.date, contentToSave, data.selectedMood, stickersStrToSave, photosStrToSave, bgsStrToSave, textsStrToSave).catch(console.error);
-                saveActivities(data.date, data.activityStates).catch(console.error);
             }
+
+            // 멀티페이지: pages 배열과 pageStickers 등 데이터를 저장 형식에 맞게 변환
+            const trimmedPages = data.pages.map(p => (p || '').trim());
+            // 빈 후행 페이지 제거
+            while (trimmedPages.length > 1 && trimmedPages[trimmedPages.length - 1] === '' && (data.pageStickers[trimmedPages.length - 1] || []).length === 0 && (data.pagePhotos[trimmedPages.length - 1] || []).length === 0 && (mergedPageTexts[trimmedPages.length - 1] || []).length === 0) {
+                trimmedPages.pop();
+            }
+            const stickersToSave = data.pageStickers.slice(0, trimmedPages.length);
+            const photosToSave = data.pagePhotos.slice(0, trimmedPages.length);
+            const textsToSave = mergedPageTexts.slice(0, trimmedPages.length).map(page =>
+                (page || []).map(t => ({ ...t, autoFocus: false }))
+            );
+
+            const contentToSave = trimmedPages.length === 1 ? trimmedPages[0] : JSON.stringify(trimmedPages);
+            const stickersStrToSave = trimmedPages.length === 1 ? JSON.stringify(stickersToSave[0] || []) : JSON.stringify(stickersToSave);
+            const photosStrToSave = JSON.stringify(photosToSave);
+            const textsStrToSave = JSON.stringify(textsToSave);
+            const bgsToSave = data.pageBackgrounds.slice(0, trimmedPages.length);
+            const bgsStrToSave = JSON.stringify(bgsToSave);
+
+            // 화면 이탈 시 비동기 저장 백그라운드 수행 (Fire and Forget)
+            saveDiary(data.date, contentToSave, data.selectedMood, stickersStrToSave, photosStrToSave, bgsStrToSave, textsStrToSave).catch(console.error);
+            saveActivities(data.date, data.activityStates).catch(console.error);
+
+            // 🚀 내비게이션 재개 (재진입 시 isSavingRef 가드로 통과)
+            navigation.dispatch(e.data.action);
         });
         return unsubscribe;
     }, [navigation]);
@@ -1258,6 +1294,7 @@ export function useWriteLogic(route, navigation, scrollRef) {
         handleTextDragEnd,
         handleCanvasTap,
         handleUpdateText,
+        handlePendingTextUpdate,
 
         // Handlers
         handleContentChange,

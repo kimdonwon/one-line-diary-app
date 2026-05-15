@@ -30,13 +30,20 @@ export const DraggableText = React.memo(({
     createdAt,
     bounds,
     onEditFocus,
+    onPendingTextUpdate,
 }) => {
     const [isEditing, setIsEditing] = useState(autoFocus);
     const [displayText, setDisplayText] = useState(text); // 표시 전용 (편집 종료 시에만 업데이트)
     const localTextRef = useRef(text); // 실시간 값 (리렌더링 없이 추적)
+    const committedTextRef = useRef(text); // 🛡️ 마지막으로 부모에게 커밋된 텍스트 추적
     const inputRef = useRef(null);
     const isNewlyCreated = useRef(autoFocus);
     const blurTimerRef = useRef(null);
+    // 🛡️ 콜백 Ref: cleanup에서 최신 onTextChange/onDelete를 안전하게 호출
+    const onTextChangeRef = useRef(onTextChange);
+    const onDeleteRef = useRef(onDelete);
+    useEffect(() => { onTextChangeRef.current = onTextChange; }, [onTextChange]);
+    useEffect(() => { onDeleteRef.current = onDelete; }, [onDelete]);
 
     const handleEndEditingProxy = () => {
         handleFinishEditing();
@@ -116,6 +123,7 @@ export const DraggableText = React.memo(({
     // 실시간 텍스트 업데이트 (ref만 갱신 → 부모 리렌더링 0회 → 스크롤 밀림 방지)
     const handleChangeText = (val) => {
         localTextRef.current = val;
+        onPendingTextUpdate?.(id, val); // 🛡️ 부모 Ref에 실시간 동기화 (리렌더링 0회)
     };
 
     // 편집 완료 처리 — blur 시 1회만 부모에 동기화
@@ -131,6 +139,7 @@ export const DraggableText = React.memo(({
                 onDelete?.(id);
             } else {
                 localTextRef.current = trimmed;
+                committedTextRef.current = trimmed; // 🛡️ 커밋 완료 마킹
                 setDisplayText(trimmed);
                 if (inputRef.current) {
                     inputRef.current.setNativeProps({ text: trimmed });
@@ -140,11 +149,23 @@ export const DraggableText = React.memo(({
         }, 100);
     };
 
+    // 🛡️ Emergency Commit: 언마운트 시 미커밋 텍스트를 즉시 부모에게 전달
     useEffect(() => {
         return () => {
             if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+            // 현재 localTextRef 값이 마지막 커밋 값과 다르면 → 미저장 상태
+            const currentText = localTextRef.current;
+            const lastCommitted = committedTextRef.current;
+            if (currentText !== lastCommitted) {
+                const trimmed = currentText.trim();
+                if (trimmed.length === 0) {
+                    onDeleteRef.current?.(id);
+                } else {
+                    onTextChangeRef.current?.(id, trimmed);
+                }
+            }
         };
-    }, []);
+    }, [id]);
 
     // 선택 해제 시 편집 모드도 함께 종료
     useEffect(() => {

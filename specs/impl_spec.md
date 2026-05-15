@@ -240,4 +240,20 @@
 - **의존성 업데이트**: 보안 패치 및 최신 SDK 대응을 위해 정기적인 `npm audit` 권장.
 
 ---
-*Last Updated: 2026-03-28*
+*Last Updated: 2026-05-15*
+
+### 7. UI/UX 개선 및 제스처
+
+- [x] **기분 선택 모달 제스처 구현 (Pull-down to Dismiss)**
+    - `Reanimated v3` + `Gesture Handler` 기반 60fps 구현 (`ReAnimated` 별칭 사용, 기존 `Animated` 코드와 충돌 없음).
+    - `Gesture.Pan()` + `Gesture.Simultaneous(pan, native)` 로 ScrollView 스크롤과 시트 드래그 동시 인식.
+    - `overshootClamping: true`로 진입 시 오버슈트 제거.
+    - 임계치: 시트 높이 20% 또는 velocityY > 1000 시 dismiss.
+    - 변경 파일: `WriteScreen.view.js` (임포트 추가 + `MoodBottomSheet` 컴포넌트 교체)
+
+- [x] **텍스트 편집 중 내비게이션 자동 저장 (Silent Autosave)**
+    - **실시간 Ref 동기화**: `DraggableText`가 매 키 입력마다 부모의 `pendingTextEditsRef`를 갱신 (리렌더링 없음).
+    - **내비게이션 인터셉트**: `beforeRemove`에서 `e.preventDefault()`로 멈춘 뒤, Ref의 미커밋 텍스트를 머지하여 저장하고 내비게이션 재개.
+    - **재진입 방지**: `isSavingRef` 가드로 무한 루프 차단.
+    - **Emergency Commit**: 컴포넌트 언마운트 시 최후의 보루로 `onTextChange` 즉시 호출 로직 유지.
+    - 변경 파일: `DraggableText.view.js`, `WriteScreen.logic.js`, `WriteScreen.view.js`

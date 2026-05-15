@@ -5,7 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import RNModal from 'react-native-modal';
 import Svg, { Path } from 'react-native-svg';
 import Sortable from 'react-native-sortables';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { GestureHandlerRootView, GestureDetector, Gesture, ScrollView as GHScrollView } from 'react-native-gesture-handler';
+import ReAnimated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS, Easing } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 
 import { COLORS, SOFT_SHADOW } from '../../constants/theme';
@@ -220,114 +221,163 @@ const AnimatedAuraBackdrop = ({ isVisible, selectedMoodKey, onPressDismiss }) =>
  */
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const MoodBottomSheet = ({ isVisible, insets, selectedMood, setSelectedMood, activeMood, activityStates, toggleActivity, handleMoodModalConfirm, handleMoodModalDismiss }) => {
-    const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+    const translateY = useSharedValue(SCREEN_HEIGHT);
+    const scrollY = useSharedValue(0);
+    const context = useSharedValue({ y: 0 });
 
+    // 닫기 로직을 JS 스레드로 안전하게 전달
+    const closeSheet = useCallback(() => {
+        handleMoodModalDismiss();
+    }, [handleMoodModalDismiss]);
+
+    // 모달 표시 여부에 따른 애니메이션
     useEffect(() => {
         if (isVisible) {
-            // 🚨 Release 빌드 안전: 뷰가 항상 마운트되어 있으므로 setTimeout 없이 즉시 애니메이션 시작
-            slideAnim.setValue(SCREEN_HEIGHT); // 시작점 명시적 동기화
-            Animated.spring(slideAnim, {
-                toValue: 0,
-                friction: 9,
-                tension: 65,
-                useNativeDriver: true,
-            }).start();
+            translateY.value = withSpring(0, {
+                damping: 25,
+                stiffness: 150,
+                mass: 1,
+                overshootClamping: true,
+                restDisplacementThreshold: 0.01,
+                restSpeedThreshold: 2,
+            });
         } else {
-            Animated.timing(slideAnim, {
-                toValue: SCREEN_HEIGHT,
-                duration: 250,
-                useNativeDriver: true,
-            }).start();
+            translateY.value = withTiming(SCREEN_HEIGHT, {
+                duration: 300,
+                easing: Easing.out(Easing.exp),
+            });
         }
     }, [isVisible]);
 
+    // 팬 제스처 정의
+    const panGesture = Gesture.Pan()
+        .onStart(() => {
+            context.value = { y: translateY.value };
+        })
+        .onUpdate((event) => {
+            // 스크롤이 최상단일 때만 아래로 드래그 허용
+            if (scrollY.value <= 0 && event.translationY > 0) {
+                const nextY = context.value.y + event.translationY;
+                translateY.value = Math.max(0, nextY);
+            }
+        })
+        .onEnd((event) => {
+            // 임계치(시트 높이 20% 또는 빠른 속도) 체크
+            if (translateY.value > SCREEN_HEIGHT * 0.2 || event.velocityY > 1000) {
+                translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 }, () => {
+                    runOnJS(closeSheet)();
+                });
+            } else {
+                // 원상복구
+                translateY.value = withSpring(0, { damping: 20, overshootClamping: true });
+            }
+        });
+
+    // 스크롤 제스처 (ScrollView와 Pan 제스처 동시 인식)
+    const nativeGesture = Gesture.Native();
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: translateY.value }],
+    }));
+
     return (
-        <Animated.View
-            style={{
-                position: 'absolute', left: 0, right: 0, bottom: 0,
-                zIndex: 10000,
-                elevation: 10000,
-                transform: [{ translateY: slideAnim }],
-            }}
-            pointerEvents="box-none"
-        >
-            <View style={{
-                backgroundColor: '#FAFAF9',
-                borderTopLeftRadius: 24,
-                borderTopRightRadius: 24,
-                padding: 24,
-                paddingBottom: insets.bottom + 24,
-                maxHeight: SCREEN_HEIGHT * 0.9,
-                ...SOFT_SHADOW.card,
-            }}>
-                {/* 핸들 바 */}
-                <View style={{ width: 40, height: 5, backgroundColor: '#D9D9D6', borderRadius: 3, alignSelf: 'center', marginBottom: 20 }} />
-                <ScrollView showsVerticalScrollIndicator={false}>
-
-                    {/* 오늘의 기분 (Staggered Pop-up) */}
-                    <Text style={[styles.sectionTitle, { marginTop: 0 }]}>오늘의 기분은?</Text>
-                    <View style={styles.moodRow}>
-                        {MOOD_LIST.map((mood, index) => (
-                            <MoodCard
-                                key={`modal-${mood.key}`}
-                                mood={mood}
-                                selected={selectedMood === mood.key}
-                                onPress={() => setSelectedMood(mood.key)}
-                                index={index}
-                                isVisible={isVisible}
-                            />
-                        ))}
+        <GestureDetector gesture={Gesture.Simultaneous(panGesture, nativeGesture)}>
+            <ReAnimated.View
+                style={[
+                    {
+                        position: 'absolute', left: 0, right: 0, bottom: 0,
+                        zIndex: 10000,
+                        elevation: 10000,
+                    },
+                    animatedStyle
+                ]}
+                pointerEvents="box-none"
+            >
+                <View style={{
+                    backgroundColor: '#FAFAF9',
+                    borderTopLeftRadius: 24,
+                    borderTopRightRadius: 24,
+                    padding: 24,
+                    paddingBottom: insets.bottom + 24,
+                    maxHeight: SCREEN_HEIGHT * 0.9,
+                    ...SOFT_SHADOW.card,
+                }}>
+                    {/* 핸들 바 영역 (Hit Slop 확보) */}
+                    <View style={{ width: '100%', height: 30, alignItems: 'center', justifyContent: 'center', marginTop: -10 }}>
+                        <View style={{ width: 40, height: 5, backgroundColor: '#D9D9D6', borderRadius: 3 }} />
                     </View>
 
-                    {/* 오늘의 활동 */}
-                    <Text style={[styles.sectionTitle, { marginTop: 32 }]}>오늘 뭐 했어?</Text>
-                    <View style={styles.activityGrid}>
-                        {ACTIVITIES.map((act) => {
-                            const state = activityStates.find(a => a.key === act.key);
-                            const isSelected = state?.selected;
-                            return (
-                                <TouchableOpacity
-                                    key={`modal-act-${act.key}`}
-                                    style={[
-                                        styles.activityChip,
-                                        isSelected && { backgroundColor: act.color },
-                                    ]}
-                                    onPress={() => toggleActivity(act.key)}
-                                    activeOpacity={0.7}
-                                >
-                                    <View style={styles.activityIcon}>
-                                        <ActivityIcon type={act.key} size={22} />
-                                    </View>
-                                    <Text style={[
-                                        styles.activityLabel,
-                                        isSelected && styles.activityLabelSelected,
-                                    ]}>
-                                        {act.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
-
-                    {/* 완료 버튼 */}
-                    <TouchableOpacity
-                        style={{
-                            marginTop: 32,
-                            backgroundColor: activeMood ? activeMood.color : COLORS.soso,
-                            borderRadius: 16,
-                            paddingVertical: 16,
-                            alignItems: 'center',
-                            ...SOFT_SHADOW.card
+                    <GHScrollView
+                        onScroll={(e) => {
+                            scrollY.value = e.nativeEvent.contentOffset.y;
                         }}
-                        onPress={handleMoodModalConfirm}
-                        activeOpacity={0.8}
+                        scrollEventThrottle={16}
+                        showsVerticalScrollIndicator={false}
                     >
-                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFF' }}>선택하기</Text>
-                    </TouchableOpacity>
+                        {/* 오늘의 기분 */}
+                        <Text style={[styles.sectionTitle, { marginTop: 0 }]}>오늘의 기분은?</Text>
+                        <View style={styles.moodRow}>
+                            {MOOD_LIST.map((mood, index) => (
+                                <MoodCard
+                                    key={`modal-${mood.key}`}
+                                    mood={mood}
+                                    selected={selectedMood === mood.key}
+                                    onPress={() => setSelectedMood(mood.key)}
+                                    index={index}
+                                    isVisible={isVisible}
+                                />
+                            ))}
+                        </View>
 
-                </ScrollView>
-            </View>
-        </Animated.View>
+                        {/* 오늘의 활동 */}
+                        <Text style={[styles.sectionTitle, { marginTop: 32 }]}>오늘 뭐 했어?</Text>
+                        <View style={styles.activityGrid}>
+                            {ACTIVITIES.map((act) => {
+                                const state = activityStates.find(a => a.key === act.key);
+                                const isSelected = state?.selected;
+                                return (
+                                    <TouchableOpacity
+                                        key={`modal-act-${act.key}`}
+                                        style={[
+                                            styles.activityChip,
+                                            isSelected && { backgroundColor: act.color },
+                                        ]}
+                                        onPress={() => toggleActivity(act.key)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={styles.activityIcon}>
+                                            <ActivityIcon type={act.key} size={22} />
+                                        </View>
+                                        <Text style={[
+                                            styles.activityLabel,
+                                            isSelected && styles.activityLabelSelected,
+                                        ]}>
+                                            {act.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+
+                        {/* 완료 버튼 */}
+                        <TouchableOpacity
+                            style={{
+                                marginTop: 32,
+                                backgroundColor: activeMood ? activeMood.color : COLORS.soso,
+                                borderRadius: 16,
+                                paddingVertical: 16,
+                                alignItems: 'center',
+                                ...SOFT_SHADOW.card
+                            }}
+                            onPress={handleMoodModalConfirm}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFF' }}>선택하기</Text>
+                        </TouchableOpacity>
+                    </GHScrollView>
+                </View>
+            </ReAnimated.View>
+        </GestureDetector>
     );
 };
 
@@ -401,6 +451,7 @@ export function WriteScreenView({ route, navigation }) {
         handleTextDragEnd,
         handleCanvasTap,
         handleUpdateText,
+        handlePendingTextUpdate,
 
         handleContentChange,
         handleStickerPress,
@@ -685,196 +736,124 @@ export function WriteScreenView({ route, navigation }) {
             >
 
 
-                    {/* ─── 🌈 통합 다이어리 카드 영역 (캔버스 + 하단 메타) ─── */}
-                    {/* (기존의 전체를 가리던 둔탁한 Animated.View 제거, 알맹이만 애니메이션 처리) */}
-                    <View style={[styles.integratedDiaryCard, { backgroundColor: dynamicCanvasColor }, isDraggingAny]} onLayout={handleCanvasContainerLayout}>
-                        {/* 멀티페이지 캔버스 영역 (가로 스와이프 + 엣지 풀 추가) */}
-                        <View
-                            style={[styles.pageContainer, isDraggingAny && { overflow: 'visible' }]}
-                            pointerEvents="box-none"
-                            onLayout={(e) => {
-                                const w = e.nativeEvent.layout.width;
-                                if (w > 0) setPageCardWidth(w);
-                            }}
-                        >
-                            {pageCardWidth > 0 && (
-                                <>
-                                    {/* ─── 📊 카드 내부 인디케이터 (피드 스타일) 위로 분리 ─── */}
-                                    <View style={[styles.cardIndicatorWrap, { backgroundColor: dynamicCanvasColor }]} pointerEvents="box-none">
-                                        <View style={styles.cardIndicatorDots}>
-                                            {pages.map((_, dotIdx) => (
-                                                <View
-                                                    key={`dot-${dotIdx}`}
-                                                    style={dotIdx === currentPageIndex ? styles.pageDotActive : styles.pageDot}
-                                                />
-                                            ))}
-                                        </View>
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                handlePageDeleteTrigger(currentPageIndex, (nextIdx) => {
-                                                    setTimeout(() => {
-                                                        pageFlatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
-                                                    }, 100);
-                                                });
-                                            }}
-                                            activeOpacity={0.6}
-                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                            style={styles.cardDeleteBtn}
-                                        >
-                                            <Text style={styles.cardDeleteText}>✕</Text>
-                                        </TouchableOpacity>
+                {/* ─── 🌈 통합 다이어리 카드 영역 (캔버스 + 하단 메타) ─── */}
+                {/* (기존의 전체를 가리던 둔탁한 Animated.View 제거, 알맹이만 애니메이션 처리) */}
+                <View style={[styles.integratedDiaryCard, { backgroundColor: dynamicCanvasColor }, isDraggingAny]} onLayout={handleCanvasContainerLayout}>
+                    {/* 멀티페이지 캔버스 영역 (가로 스와이프 + 엣지 풀 추가) */}
+                    <View
+                        style={[styles.pageContainer, isDraggingAny && { overflow: 'visible' }]}
+                        pointerEvents="box-none"
+                        onLayout={(e) => {
+                            const w = e.nativeEvent.layout.width;
+                            if (w > 0) setPageCardWidth(w);
+                        }}
+                    >
+                        {pageCardWidth > 0 && (
+                            <>
+                                {/* ─── 📊 카드 내부 인디케이터 (피드 스타일) 위로 분리 ─── */}
+                                <View style={[styles.cardIndicatorWrap, { backgroundColor: dynamicCanvasColor }]} pointerEvents="box-none">
+                                    <View style={styles.cardIndicatorDots}>
+                                        {pages.map((_, dotIdx) => (
+                                            <View
+                                                key={`dot-${dotIdx}`}
+                                                style={dotIdx === currentPageIndex ? styles.pageDotActive : styles.pageDot}
+                                            />
+                                        ))}
                                     </View>
-
-                                    <FlatList
-                                        ref={pageFlatListRef}
-                                        data={[...pages, '__ADD_PAGE__']}
-                                        horizontal
-                                        pagingEnabled={!isDraggingAny && !selectedItemId}
-                                        showsHorizontalScrollIndicator={false}
-                                        scrollEnabled={!isDraggingAny && !selectedItemId}
-                                        disableIntervalMomentum={true}
-                                        disableScrollViewPanResponder={true}
-                                        contentContainerStyle={isDraggingAny && { overflow: 'visible' }}
-                                        style={isDraggingAny && { overflow: 'visible' }}
-                                        keyExtractor={(_, idx) => `page-${idx}`}
-                                        onMomentumScrollEnd={(e) => {
-                                            const idx = Math.round(e.nativeEvent.contentOffset.x / pageCardWidth);
-                                            if (idx >= pages.length) {
-                                                // 🧲 엣지 풀 트리거: 마지막 '+' 카드에 도달하면 페이지 자동 추가
-                                                addPage();
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            handlePageDeleteTrigger(currentPageIndex, (nextIdx) => {
                                                 setTimeout(() => {
-                                                    pageFlatListRef.current?.scrollToIndex({ index: pages.length, animated: true });
+                                                    pageFlatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
                                                 }, 100);
-                                            } else {
-                                                goToPage(idx);
-                                            }
+                                            });
                                         }}
-                                        getItemLayout={(_, index) => ({
-                                            length: pageCardWidth,
-                                            offset: pageCardWidth * index,
-                                            index,
-                                        })}
-                                        renderItem={({ item: pageContent, index: pageIdx }) => {
-                                            // ─── 🧲 마지막 '+' 카드 (엣지 풀 트리거) ───
-                                            if (pageContent === '__ADD_PAGE__') {
-                                                return (
-                                                    <TouchableOpacity
-                                                        activeOpacity={0.6}
-                                                        onPress={() => {
-                                                            addPage();
-                                                            setTimeout(() => {
-                                                                pageFlatListRef.current?.scrollToIndex({ index: pages.length, animated: true });
-                                                            }, 100);
-                                                        }}
-                                                        style={[styles.inputCard, styles.addPageCard, { width: pageCardWidth }]}
-                                                    >
-                                                        <Text style={styles.addPageIcon}>+</Text>
-                                                        <Text style={styles.addPageText}>새 페이지</Text>
-                                                    </TouchableOpacity>
-                                                );
-                                            }
+                                        activeOpacity={0.6}
+                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                        style={styles.cardDeleteBtn}
+                                    >
+                                        <Text style={styles.cardDeleteText}>✕</Text>
+                                    </TouchableOpacity>
+                                </View>
 
-                                            const bgData = getBackgroundById(pageBackgrounds[pageIdx] || 'default');
+                                <FlatList
+                                    ref={pageFlatListRef}
+                                    data={[...pages, '__ADD_PAGE__']}
+                                    horizontal
+                                    pagingEnabled={!isDraggingAny && !selectedItemId}
+                                    showsHorizontalScrollIndicator={false}
+                                    scrollEnabled={!isDraggingAny && !selectedItemId}
+                                    disableIntervalMomentum={true}
+                                    disableScrollViewPanResponder={true}
+                                    contentContainerStyle={isDraggingAny && { overflow: 'visible' }}
+                                    style={isDraggingAny && { overflow: 'visible' }}
+                                    keyExtractor={(_, idx) => `page-${idx}`}
+                                    onMomentumScrollEnd={(e) => {
+                                        const idx = Math.round(e.nativeEvent.contentOffset.x / pageCardWidth);
+                                        if (idx >= pages.length) {
+                                            // 🧲 엣지 풀 트리거: 마지막 '+' 카드에 도달하면 페이지 자동 추가
+                                            addPage();
+                                            setTimeout(() => {
+                                                pageFlatListRef.current?.scrollToIndex({ index: pages.length, animated: true });
+                                            }, 100);
+                                        } else {
+                                            goToPage(idx);
+                                        }
+                                    }}
+                                    getItemLayout={(_, index) => ({
+                                        length: pageCardWidth,
+                                        offset: pageCardWidth * index,
+                                        index,
+                                    })}
+                                    renderItem={({ item: pageContent, index: pageIdx }) => {
+                                        // ─── 🧲 마지막 '+' 카드 (엣지 풀 트리거) ───
+                                        if (pageContent === '__ADD_PAGE__') {
                                             return (
-                                                <Card style={[styles.inputCard, { width: pageCardWidth, backgroundColor: bgData.backgroundColor }, isDraggingAny && { overflow: 'visible' }]}>
-                                                    {/* [층0] 📝 빈 공간 롱탭 전용 배경 (텍스트 생성용) */}
-                                                    <Pressable
-                                                        style={StyleSheet.absoluteFill}
-                                                        onPress={handleClearSelection}
-                                                        onLongPress={(e) => {
-                                                            if (pageIdx === currentPageIndex) {
-                                                                const { locationX, locationY } = e.nativeEvent;
-                                                                handleCanvasTap(locationX, locationY);
-                                                            }
-                                                        }}
-                                                        delayLongPress={400}
-                                                    />
-                                                    {/* [층0.5] 반투명 프레임 사진 시각 레이어 (텍스트 뒤, 터치 불가) */}
-                                                    <View
-                                                        style={[StyleSheet.absoluteFill, { zIndex: 1, elevation: 0 }]}
-                                                        pointerEvents="none"
-                                                    >
-                                                        {(pagePhotos[pageIdx] || []).filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray').map(photo => {
-                                                            const anim = getPhotoAnimation(photo);
-                                                            return (
-                                                                <DraggablePhoto
-                                                                    key={`vis-${photo.id}`}
-                                                                    photo={photo}
-                                                                    bounds={inputBoxBounds}
-                                                                    externalPan={anim.pan}
-                                                                    externalRotation={anim.rotation}
-                                                                    onDelete={handleDeletePhoto}
-                                                                    onDragEnd={handlePhotoDragEnd}
-                                                                    onInteractionStart={handleInteractionStart}
-                                                                    onInteractionEnd={handleInteractionEnd}
-                                                                    onDragMove={handlePhotoDragMove}
-                                                                    onDragDrop={handlePhotoDragDrop}
-                                                                    onSelect={handleSelect}
-                                                                    isSelected={selectedItemId === photo.id}
-                                                                />
-                                                            );
-                                                        })}
-                                                    </View>
+                                                <TouchableOpacity
+                                                    activeOpacity={0.6}
+                                                    onPress={() => {
+                                                        addPage();
+                                                        setTimeout(() => {
+                                                            pageFlatListRef.current?.scrollToIndex({ index: pages.length, animated: true });
+                                                        }, 100);
+                                                    }}
+                                                    style={[styles.inputCard, styles.addPageCard, { width: pageCardWidth }]}
+                                                >
+                                                    <Text style={styles.addPageIcon}>+</Text>
+                                                    <Text style={styles.addPageText}>새 페이지</Text>
+                                                </TouchableOpacity>
+                                            );
+                                        }
 
-                                                    {/* [층1] 📝 빈 캔버스 안내 레이어 (시각 전용, 터치 불가) */}
-                                                    <View
-                                                        style={[StyleSheet.absoluteFill, { zIndex: 2 }]}
-                                                        pointerEvents="none"
-                                                    >
-                                                        {isDataInitialized && (pageTexts[pageIdx] || []).length === 0 && (pagePhotos[pageIdx] || []).length === 0 && (pageStickers[pageIdx] || []).length === 0 && (
-                                                            <View style={styles.canvasGuide}>
-
-                                                                <Text style={styles.canvasGuideText}>
-                                                                    화면을 꾹 눌러서 일기를 써보세요.{'\n'}
-                                                                    옆으로 밀어 페이지를 이동하세요.
-                                                                </Text>
-                                                            </View>
-                                                        )}
-                                                    </View>
-
-                                                    {/* [층1.5] 👻 반투명 프레임 사진 터치 레이어 (텍스트 위, 보이지 않음) */}
-                                                    <View
-                                                        style={[StyleSheet.absoluteFill, { zIndex: 4 }]}
-                                                        pointerEvents="box-none"
-                                                    >
-                                                        {(pagePhotos[pageIdx] || []).filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray').map(photo => {
-                                                            const anim = getPhotoAnimation(photo);
-                                                            return (
-                                                                <DraggablePhoto
-                                                                    key={`ghost-${photo.id}`}
-                                                                    isGhost={true}
-                                                                    photo={photo}
-                                                                    bounds={inputBoxBounds}
-                                                                    externalPan={anim.pan}
-                                                                    externalRotation={anim.rotation}
-                                                                    onDelete={handleDeletePhoto}
-                                                                    onDragEnd={handlePhotoDragEnd}
-                                                                    onInteractionStart={handleInteractionStart}
-                                                                    onInteractionEnd={handleInteractionEnd}
-                                                                    onDragMove={handlePhotoDragMove}
-                                                                    onDragDrop={handlePhotoDragDrop}
-                                                                    onSelect={handleSelect}
-                                                                    isSelected={selectedItemId === photo.id}
-                                                                />
-                                                            );
-                                                        })}
-                                                    </View>
-
-
-                                                    {/* [층2] 📷 폴라로이드 사진 레이어 (반투명 프레임 제외) */}
-                                                    <Animated.View
-                                                        style={[StyleSheet.absoluteFill, {
-                                                            zIndex: 5, elevation: 5,
-                                                            opacity: photoRevealAnim,
-                                                            transform: [{ scale: photoRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }]
-                                                        }]}
-                                                        pointerEvents="box-none"
-                                                    >
-                                                        {(pagePhotos[pageIdx] || []).filter(p => p.frameType !== 'transparent_white' && p.frameType !== 'transparent_gray').map(photo => (
+                                        const bgData = getBackgroundById(pageBackgrounds[pageIdx] || 'default');
+                                        return (
+                                            <Card style={[styles.inputCard, { width: pageCardWidth, backgroundColor: bgData.backgroundColor }, isDraggingAny && { overflow: 'visible' }]}>
+                                                {/* [층0] 📝 빈 공간 롱탭 전용 배경 (텍스트 생성용) */}
+                                                <Pressable
+                                                    style={StyleSheet.absoluteFill}
+                                                    onPress={handleClearSelection}
+                                                    onLongPress={(e) => {
+                                                        if (pageIdx === currentPageIndex) {
+                                                            const { locationX, locationY } = e.nativeEvent;
+                                                            handleCanvasTap(locationX, locationY);
+                                                        }
+                                                    }}
+                                                    delayLongPress={400}
+                                                />
+                                                {/* [층0.5] 반투명 프레임 사진 시각 레이어 (텍스트 뒤, 터치 불가) */}
+                                                <View
+                                                    style={[StyleSheet.absoluteFill, { zIndex: 1, elevation: 0 }]}
+                                                    pointerEvents="none"
+                                                >
+                                                    {(pagePhotos[pageIdx] || []).filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray').map(photo => {
+                                                        const anim = getPhotoAnimation(photo);
+                                                        return (
                                                             <DraggablePhoto
-                                                                key={photo.id}
+                                                                key={`vis-${photo.id}`}
                                                                 photo={photo}
                                                                 bounds={inputBoxBounds}
+                                                                externalPan={anim.pan}
+                                                                externalRotation={anim.rotation}
                                                                 onDelete={handleDeletePhoto}
                                                                 onDragEnd={handlePhotoDragEnd}
                                                                 onInteractionStart={handleInteractionStart}
@@ -884,166 +863,239 @@ export function WriteScreenView({ route, navigation }) {
                                                                 onSelect={handleSelect}
                                                                 isSelected={selectedItemId === photo.id}
                                                             />
-                                                        ))}
-                                                    </Animated.View>
+                                                        );
+                                                    })}
+                                                </View>
 
-                                                    {/* [층2.5] ✏️ 텍스트 스티커 영역 */}
-                                                    <Animated.View
-                                                        style={[StyleSheet.absoluteFill, {
-                                                            zIndex: 8, elevation: 8,
-                                                            opacity: textRevealAnim,
-                                                            transform: [{ translateY: textRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }]
-                                                        }]}
-                                                        pointerEvents="box-none"
-                                                    >
-                                                        {(pageTexts[pageIdx] || []).map(textNode => (
-                                                            <DraggableText
-                                                                key={`txt-${textNode.id}`}
-                                                                id={textNode.id}
-                                                                text={textNode.text}
-                                                                fontId={textNode.fontId}
-                                                                color={textNode.color}
-                                                                bgColor={textNode.bgColor}
-                                                                initialX={textNode.x}
-                                                                initialY={textNode.y}
-                                                                initialRotation={textNode.rotation}
-                                                                initialScale={textNode.scale}
-                                                                onDelete={handleDeleteText}
-                                                                onDragEnd={handleTextDragEnd}
-                                                                onTextChange={handleUpdateText}
+                                                {/* [층1] 📝 빈 캔버스 안내 레이어 (시각 전용, 터치 불가) */}
+                                                <View
+                                                    style={[StyleSheet.absoluteFill, { zIndex: 2 }]}
+                                                    pointerEvents="none"
+                                                >
+                                                    {isDataInitialized && (pageTexts[pageIdx] || []).length === 0 && (pagePhotos[pageIdx] || []).length === 0 && (pageStickers[pageIdx] || []).length === 0 && (
+                                                        <View style={styles.canvasGuide}>
+
+                                                            <Text style={styles.canvasGuideText}>
+                                                                화면을 꾹 눌러서 일기를 써보세요.{'\n'}
+                                                                옆으로 밀어 페이지를 이동하세요.
+                                                            </Text>
+                                                        </View>
+                                                    )}
+                                                </View>
+
+                                                {/* [층1.5] 👻 반투명 프레임 사진 터치 레이어 (텍스트 위, 보이지 않음) */}
+                                                <View
+                                                    style={[StyleSheet.absoluteFill, { zIndex: 4 }]}
+                                                    pointerEvents="box-none"
+                                                >
+                                                    {(pagePhotos[pageIdx] || []).filter(p => p.frameType === 'transparent_white' || p.frameType === 'transparent_gray').map(photo => {
+                                                        const anim = getPhotoAnimation(photo);
+                                                        return (
+                                                            <DraggablePhoto
+                                                                key={`ghost-${photo.id}`}
+                                                                isGhost={true}
+                                                                photo={photo}
+                                                                bounds={inputBoxBounds}
+                                                                externalPan={anim.pan}
+                                                                externalRotation={anim.rotation}
+                                                                onDelete={handleDeletePhoto}
+                                                                onDragEnd={handlePhotoDragEnd}
                                                                 onInteractionStart={handleInteractionStart}
                                                                 onInteractionEnd={handleInteractionEnd}
-                                                                onDragMove={handleTextDragMove}
-                                                                onDragDrop={handleTextDragDrop}
+                                                                onDragMove={handlePhotoDragMove}
+                                                                onDragDrop={handlePhotoDragDrop}
                                                                 onSelect={handleSelect}
-                                                                isSelected={selectedItemId === textNode.id}
-                                                                autoFocus={textNode.autoFocus || false}
-                                                                bounds={inputBoxBounds}
-                                                                onEditFocus={handleTextEditFocus}
+                                                                isSelected={selectedItemId === photo.id}
                                                             />
-                                                        ))}
-                                                    </Animated.View>
+                                                        );
+                                                    })}
+                                                </View>
 
-                                                    {/* [층3] 🌟 다꾸 스티커 영역 (최상위) */}
-                                                    <Animated.View
-                                                        style={[StyleSheet.absoluteFill, {
-                                                            zIndex: 10, elevation: 10,
-                                                            opacity: stickerRevealAnim,
-                                                            transform: [{ scale: stickerRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }, { translateY: stickerRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }]
-                                                        }]}
-                                                        pointerEvents="box-none"
-                                                        onLayout={(e) => {
-                                                            if (pageIdx === currentPageIndex) {
-                                                                const { width, height, x, y } = e.nativeEvent.layout;
-                                                                if (width !== inputBoxBounds.width || height !== inputBoxBounds.height) {
-                                                                    setInputBoxBounds({ width, height, x, y });
-                                                                }
+
+                                                {/* [층2] 📷 폴라로이드 사진 레이어 (반투명 프레임 제외) */}
+                                                <Animated.View
+                                                    style={[StyleSheet.absoluteFill, {
+                                                        zIndex: 5, elevation: 5,
+                                                        opacity: photoRevealAnim,
+                                                        transform: [{ scale: photoRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }]
+                                                    }]}
+                                                    pointerEvents="box-none"
+                                                >
+                                                    {(pagePhotos[pageIdx] || []).filter(p => p.frameType !== 'transparent_white' && p.frameType !== 'transparent_gray').map(photo => (
+                                                        <DraggablePhoto
+                                                            key={photo.id}
+                                                            photo={photo}
+                                                            bounds={inputBoxBounds}
+                                                            onDelete={handleDeletePhoto}
+                                                            onDragEnd={handlePhotoDragEnd}
+                                                            onInteractionStart={handleInteractionStart}
+                                                            onInteractionEnd={handleInteractionEnd}
+                                                            onDragMove={handlePhotoDragMove}
+                                                            onDragDrop={handlePhotoDragDrop}
+                                                            onSelect={handleSelect}
+                                                            isSelected={selectedItemId === photo.id}
+                                                        />
+                                                    ))}
+                                                </Animated.View>
+
+                                                {/* [층2.5] ✏️ 텍스트 스티커 영역 */}
+                                                <Animated.View
+                                                    style={[StyleSheet.absoluteFill, {
+                                                        zIndex: 8, elevation: 8,
+                                                        opacity: textRevealAnim,
+                                                        transform: [{ translateY: textRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }]
+                                                    }]}
+                                                    pointerEvents="box-none"
+                                                >
+                                                    {(pageTexts[pageIdx] || []).map(textNode => (
+                                                        <DraggableText
+                                                            key={`txt-${textNode.id}`}
+                                                            id={textNode.id}
+                                                            text={textNode.text}
+                                                            fontId={textNode.fontId}
+                                                            color={textNode.color}
+                                                            bgColor={textNode.bgColor}
+                                                            initialX={textNode.x}
+                                                            initialY={textNode.y}
+                                                            initialRotation={textNode.rotation}
+                                                            initialScale={textNode.scale}
+                                                            onDelete={handleDeleteText}
+                                                            onDragEnd={handleTextDragEnd}
+                                                            onTextChange={handleUpdateText}
+                                                            onPendingTextUpdate={handlePendingTextUpdate}
+                                                            onInteractionStart={handleInteractionStart}
+                                                            onInteractionEnd={handleInteractionEnd}
+                                                            onDragMove={handleTextDragMove}
+                                                            onDragDrop={handleTextDragDrop}
+                                                            onSelect={handleSelect}
+                                                            isSelected={selectedItemId === textNode.id}
+                                                            autoFocus={textNode.autoFocus || false}
+                                                            bounds={inputBoxBounds}
+                                                            onEditFocus={handleTextEditFocus}
+                                                        />
+                                                    ))}
+                                                </Animated.View>
+
+                                                {/* [층3] 🌟 다꾸 스티커 영역 (최상위) */}
+                                                <Animated.View
+                                                    style={[StyleSheet.absoluteFill, {
+                                                        zIndex: 10, elevation: 10,
+                                                        opacity: stickerRevealAnim,
+                                                        transform: [{ scale: stickerRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }, { translateY: stickerRevealAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }]
+                                                    }]}
+                                                    pointerEvents="box-none"
+                                                    onLayout={(e) => {
+                                                        if (pageIdx === currentPageIndex) {
+                                                            const { width, height, x, y } = e.nativeEvent.layout;
+                                                            if (width !== inputBoxBounds.width || height !== inputBoxBounds.height) {
+                                                                setInputBoxBounds({ width, height, x, y });
                                                             }
-                                                        }}
-                                                    >
-                                                        {(pageStickers[pageIdx] || []).map(sticker => (
-                                                            <DraggableSticker
-                                                                key={sticker.id}
-                                                                sticker={sticker}
-                                                                bounds={inputBoxBounds}
-                                                                onDelete={handleDeleteSticker}
-                                                                onDragEnd={handleDragEnd}
-                                                                onInteractionStart={handleInteractionStart}
-                                                                onInteractionEnd={handleInteractionEnd}
-                                                                onDragMove={handleStickerDragMove}
-                                                                onDragDrop={handleStickerDragDrop}
-                                                                onSelect={handleSelect}
-                                                                isSelected={selectedItemId === sticker.id}
-                                                            />
-                                                        ))}
-                                                    </Animated.View>
-                                                </Card>
-                                            );
-                                        }}
-                                    />
-                                </>)}
-
-                        </View>
-
-
-
-
-                        {/* ─── 📊 피드 레이아웃의 하단 메타 정보 영역 ─── */}
-                        <View style={styles.integratedDiaryMeta}>
-                            {/* 🛠️ 좌측 도구 버튼 영역 (스티커, 카메라, 텍스트) */}
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        Keyboard.dismiss();
-                                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                                        setShowStickers(!showStickers);
-                                        setShowPhotos(false);
-                                        setShowBackgrounds(false);
-                                        setShowTexts(false);
+                                                        }
+                                                    }}
+                                                >
+                                                    {(pageStickers[pageIdx] || []).map(sticker => (
+                                                        <DraggableSticker
+                                                            key={sticker.id}
+                                                            sticker={sticker}
+                                                            bounds={inputBoxBounds}
+                                                            onDelete={handleDeleteSticker}
+                                                            onDragEnd={handleDragEnd}
+                                                            onInteractionStart={handleInteractionStart}
+                                                            onInteractionEnd={handleInteractionEnd}
+                                                            onDragMove={handleStickerDragMove}
+                                                            onDragDrop={handleStickerDragDrop}
+                                                            onSelect={handleSelect}
+                                                            isSelected={selectedItemId === sticker.id}
+                                                        />
+                                                    ))}
+                                                </Animated.View>
+                                            </Card>
+                                        );
                                     }}
-                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                    style={[styles.canvasToolButton, styles.canvasToolSticker]}
-                                >
-                                    <StickerIcon size={20} active={showStickers} />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        Keyboard.dismiss();
-                                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                                        setShowPhotos(!showPhotos);
-                                        setShowStickers(false);
-                                        setShowBackgrounds(false);
-                                        setShowTexts(false);
-                                    }}
-                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                    style={[styles.canvasToolButton, styles.canvasToolPhoto]}
-                                >
-                                    <CameraIcon size={20} color={"#2D1E16"} />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        Keyboard.dismiss();
-                                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                                        setShowTexts(!showTexts);
-                                        setShowStickers(false);
-                                        setShowPhotos(false);
-                                        setShowBackgrounds(false);
-                                    }}
-                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                    style={[styles.canvasToolButton, styles.canvasToolText]}
-                                >
-                                    <TextIcon size={22} active={showTexts} color={"#2D1E16"} />
-                                </TouchableOpacity>
-                            </View>
+                                />
+                            </>)}
 
-                            {/* 우측 활동 및 기분 아이콘 영역 (모달 트리거) */}
-                            <TouchableOpacity
-                                style={styles.canvasToolMood}
-                                onPress={openMoodModal}
-                                activeOpacity={0.8}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', marginRight: 4, maxWidth: 80 }}>
-                                    {activityStates.filter(a => a.selected).map(act => (
-                                        <View key={`meta-act-${act.key}`} style={{ margin: 2 }}>
-                                            <ActivityIcon type={act.key} size={16} />
-                                        </View>
-                                    ))}
-                                </View>
-                                <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                                    {activeMood ? (
-                                        <MoodCharacter character={activeMood.character} size={36} />
-                                    ) : (
-                                        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E9E9E7', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Text style={{ fontSize: 18 }}>?</Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </TouchableOpacity>
-                        </View>
                     </View>
 
-                </ScrollView>
+
+
+
+                    {/* ─── 📊 피드 레이아웃의 하단 메타 정보 영역 ─── */}
+                    <View style={styles.integratedDiaryMeta}>
+                        {/* 🛠️ 좌측 도구 버튼 영역 (스티커, 카메라, 텍스트) */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    Keyboard.dismiss();
+                                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                    setShowStickers(!showStickers);
+                                    setShowPhotos(false);
+                                    setShowBackgrounds(false);
+                                    setShowTexts(false);
+                                }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                style={[styles.canvasToolButton, styles.canvasToolSticker]}
+                            >
+                                <StickerIcon size={20} active={showStickers} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    Keyboard.dismiss();
+                                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                    setShowPhotos(!showPhotos);
+                                    setShowStickers(false);
+                                    setShowBackgrounds(false);
+                                    setShowTexts(false);
+                                }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                style={[styles.canvasToolButton, styles.canvasToolPhoto]}
+                            >
+                                <CameraIcon size={20} color={"#2D1E16"} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    Keyboard.dismiss();
+                                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                    setShowTexts(!showTexts);
+                                    setShowStickers(false);
+                                    setShowPhotos(false);
+                                    setShowBackgrounds(false);
+                                }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                style={[styles.canvasToolButton, styles.canvasToolText]}
+                            >
+                                <TextIcon size={22} active={showTexts} color={"#2D1E16"} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* 우측 활동 및 기분 아이콘 영역 (모달 트리거) */}
+                        <TouchableOpacity
+                            style={styles.canvasToolMood}
+                            onPress={openMoodModal}
+                            activeOpacity={0.8}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', marginRight: 4, maxWidth: 80 }}>
+                                {activityStates.filter(a => a.selected).map(act => (
+                                    <View key={`meta-act-${act.key}`} style={{ margin: 2 }}>
+                                        <ActivityIcon type={act.key} size={16} />
+                                    </View>
+                                ))}
+                            </View>
+                            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                                {activeMood ? (
+                                    <MoodCharacter character={activeMood.character} size={36} />
+                                ) : (
+                                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#E9E9E7', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Text style={{ fontSize: 18 }}>?</Text>
+                                    </View>
+                                )}
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+            </ScrollView>
 
 
             {/* ─── 🚀 닫기용 투명 오버레이 ─── */}
